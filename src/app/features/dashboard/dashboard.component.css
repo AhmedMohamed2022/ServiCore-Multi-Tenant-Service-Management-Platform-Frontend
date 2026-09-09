@@ -1,0 +1,54 @@
+.dashboard-landing-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.welcome-box h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #0f172a;
+}
+.welcome-box p {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.95rem;
+  color: #64748b;
+}
+.highlight {
+  font-weight: 600;
+  color: #2563eb;
+}
+.shortcut-grid-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+.shortcut-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease-in-out;
+}
+.shortcut-card:hover {
+  transform: translateY(-2px);
+  border-color: #2563eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.card-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+.shortcut-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #1e293b;
+}
+.shortcut-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+}

@@ -1,0 +1,67 @@
+<div class="app-layout-wrapper">
+    <!-- Sidebar Navigation Drawer -->
+    <aside class="sidebar-container">
+        <div class="sidebar-brand">
+            <span class="brand-logo">⚙️</span>
+            <h1 class="brand-title">ServiCore</h1>
+        </div>
+
+        <!-- Active Multi-Tenant Workspace Selector Integration -->
+        <app-tenant-switcher></app-tenant-switcher>
+
+        <nav class="navigation-matrix">
+            <span class="nav-section-label">Core Operations</span>
+            <a routerLink="/app/dashboard" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a routerLink="/app/tickets" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🎫</span>
+                <span class="nav-label">Ticket Console</span>
+            </a>
+
+            <!-- Administration paths visibility will be secured via guards in next phase -->
+            <span class="nav-section-label">Platform Administration</span>
+            <a routerLink="/app/management/teams" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Team Rosters</span>
+            </a>
+            <a routerLink="/app/management/customers" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🤝</span>
+                <span class="nav-label">Client Directory</span>
+            </a>
+            <a routerLink="/app/management/categories" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🏷️</span>
+                <span class="nav-label">Taxonomy Specs</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button (click)="onLogoutClick()" class="logout-btn">
+                <span class="btn-icon">🚪</span>
+                <span class="btn-label">Terminate Session</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Primary Presentation Workspace Viewport Wrapper -->
+    <div class="main-viewport-container">
+        <header class="top-app-bar">
+            <div class="bar-left-context">
+                <span class="context-breadcrumb">Workspace Portal</span>
+            </div>
+            <div class="bar-right-profile" *ngIf="authService.currentUser() as user">
+                <div class="user-meta">
+                    <span class="user-display-name">{{ userEmail() }}</span>
+                    <span class="user-system-id">ID: {{ userId().substring(0, 8) }}...</span>
+                </div>
+                <div class="avatar-placeholder">👤</div>
+            </div>
+        </header>
+
+        <!-- Main Dynamic Route Viewport -->
+        <main class="primary-content-viewport">
+            <router-outlet></router-outlet>
+        </main>
+    </div>
+</div>

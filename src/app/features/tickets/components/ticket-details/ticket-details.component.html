@@ -1,0 +1,89 @@
+<div class="ticket-details-workspace">
+    <header class="workspace-header">
+        <div class="breadcrumb-nav">
+            <a routerLink="/app/tickets" class="back-link">← Return to Ticket Queue</a>
+        </div>
+        <h2>Ticket Audit & Configuration Console</h2>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="alert-error-banner" role="alert">
+        {{ errorMessage() }}
+    </div>
+    }
+
+    @if (isLoading()) {
+    <div class="loading-state-block">Retrieving case record parameters from secure vaults...</div>
+    } @else {
+    @if (ticket(); as currentTicket) {
+    <div class="details-split-grid">
+
+        <!-- Left Major Card Block: Primary Ticket Context Meta Info -->
+        <main class="primary-content-card">
+            <div class="ticket-title-header">
+                <span class="ref-id-tag">Case Token: {{ currentTicket.id }}</span>
+                <h3>{{ currentTicket.title }}</h3>
+                <p class="timestamp-meta">Created on {{ currentTicket.createdAt | date:'medium' }} | Updated: {{
+                    currentTicket.updatedAt | date:'short' }}</p>
+            </div>
+
+            <div class="description-body-box">
+                <h4>Case Description Log Entry</h4>
+                <p class="body-text-content">{{ currentTicket.description }}</p>
+            </div>
+
+            <div class="system-link-directory">
+                <div class="link-item">
+                    <span class="l-lbl">CRM Client Account Link</span>
+                    <span class="l-val">{{ currentTicket.customerName || 'Direct Submit Client' }}</span>
+                    <span class="l-id">UUID: {{ currentTicket.customerId }}</span>
+                </div>
+                <div class="link-item">
+                    <span class="l-lbl">Taxonomy Class Mapping</span>
+                    <span class="l-val">{{ currentTicket.categoryName || 'General Queue' }}</span>
+                    <span class="l-id">UUID: {{ currentTicket.categoryId }}</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Minor Side Panel Card Block: Live Workflow State Action Modifiers -->
+        <aside class="sidebar-action-controls">
+            <div class="control-card">
+                <h3>Workflow Lifecycle Operations</h3>
+
+                <div class="control-group">
+                    <label for="lifecycleSelect">Workflow Status Modifier</label>
+                    <select id="lifecycleSelect" [value]="currentTicket.status" (change)="onStatusChange($event)"
+                        [disabled]="isActionLoading()">
+                        @for (st of statuses; track st.value) {
+                        <option [value]="st.value">{{ st.label }}</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="agentSelect"> Roster Assignment</label>
+                    <select id="agentSelect" [value]="currentTicket.assignedAgentId || ''"
+                        (change)="onAssignAgent($event)" [disabled]="isActionLoading()">
+                        <option value="">-- Unassigned (Return to Shared Queue) --</option>
+                        @for (agent of availableAgents(); track agent.userId) {
+                        <option [value]="agent.userId">{{ agent.name || 'System Agent' }}</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="static-badge-row">
+                    <div class="badge-item">
+                        <span class="b-lbl">Priority Level</span>
+                        <span class="b-val status-text-priority-{{ currentTicket.priority }}">
+                            {{ priorityLabels[currentTicket.priority] }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+    }
+    }
+</div>

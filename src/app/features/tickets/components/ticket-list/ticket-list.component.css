@@ -1,0 +1,189 @@
+.ticket-workspace-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pane-headline h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #0f172a;
+}
+
+.pane-headline p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Metric Counter Strips */
+.metrics-dashboard-strip {
+  display: flex;
+  gap: 1rem;
+}
+
+.metric-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.metric-card:hover,
+.metric-card.active-card {
+  transform: translateY(-2px);
+  border-color: #2563eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.m-val {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.m-lbl {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.card-new.active-card {
+  border-color: #f59e0b;
+}
+.card-active.active-card {
+  border-color: #3b82f6;
+}
+.card-resolved.active-card {
+  border-color: #10b981;
+}
+
+/* Grid Dashboard Frame Configuration */
+.grid-layout-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.controls-toolbar {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+}
+
+.filter-tab-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-tab-row button {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.filter-tab-row button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.filter-tab-row button.selected-tab {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.data-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-grid-table th,
+.data-grid-table td {
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.data-grid-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.interactive-row:hover {
+  background: #f8fafc;
+}
+
+.detail-cell-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.t-title {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.t-id {
+  font-size: 0.725rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badge-new {
+  background: #fef3c7;
+  color: #d97706;
+}
+.badge-progress {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.badge-resolved {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.priority-text {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.text-p-2 {
+  color: #dc2626;
+} /* High Priority formatting example */
+.text-p-3 {
+  color: #b91c1c;
+  text-transform: uppercase;
+} /* Urgent formatting example */
+
+.loading-state-block,
+.empty-state-block {
+  padding: 4rem;
+  text-align: center;
+  color: #64748b;
+}

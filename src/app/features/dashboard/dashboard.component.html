@@ -1,0 +1,38 @@
+<div class="dashboard-landing-pane">
+    <header class="welcome-box">
+        <h2>System Workspace Dashboard</h2>
+        <p>
+            Welcome back, <span class="highlight">{{ userEmail() }}</span>. Select an operational workspace node from
+            the index matrix below or
+            use the sidebar menu to begin.
+        </p>
+    </header>
+
+    <div class="shortcut-grid-matrix">
+        <div class="shortcut-card" routerLink="/app/tickets">
+            <span class="card-icon">🎫</span>
+            <h3>Ticket Console</h3>
+            <p>
+                Monitor your active backlogs and update ticket lifecycle states.
+            </p>
+        </div>
+
+        <div class="shortcut-card" routerLink="/app/management/teams">
+            <span class="card-icon">👥</span>
+            <h3>Team Rosters</h3>
+            <p>Configure team members and manage role allocations.</p>
+        </div>
+
+        <div class="shortcut-card" routerLink="/app/management/customers">
+            <span class="card-icon">🤝</span>
+            <h3>Client Directory</h3>
+            <p>Register client communication links and audit profiles.</p>
+        </div>
+
+        <div class="shortcut-card" routerLink="/app/management/categories">
+            <span class="card-icon">🏷️</span>
+            <h3>Taxonomy Specs</h3>
+            <p>Adjust classification fields and edit ticket category labels.</p>
+        </div>
+    </div>
+</div>

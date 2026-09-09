@@ -1,0 +1,77 @@
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Create Owner Account</h2>
+        <p class="subtitle">Deploy a secure multi-tenant cloud organization unit</p>
+
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            @if (errorMessage()) {
+            <div class="error-banner" role="alert">
+                {{ errorMessage() }}
+            </div>
+            }
+
+            @if (successMessage()) {
+            <div class="success-banner" role="alert">
+                {{ successMessage() }}
+            </div>
+            }
+
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input id="name" type="text" formControlName="name" placeholder="John Doe"
+                    [class.invalid]="registerForm.controls.name.touched && registerForm.controls.name.invalid" />
+                @if (registerForm.controls.name.touched && registerForm.controls.name.errors?.['required']) {
+                <span class="error-text">Identity name field is required.</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="organizationName">Organization Workspace Name</label>
+                <input id="organizationName" type="text" formControlName="organizationName"
+                    placeholder="Acme Enterprise Solutions"
+                    [class.invalid]="registerForm.controls.organizationName.touched && registerForm.controls.organizationName.invalid" />
+                @if (registerForm.controls.organizationName.touched &&
+                registerForm.controls.organizationName.errors?.['required']) {
+                <span class="error-text">Unique corporate workspace identity is required.</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="email">Corporate Email Address</label>
+                <input id="email" type="email" formControlName="email" placeholder="owner@company.com"
+                    [class.invalid]="registerForm.controls.email.touched && registerForm.controls.email.invalid" />
+                @if (registerForm.controls.email.touched && registerForm.controls.email.errors?.['required']) {
+                <span class="error-text">Email account routing is required.</span>
+                }
+                @if (registerForm.controls.email.touched && registerForm.controls.email.errors?.['email']) {
+                <span class="error-text">Provide a valid structural email mapping format.</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="password">Account Security Password</label>
+                <input id="password" type="password" formControlName="password" placeholder="••••••••"
+                    [class.invalid]="registerForm.controls.password.touched && registerForm.controls.password.invalid" />
+                @if (registerForm.controls.password.touched && registerForm.controls.password.errors?.['required']) {
+                <span class="error-text">Security credential pass phrase is required.</span>
+                }
+                @if (registerForm.controls.password.touched && registerForm.controls.password.errors?.['minlength']) {
+                <span class="error-text">Password must be at least 6 characters.</span>
+                }
+            </div>
+
+            <button type="submit" [disabled]="isLoading() || registerForm.invalid">
+                @if (isLoading()) {
+                <span class="spinner"></span> Provisioning Platform Space...
+                } @else {
+                Register Organization
+                }
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <span>Already hold a member profile?</span>
+            <a routerLink="/login">Return to Security Sign-In</a>
+        </div>
+    </div>
+</div>

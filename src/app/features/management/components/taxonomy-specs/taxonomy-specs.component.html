@@ -1,0 +1,85 @@
+<div class="taxonomy-workspace-container">
+    <header class="workspace-header">
+        <h2>Ticket Taxonomy Configuration</h2>
+        <p>Configure classification fields, ticket dispatch categories, and issue groupings</p>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="alert-banner-error" role="alert">
+        {{ errorMessage() }}
+        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
+    </div>
+    }
+
+    <div class="taxonomy-split-layout">
+        <!-- Left Pane: Taxonomy Form Settings -->
+        <section class="form-pane">
+            <div class="action-card">
+                <h3>{{ isEditing() ? 'Modify Taxonomy Label' : 'Add New Category' }}</h3>
+                <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
+                    <div class="form-group">
+                        <label return="catName">Category Designation Name</label>
+                        <input id="catName" type="text" formControlName="name"
+                            placeholder="e.g., Database Outage, Hardware RMAs"
+                            [class.input-error]="categoryForm.controls.name.touched && categoryForm.controls.name.invalid" />
+                        @if (categoryForm.controls.name.touched && categoryForm.controls.name.errors?.['required']) {
+                        <span class="field-error-msg">A unique classification name label is required.</span>
+                        }
+                        @if (categoryForm.controls.name.touched && categoryForm.controls.name.errors?.['minlength']) {
+                        <span class="field-error-msg">Label names must contain at least 2 alpha characters.</span>
+                        }
+                    </div>
+
+                    <div class="action-row-buttons">
+                        <button type="submit" [disabled]="categoryForm.invalid">
+                            {{ isEditing() ? 'Commit Entry' : 'Deploy Label' }}
+                        </button>
+                        @if (isEditing()) {
+                        <button type="button" class="btn-secondary" (click)="resetFormLifecycle()">Cancel</button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Right Pane: Taxonomy Roster Grid Matrix -->
+        <section class="index-pane">
+            <div class="data-grid-list">
+                <h4>Registered Ticket Classifications Matrix</h4>
+                @if (isLoading()) {
+                <div class="loading-state-block">Compiling classification records index...</div>
+                } @else if (categories().length === 0) {
+                <div class="empty-state-block">No validation category configurations map to this current tenant
+                    workspace.</div>
+                } @else {
+                <table class="taxonomy-table">
+                    <thead>
+                        <tr>
+                            <th>Classification Matrix Meta</th>
+                            <th>Global Actions Matrix</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (category of categories(); track category.id) {
+                        <tr>
+                            <td>
+                                <div class="taxonomy-profile-cell">
+                                    <span class="cat-title">{{ category.name }}</span>
+                                    <span class="cat-id">System Token ID: {{ category.id }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn-warn-sm" (click)="onEditInit(category)">Modify</button>
+                                    <button class="btn-danger-sm" (click)="onDelete(category.id)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+                }
+            </div>
+        </section>
+    </div>
+</div>

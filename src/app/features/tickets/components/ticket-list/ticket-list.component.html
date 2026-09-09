@@ -1,0 +1,109 @@
+<div class="ticket-workspace-pane">
+    <header class="pane-headline">
+        <div class="headline-left">
+            <h2>Enterprise Ticket Console</h2>
+            <p>Monitor tenant service backlogs, distribute ownership fields, and audit issue updates</p>
+
+            <!-- Operational Action Controls Row Panel -->
+            <div class="header-action-toolbar" style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center;">
+                <button routerLink="/app/tickets/create" class="btn-primary">Add Ticket</button>
+                <span class="context-tip-text" style="font-size: 0.85rem; color: #64748b;">
+                    💡 Click individual line-item records in the matrix registry below to view conversation audits and
+                    edit workflow states.
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Metric Counter Summary Strip Cards -->
+    <div class="metrics-dashboard-strip">
+        <div class="metric-card" (click)="setFilter('ALL')" [class.active-card]="statusFilter() === 'ALL'">
+            <span class="m-val">{{ totalCount() }}</span>
+            <span class="m-lbl">Total Backlog</span>
+        </div>
+        <div class="metric-card card-new" (click)="setFilter('0')" [class.active-card]="statusFilter() === '0'">
+            <span class="m-val">{{ newCount() }}</span>
+            <span class="m-lbl">Unassigned New</span>
+        </div>
+        <div class="metric-card card-active" (click)="setFilter('2')" [class.active-card]="statusFilter() === '2'">
+            <span class="m-val">{{ activeCount() }}</span>
+            <span class="m-lbl">Active Processing</span>
+        </div>
+        <div class="metric-card card-resolved" (click)="setFilter('4')" [class.active-card]="statusFilter() === '4'">
+            <span class="m-val">{{ resolvedCount() }}</span>
+            <span class="m-lbl">Resolved Closures</span>
+        </div>
+    </div>
+
+    @if (errorMessage()) {
+    <div class="alert-error-banner" role="alert">
+        {{ errorMessage() }}
+    </div>
+    }
+
+    <!-- Data Display Grid Board Layout -->
+    <div class="grid-layout-container">
+        <div class="controls-toolbar">
+            <div class="filter-tab-row">
+                <button (click)="setFilter('ALL')" [class.selected-tab]="statusFilter() === 'ALL'">All Tasks</button>
+                <button (click)="setFilter('0')" [class.selected-tab]="statusFilter() === '0'">New</button>
+                <button (click)="setFilter('2')" [class.selected-tab]="statusFilter() === '2'">In Progress</button>
+                <button (click)="setFilter('3')" [class.selected-tab]="statusFilter() === '3'">Awaiting Client</button>
+                <button (click)="setFilter('4')" [class.selected-tab]="statusFilter() === '4'">Resolved</button>
+            </div>
+        </div>
+
+        @if (isLoading()) {
+        <div class="loading-state-block">Gathering support issues registry matrices...</div>
+        } @else if (filteredTickets().length === 0) {
+        <div class="empty-state-block">No outstanding ticket issues mapped to this classification scope.</div>
+        } @else {
+        <table class="data-grid-table">
+            <thead>
+                <tr>
+                    <th>Ticket Reference Details</th>
+                    <th>Classification</th>
+                    <th>Status Indicator</th>
+                    <th>Priority Tier</th>
+                    <th>Assigned Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (ticket of filteredTickets(); track ticket.id) {
+                <tr class="interactive-row">
+                    <td>
+                        <div class="detail-cell-box">
+                            <!-- The dynamic entry row link wraps around the ticket title text -->
+                            <span class="t-title" [routerLink]="['/app/tickets', ticket.id]"
+                                style="cursor: pointer; color: #2563eb; font-weight: 600;">
+                                {{ ticket.title }}
+                            </span>
+                            <span class="t-id">Token Ref ID: {{ ticket.id }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="txt-category">{{ ticket.categoryName || 'General Issue' }}</span>
+                    </td>
+                    <td>
+                        <span class="status-badge" [class.badge-new]="ticket.status === 0"
+                            [class.badge-progress]="ticket.status === 2" [class.badge-resolved]="ticket.status === 4">
+                            {{ statusLabels[ticket.status] }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="priority-text text-p-{{ ticket.priority }}">
+                            {{ priorityLabels[ticket.priority] }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="agent-assignment-name">
+                            {{ ticket.assignedAgentName || 'Unassigned Queue' }}
+                        </span>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+    </div>
+</div>

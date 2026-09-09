@@ -3,6 +3,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "rootDir": "./src", // Tells TS exactly where your source files live
     "outDir": "./dist/out-tsc",
     "strict": true,
     "noImplicitOverride": true,

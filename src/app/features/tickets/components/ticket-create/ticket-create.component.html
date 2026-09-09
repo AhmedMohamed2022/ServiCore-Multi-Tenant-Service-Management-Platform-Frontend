@@ -1,0 +1,107 @@
+<div class="create-ticket-workspace">
+    <header class="workspace-header">
+        <div class="breadcrumb-nav">
+            <a routerLink="/app/tickets" class="back-link">← Ticket Console</a>
+        </div>
+        <h2>Provision Support Ticket Case</h2>
+        <p>Initialize a new multi-tenant ticket track and allocate organizational classifications</p>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="alert-error-banner" role="alert">
+        {{ errorMessage() }}
+    </div>
+    }
+
+    <div class="form-container-card">
+        @if (isLoadingOptions()) {
+        <div class="loading-overlay">
+            <span class="pulse-loader"></span> Syncing organizational indexes...
+        </div>
+        } @else {
+        <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
+
+            <div class="form-group">
+                <label for="title">Ticket Subject Title</label>
+                <input id="title" type="text" formControlName="title"
+                    placeholder="Brief statement summary of the service request"
+                    [class.field-error]="ticketForm.controls.title.touched && ticketForm.controls.title.invalid" />
+                @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['required']) {
+                <span class="error-msg-text">A brief summary title subject is required.</span>
+                }
+                @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['minlength']) {
+                <span class="error-msg-text">Title descriptions must be at least 5 characters.</span>
+                }
+            </div>
+
+            <div class="split-form-row">
+                <div class="form-group flex-item">
+                    <label for="customerId">Account Holder (Customer Client)</label>
+                    <select id="customerId" formControlName="customerId"
+                        [class.field-error]="ticketForm.controls.customerId.touched && ticketForm.controls.customerId.invalid">
+                        <option value="" disabled selected>-- Select CRM Profile Reference --</option>
+                        @for (cust of customers(); track cust.id) {
+                        <option [value]="cust.id">{{ cust.name }} ({{ cust.email }})</option>
+                        }
+                    </select>
+                    @if (ticketForm.controls.customerId.touched && ticketForm.controls.customerId.errors?.['required'])
+                    {
+                    <span class="error-msg-text">An explicit matching client customer identity link is required.</span>
+                    }
+                </div>
+
+                <div class="form-group flex-item">
+                    <label for="categoryId">Taxonomy Classification Category</label>
+                    <select id="categoryId" formControlName="categoryId"
+                        [class.field-error]="ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid">
+                        <option value="" disabled selected>-- Select Taxonomy Specification --</option>
+                        @for (cat of categories(); track cat.id) {
+                        <option [value]="cat.id">{{ cat.name }}</option>
+                        }
+                    </select>
+                    @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.errors?.['required'])
+                    {
+                    <span class="error-msg-text">Dispatch catalog categorization is required.</span>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group max-width-select">
+                <label for="priority">Urgency Priority Tier</label>
+                <select id="priority" formControlName="priority">
+                    @for (opt of priorityOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Detailed Description Context</label>
+                <textarea id="description" formControlName="description" rows="6"
+                    placeholder="Provide a comprehensive operational log entry regarding technical symptoms, replication maps, or hardware impacts..."
+                    [class.field-error]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid">
+          </textarea>
+                @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
+                <span class="error-msg-text">Detailed context documentation logs are required.</span>
+                }
+                @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
+                <span class="error-msg-text">Description entries must be at least 10 characters long.</span>
+                }
+            </div>
+
+            <div class="form-actions-footer">
+                <button type="button" class="btn-cancel" routerLink="/app/tickets"
+                    [disabled]="isSubmitting()">Discard</button>
+                <button type="submit" class="btn-submit" [disabled]="ticketForm.invalid || isSubmitting()">
+                    @if (isSubmitting()) {
+                    <span class="loader-icon"></span> Committing Database Record...
+                    } @else {
+                    Provision Ticket
+                    }
+                </button>
+            </div>
+
+        </form>
+        }
+    </div>
+</div>

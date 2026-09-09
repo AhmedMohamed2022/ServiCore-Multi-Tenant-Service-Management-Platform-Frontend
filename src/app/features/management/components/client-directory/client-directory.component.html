@@ -1,0 +1,95 @@
+<div class="crm-workspace-container">
+    <header class="workspace-header">
+        <h2>CRM Client Accounts Directory</h2>
+        <p>Manage external client definitions, service account linkages, and profile databases</p>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="alert-banner-error" role="alert">
+        {{ errorMessage() }}
+        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
+    </div>
+    }
+
+    <div class="crm-split-layout">
+        <!-- Left Pane: Management/Form Controls -->
+        <section class="form-pane">
+            <div class="action-card">
+                <h3>{{ isEditing() ? 'Modify Customer Profile' : 'Register New Client' }}</h3>
+                <form [formGroup]="customerForm" (ngSubmit)="onSubmit()">
+                    <div class="form-group">
+                        <label for="cName">Client Name / Corporate Title</label>
+                        <input id="cName" type="text" formControlName="name"
+                            placeholder="e.g., Jane Smith or Contoso Ltd"
+                            [class.input-error]="customerForm.controls.name.touched && customerForm.controls.name.invalid" />
+                        @if (customerForm.controls.name.touched && customerForm.controls.name.errors?.['required']) {
+                        <span class="field-error-msg">Client name is explicitly required.</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cEmail">Authorized Communication Email</label>
+                        <input id="cEmail" type="email" formControlName="email" placeholder="name@clientdomain.com"
+                            [class.input-error]="customerForm.controls.email.touched && customerForm.controls.email.invalid" />
+                        @if (customerForm.controls.email.touched && customerForm.controls.email.errors?.['required']) {
+                        <span class="field-error-msg">Email routing path validation is required.</span>
+                        }
+                        @if (customerForm.controls.email.touched && customerForm.controls.email.errors?.['email']) {
+                        <span class="field-error-msg">Provide a structurally intact email format.</span>
+                        }
+                    </div>
+
+                    <div class="action-row-buttons">
+                        <button type="submit" [disabled]="customerForm.invalid">
+                            {{ isEditing() ? 'Commit Parameters' : 'Deploy Record' }}
+                        </button>
+                        @if (isEditing()) {
+                        <button type="button" class="btn-secondary" (click)="resetFormLifecycle()">Cancel</button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Right Pane: CRM Data Index Table Matrix -->
+        <section class="index-pane">
+            <div class="data-grid-list">
+                <h4>Registered Clients Matrix Index</h4>
+                @if (isLoading()) {
+                <div class="loading-state-block">Gathering directory storage structures...</div>
+                } @else if (customers().length === 0) {
+                <div class="empty-state-block">No registered client profile models detected under this tenant space.
+                </div>
+                } @else {
+                <table class="crm-table">
+                    <thead>
+                        <tr>
+                            <th>Profile Identification Info</th>
+                            <th>Global Actions Matrix</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (customer of customers(); track customer.id) {
+                        <tr>
+                            <td>
+                                <div class="customer-profile-cell">
+                                    <span class="c-name">{{ customer.name }}</span>
+                                    <span class="c-email">Mail link: {{ customer.email }}</span>
+                                    <span class="c-id">Data token: {{ customer.id }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn-warn-sm" (click)="onEditInit(customer)">Modify</button>
+                                    <button class="btn-danger-sm" (click)="onDelete(customer.id)">Purge</button>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+                }
+            </div>
+        </section>
+    </div>
+</div>

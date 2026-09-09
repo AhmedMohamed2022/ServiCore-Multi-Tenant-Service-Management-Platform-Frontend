@@ -1,0 +1,9 @@
+<div class="tenant-switcher-box">
+    <label for="tenantSelect">Active Workspace</label>
+    <select id="tenantSelect" [value]="tenantContext.currentOrganizationId() || ''" (change)="onTenantChange($event)">
+        <option value="" disabled selected>-- Choose Workspace --</option>
+        @for (org of organizations(); track org.id) {
+        <option [value]="org.id">{{ org.name }}</option>
+        }
+    </select>
+</div>
