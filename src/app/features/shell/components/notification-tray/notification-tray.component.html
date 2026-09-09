@@ -1,0 +1,38 @@
+<div class="tray-anchor-box">
+    <!-- Interactive Trigger Bell Toggle Icon Button -->
+    <button class="trigger-bell-btn" (click)="toggleTrayMenuView()" [class.has-unread]="alertService.unreadCount() > 0">
+        <span class="bell-icon">🔔</span>
+        @if (alertService.unreadCount() > 0) {
+        <span class="count-badge-counter">{{ alertService.unreadCount() }}</span>
+        }
+    </button>
+
+    <!-- Overlay Dropdown Context Drawer Pane -->
+    @if (isTrayOpen()) {
+    <div class="tray-dropdown-menu">
+        <div class="tray-menu-header">
+            <h4>Notifications Center</h4>
+            <span class="counter-summary-txt">{{ alertService.unreadCount() }} outstanding alerts</span>
+        </div>
+
+        <div class="tray-scroll-timeline">
+            @if (alertService.registryList().length === 0) {
+            <div class="tray-empty-block">No system alerts captured in this active operational space.</div>
+            } @else {
+            @for (alert of alertService.registryList(); track alert.id) {
+            <div class="alert-item-node" [class.item-unread]="!alert.isRead" (click)="onMarkRead($event, alert)">
+                <div class="alert-node-header">
+                    <span class="node-title-txt">{{ alert.title }}</span>
+                    @if (!alert.isRead) {
+                    <span class="unread-dot-indicator"></span>
+                    }
+                </div>
+                <p class="node-message-paragraph">{{ alert.message }}</p>
+                <span class="node-time-stamp">{{ alert.createdAt | date:'shortTime' }}</span>
+            </div>
+            }
+            }
+        </div>
+    </div>
+    }
+</div>

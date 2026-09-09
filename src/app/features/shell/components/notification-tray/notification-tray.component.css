@@ -1,0 +1,134 @@
+.tray-anchor-box {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger-bell-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.35rem;
+  cursor: pointer;
+  position: relative;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.15s;
+}
+
+.trigger-bell-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.count-badge-counter {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 10px;
+  line-height: 1;
+  min-width: 10px;
+  text-align: center;
+}
+
+.tray-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  width: 320px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.tray-menu-header {
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tray-menu-header h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.counter-summary-txt {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.tray-scroll-timeline {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.alert-item-node {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: background-color 0.1s ease-in-out;
+}
+
+.alert-item-node:hover {
+  background-color: #f8fafc;
+}
+
+.alert-item-node.item-unread {
+  background-color: #f0fdf4; /* Soft hint highlight for unseen items */
+}
+
+.alert-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.node-title-txt {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.unread-dot-indicator {
+  width: 6px;
+  height: 6px;
+  background-color: #22c55e;
+  border-radius: 50%;
+}
+
+.node-message-paragraph {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.node-time-stamp {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  align-self: flex-end;
+}
+.tray-empty-block {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+}

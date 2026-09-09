@@ -12,11 +12,17 @@ import {
   TicketStatusLabels,
   TicketPriorityLabels,
 } from '../../models/ticket-enums.model';
+import { TicketCommentsComponent } from '../ticket-comments/ticket-comments.component';
 
 @Component({
   selector: 'app-ticket-details',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    TicketCommentsComponent,
+  ],
   templateUrl: './ticket-details.component.html',
   styleUrls: ['./ticket-details.component.css'],
 })

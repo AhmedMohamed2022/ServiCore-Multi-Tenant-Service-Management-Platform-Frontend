@@ -1,0 +1,60 @@
+<div class="comments-thread-container">
+    <div class="thread-divider">
+        <span>Activity Log & Communication Thread</span>
+    </div>
+
+    @if (errorMessage()) {
+    <div class="comment-alert-error" role="alert">
+        {{ errorMessage() }}
+    </div>
+    }
+
+    <!-- Chronological Timeline Message List Loop -->
+    <div class="timeline-stream-box">
+        @if (isLoading()) {
+        <div class="timeline-loading">Querying collaborative interaction history loops...</div>
+        } @else if (comments().length === 0) {
+        <div class="timeline-empty">No conversation records appended to this ticket case architecture file yet.</div>
+        } @else {
+        @for (comment of comments(); track comment.id) {
+        <div class="timeline-bubble-wrapper" [class.bubble-mine]="comment.userEmail === activeUserEmail()">
+            <div class="bubble-meta-header">
+                <span class="bubble-author">{{ comment.userEmail }}</span>
+                <span class="bubble-time">{{ comment.createdAt | date:'short' }}</span>
+            </div>
+            <div class="bubble-message-card">
+                <p class="comment-text-paragraph">{{ comment.content }}</p>
+            </div>
+        </div>
+        }
+        }
+    </div>
+
+    <!-- New Commentary Submission Deck -->
+    <div class="new-comment-submission-deck">
+        <form [formGroup]="commentForm" (ngSubmit)="onSubmitComment()">
+            <div class="form-group">
+                <label return="txtComment">Post Response Entry</label>
+                <textarea id="txtComment" formControlName="content" rows="4"
+                    placeholder="Append diagnostic updates, cross-reference data clusters, or reply back to the account submitter..."
+                    [class.input-error]="commentForm.controls.content.touched && commentForm.controls.content.invalid"
+                    [disabled]="isSubmitting()">
+        </textarea>
+
+                @if (commentForm.controls.content.touched && commentForm.controls.content.errors?.['required']) {
+                <span class="field-validation-error">Comment message payload parameter cannot be empty.</span>
+                }
+            </div>
+
+            <div class="submission-actions-row">
+                <button type="submit" [disabled]="commentForm.invalid || isSubmitting()">
+                    @if (isSubmitting()) {
+                    <span class="spinning-loader"></span> Publishing Update...
+                    } @else {
+                    Submit Response
+                    }
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

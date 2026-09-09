@@ -1,0 +1,23 @@
+<div class="invite-container">
+    <div class="invite-card">
+        <h2>Activate Client Portal Account</h2>
+        <p class="subtitle">Set your security passphrase credential parameters to open your self-service ticket
+            dashboard</p>
+
+        @if (errorMessage()) { <div class="banner-err">{{ errorMessage() }}</div> }
+        @if (successMessage()) { <div class="banner-ok">{{ successMessage() }}</div> }
+
+        <form [formGroup]="setupForm" (ngSubmit)="onCompleteCustomerOnboarding()" *ngIf="token && !successMessage()">
+            <div class="input-block">
+                <label for="cPass">Portal Access Password</label>
+                <input id="cPass" type="password" formControlName="password" placeholder="••••••••" />
+                @if (setupForm.controls.password.touched && setupForm.controls.password.invalid) {
+                <span class="err-txt">Password security rules demand at least 6 alpha characters.</span>
+                }
+            </div>
+            <button type="submit" [disabled]="setupForm.invalid || isProcessing()">
+                {{ isProcessing() ? 'Deploying Access Parameters...' : 'Activate Portal Hub' }}
+            </button>
+        </form>
+    </div>
+</div>

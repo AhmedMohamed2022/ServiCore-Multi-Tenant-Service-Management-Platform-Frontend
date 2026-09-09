@@ -37,13 +37,12 @@ export class AuthService {
     this.tenantContext.clearOrganization();
     this.token.set(null);
     this.currentUser.set(null);
+    this.availableOrganizations.set([]);
 
     return this.http.post<LoginResponse>(`${this.baseUrl}/login`, request).pipe(
       tap((res) => {
         localStorage.setItem(this.TOKEN_KEY, res.token);
         this.token.set(res.token);
-        // No org header needed yet — /auth/me and /organizations/mine
-        // are exempt from tenant resolution on the backend.
       }),
       switchMap(() => this.fetchMe()),
       switchMap((user) => this.fetchMyOrganizations().pipe(map(() => user))),
@@ -55,8 +54,6 @@ export class AuthService {
   }
 
   register(request: RegisterRequest): Observable<RegisterResponse> {
-    // Don't set tenant context here — the user isn't logged in yet.
-    // login() re-derives it from /organizations/mine right after.
     return this.http.post<RegisterResponse>(
       `${this.baseUrl}/register`,
       request,
@@ -75,7 +72,6 @@ export class AuthService {
       .pipe(tap((orgs) => this.availableOrganizations.set(orgs)));
   }
 
-  /** Call this from an org-picker screen when the user has 2+ orgs. */
   selectOrganization(organizationId: string): void {
     this.tenantContext.setOrganization(organizationId);
     this.router.navigate(['/app/management/teams']);
@@ -93,9 +89,50 @@ export class AuthService {
   private routeAfterLogin(): void {
     const orgs = this.availableOrganizations();
 
+    // =========================================================================
+    // 🤝 SECURE CUSTOMER INITIALIZATION LIFECYCLE
+    // =========================================================================
+    if (orgs.length === 0) {
+      const activeToken = this.token();
+      if (activeToken) {
+        try {
+          // Decode the token payload array natively
+          const base64Url = activeToken.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join(''),
+          );
+
+          const decodedToken = JSON.parse(jsonPayload);
+
+          // Extract the direct organizational identity parameters claim injected by your token generator
+          const organizationId =
+            decodedToken.organizationId || decodedToken.OrganizationId;
+
+          if (organizationId) {
+            this.tenantContext.setOrganization(organizationId);
+          }
+        } catch (e) {
+          console.error(
+            'Error extracting customer organization token context claims:',
+            e,
+          );
+        }
+      }
+
+      this.router.navigate(['/portal/tickets']);
+      return;
+    }
+
+    // =========================================================================
+    // 👥 STAFF / OPERATIONS INITIALIZATION LIFECYCLE
+    // =========================================================================
     if (orgs.length === 1) {
       this.tenantContext.setOrganization(orgs[0].id);
-      this.router.navigate(['/app/management/teams']);
+      this.router.navigate(['/app/dashboard']);
       return;
     }
 
@@ -103,9 +140,6 @@ export class AuthService {
       this.router.navigate(['/select-organization']);
       return;
     }
-
-    // Authenticated, but not a member of any organization.
-    this.router.navigate(['/no-organization']);
   }
 
   private initializeSession(): void {
@@ -115,9 +149,6 @@ export class AuthService {
 
     this.fetchMe().subscribe({
       error: (err) => {
-        // errorInterceptor already handles real auth failures (401).
-        // Anything else here (400/403 tenant issues, network errors)
-        // shouldn't blow away a token that's still perfectly valid.
         if (err?.status === 401) {
           this.logout();
         }

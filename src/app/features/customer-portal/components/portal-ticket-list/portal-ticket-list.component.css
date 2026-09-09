@@ -1,0 +1,114 @@
+.portal-tickets-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.view-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #0f172a;
+}
+.view-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.portal-grid-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.portal-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.portal-data-table th,
+.portal-data-table td {
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.portal-data-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.portal-row:hover {
+  background: #f8fafc;
+}
+
+.title-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.t-subject {
+  font-weight: 600;
+  color: #0284c7;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.t-subject:hover {
+  text-decoration: underline;
+}
+
+.t-token {
+  font-size: 0.725rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.p-status-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.p-badge-new {
+  background: #fef3c7;
+  color: #d97706;
+}
+.p-badge-active {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.p-badge-resolved {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.p-priority-lbl {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+}
+.p-agent-name {
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.state-block-info {
+  padding: 4rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+.portal-error-banner {
+  padding: 0.75rem 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 6px;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}

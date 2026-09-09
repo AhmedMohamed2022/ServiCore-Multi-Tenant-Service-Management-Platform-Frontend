@@ -44,6 +44,7 @@
                     <span class="l-id">UUID: {{ currentTicket.categoryId }}</span>
                 </div>
             </div>
+            <app-ticket-comments [ticketId]="currentTicket.id"></app-ticket-comments>
         </main>
 
         <!-- Right Minor Side Panel Card Block: Live Workflow State Action Modifiers -->

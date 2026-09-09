@@ -1,0 +1,60 @@
+<div class="portal-tickets-workspace">
+    <header class="view-header">
+        <h2>My Support Requests</h2>
+        <p>Track your reported issue updates, view response timelines, and communicate with assigned engineering teams
+        </p>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="portal-error-banner" role="alert">
+        {{ errorMessage() }}
+    </div>
+    }
+
+    <div class="portal-grid-card">
+        @if (isLoading()) {
+        <div class="state-block-info">Retrieving your personal service log arrays...</div>
+        } @else if (customerTickets().length === 0) {
+        <div class="state-block-info">No outstanding service tickets found linked to this client profile workspace.
+        </div>
+        } @else {
+        <table class="portal-data-table">
+            <thead>
+                <tr>
+                    <th>Support Case Reference Details</th>
+                    <th>Workflow Status</th>
+                    <th>Urgency Priority</th>
+                    <th>Assigned Expert</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (ticket of customerTickets(); track ticket.id) {
+                <tr class="portal-row">
+                    <td>
+                        <div class="title-cell">
+                            <!-- Routes safely straight to the shared timeline details template component -->
+                            <span class="t-subject" [routerLink]="['/portal/tickets', ticket.id]">
+                                {{ ticket.title }}
+                            </span>
+                            <span class="t-token">Reference Token ID: {{ ticket.id }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="p-status-badge" [class.p-badge-new]="ticket.status === 0"
+                            [class.p-badge-active]="ticket.status === 2" [class.p-badge-resolved]="ticket.status === 4">
+                            {{ statusLabels[ticket.status] }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="p-priority-lbl">{{ priorityLabels[ticket.priority] }}</span>
+                    </td>
+                    <td>
+                        <span class="p-agent-name">{{ ticket.assignedAgentName || 'Awaiting Allocation' }}</span>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+    </div>
+</div>

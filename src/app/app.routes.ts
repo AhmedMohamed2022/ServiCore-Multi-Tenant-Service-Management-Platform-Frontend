@@ -1,7 +1,10 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+
 export const routes: Routes = [
-  // Public Identity Workspace Paths
+  // =========================================================================
+  // 1. PUBLIC / ANONYMOUS ACCESS PATHWAYS (No authGuard permitted here)
+  // =========================================================================
   {
     path: 'login',
     loadComponent: () =>
@@ -16,8 +19,24 @@ export const routes: Routes = [
         (m) => m.RegisterComponent,
       ),
   },
+  {
+    path: 'accept-invitation',
+    loadComponent: () =>
+      import('./features/auth/components/accept-staff-invitation/accept-staff-invitation.component').then(
+        (m) => m.AcceptStaffInvitationComponent,
+      ),
+  },
+  {
+    path: 'accept-customer-invitation',
+    loadComponent: () =>
+      import('./features/auth/components/accept-customer-invitation/accept-customer-invitation.component').then(
+        (m) => m.AcceptCustomerInvitationComponent,
+      ),
+  },
 
-  // Protected Enterprise Platform Shell Workspace
+  // =========================================================================
+  // 2. PROTECTED INTERNAL SQUAD PLATFORM WORKSPACE (Staff / Operators Only)
+  // =========================================================================
   {
     path: 'app',
     loadComponent: () =>
@@ -33,7 +52,6 @@ export const routes: Routes = [
             (m) => m.DashboardComponent,
           ),
       },
-      // Fixed: ticket sub-routes are now properly linked and lazy loaded using loadChildren
       {
         path: 'tickets',
         loadChildren: () =>
@@ -62,12 +80,25 @@ export const routes: Routes = [
             (m) => m.TaxonomySpecsComponent,
           ),
       },
-      // Fallback workspace routing redirection rule
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
 
-  // Default Fallbacks
+  // =========================================================================
+  // 3. PROTECTED CLIENT HUB PORTAL WORKSPACE (Isolated Customers Only)
+  // =========================================================================
+  {
+    path: 'portal',
+    loadChildren: () =>
+      import('./features/customer-portal/portal-tickets.routes').then(
+        (m) => m.PORTAL_ROUTES,
+      ),
+    canActivate: [authGuard],
+  },
+
+  // =========================================================================
+  // 4. MASTER FALLBACK SYSTEM WILDCARDS
+  // =========================================================================
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' },
 ];

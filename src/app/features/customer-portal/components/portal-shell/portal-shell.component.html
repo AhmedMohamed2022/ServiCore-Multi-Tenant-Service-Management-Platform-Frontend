@@ -1,0 +1,41 @@
+<div class="portal-layout-frame">
+    <!-- Left Side: Sandboxed Sidebar Drawer Navigation -->
+    <aside class="portal-sidebar">
+        <div class="portal-brand">
+            <span class="brand-logo">🤝</span>
+            <h1 class="brand-title">Client Hub</h1>
+        </div>
+
+        <nav class="portal-nav-links">
+            <span class="section-tag">Service Account Desk</span>
+            <a routerLink="/portal/tickets" routerLinkActive="active-portal-node" class="nav-node">
+                <span class="node-icon">📋</span>
+                <span class="node-label">My Support Cases</span>
+            </a>
+        </nav>
+
+        <div class="portal-sidebar-footer">
+            <button (click)="onLogout()" class="portal-logout-btn">
+                <span class="btn-icon">🚪</span>
+                <span class="btn-label">Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Side: Content Frame Workspace -->
+    <div class="portal-viewport-box">
+        <header class="portal-top-bar">
+            <div class="bar-left">
+                <span class="badge-portal">Secure Customer Connection</span>
+            </div>
+            <div class="bar-right">
+                <span class="account-email">{{ customerEmail() }}</span>
+                <div class="account-avatar">👤</div>
+            </div>
+        </header>
+
+        <main class="portal-primary-view">
+            <router-outlet></router-outlet>
+        </main>
+    </div>
+</div>

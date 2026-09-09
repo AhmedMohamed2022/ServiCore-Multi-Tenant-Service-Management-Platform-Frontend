@@ -1,0 +1,22 @@
+<div class="invite-container">
+    <div class="invite-card">
+        <h2>Join Operational Team</h2>
+        <p class="subtitle">Complete your secure profile configuration to connect to your assigned tenant space</p>
+
+        @if (errorMessage()) { <div class="banner-err">{{ errorMessage() }}</div> }
+        @if (successMessage()) { <div class="banner-ok">{{ successMessage() }}</div> }
+
+        <form [formGroup]="setupForm" (ngSubmit)="onCompleteStaffOnboarding()" *ngIf="token && !successMessage()">
+            <div class="input-block">
+                <label for="sPass">Account Security Password</label>
+                <input id="sPass" type="password" formControlName="password" placeholder="••••••••" />
+                @if (setupForm.controls.password.touched && setupForm.controls.password.invalid) {
+                <span class="err-txt">Passwords must be at least 6 characters.</span>
+                }
+            </div>
+            <button type="submit" [disabled]="setupForm.invalid || isProcessing()">
+                {{ isProcessing() ? 'Configuring System Profile...' : 'Activate Roster Identity' }}
+            </button>
+        </form>
+    </div>
+</div>
