@@ -1,8 +1,15 @@
 <div class="portal-tickets-workspace">
-    <header class="view-header">
-        <h2>My Support Requests</h2>
-        <p>Track your reported issue updates, view response timelines, and communicate with assigned engineering teams
-        </p>
+    <header class="view-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>My Support Requests</h2>
+            <p>Track your reported issue updates, view response timelines, and communicate with assigned engineering
+                teams</p>
+        </div>
+        <!-- Added: Explicit path linkage to invoke the sandboxed create workspace layout form -->
+        <button type="button" routerLink="/portal/tickets/create"
+            style="padding: 0.5rem 1.25rem; background-color: #0284c7; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
+            Open New Request
+        </button>
     </header>
 
     @if (errorMessage()) {
@@ -40,7 +47,7 @@
                         </div>
                     </td>
                     <td>
-                        <span class="p-status-badge" [class.p-badge-new]="ticket.status === 0"
+                        <span class="p-status-badge" [class.p-badge-new]="ticket.status === 1"
                             [class.p-badge-active]="ticket.status === 2" [class.p-badge-resolved]="ticket.status === 4">
                             {{ statusLabels[ticket.status] }}
                         </span>

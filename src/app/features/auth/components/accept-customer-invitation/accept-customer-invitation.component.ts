@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
@@ -10,7 +10,7 @@ import { environment } from '../../../../../environments/environment';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './accept-customer-invitation.component.html',
-  styleUrls: ['../accept-staff-invitation/accept-invitation.shared.css'],
+  styleUrls: ['./accept-customer-invitation.component.css'],
 })
 export class AcceptCustomerInvitationComponent implements OnInit {
   @Input() token!: string;
@@ -41,7 +41,6 @@ export class AcceptCustomerInvitationComponent implements OnInit {
     this.isProcessing.set(true);
     this.errorMessage.set(null);
 
-    // Maps exactly to the parameters expected by CustomerInvitationsController
     const payload = {
       token: this.token,
       password: this.setupForm.getRawValue().password,
@@ -53,7 +52,7 @@ export class AcceptCustomerInvitationComponent implements OnInit {
         next: () => {
           this.isProcessing.set(false);
           this.successMessage.set(
-            'Client space profile activated successfully. Routing back to portal sign in panel...',
+            'Client space profile activated successfully. Routing back to sign in panel...',
           );
           setTimeout(() => this.router.navigate(['/login']), 2500);
         },

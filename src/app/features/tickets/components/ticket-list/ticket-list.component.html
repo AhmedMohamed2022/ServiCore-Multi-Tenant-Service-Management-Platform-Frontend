@@ -85,7 +85,7 @@
                         <span class="txt-category">{{ ticket.categoryName || 'General Issue' }}</span>
                     </td>
                     <td>
-                        <span class="status-badge" [class.badge-new]="ticket.status === 0"
+                        <span class="status-badge" [class.badge-new]="ticket.status === 1"
                             [class.badge-progress]="ticket.status === 2" [class.badge-resolved]="ticket.status === 4">
                             {{ statusLabels[ticket.status] }}
                         </span>

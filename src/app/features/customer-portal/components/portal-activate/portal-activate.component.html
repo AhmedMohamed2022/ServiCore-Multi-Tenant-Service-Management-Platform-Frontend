@@ -1,0 +1,17 @@
+<div class="activation-pane">
+    <div class="activation-card">
+        <h3>Authorize Support Workspace Context</h3>
+        <p class="subtitle">Please provide your target Organization GUID Identifier to securely initialize this client
+            device connection.</p>
+
+        <form [formGroup]="activationForm" (ngSubmit)="onActivateSubmit()">
+            <div class="form-group">
+                <label for="orgId">Organization Token Ref UUID</label>
+                <input id="orgId" type="text" formControlName="organizationId"
+                    placeholder="e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    [class.input-error]="activationForm.controls.organizationId.touched && activationForm.controls.organizationId.invalid" />
+            </div>
+            <button type="submit" [disabled]="activationForm.invalid">Authorize Session</button>
+        </form>
+    </div>
+</div>

@@ -1,31 +1,31 @@
 export enum TicketStatus {
-  New = 0,
-  Open = 1,
-  InProgress = 2,
-  WaitingForCustomer = 3,
-  Resolved = 4,
-  Closed = 5,
+  New = 1,
+  Open = 2,
+  InProgress = 3,
+  WaitingForCustomer = 4,
+  Resolved = 5,
+  Closed = 6,
 }
 
 export enum TicketPriority {
-  Low = 0,
-  Medium = 1,
-  High = 2,
-  Urgent = 3,
+  Low = 1,
+  Medium = 2,
+  High = 3,
+  Urgent = 4,
 }
 
-export const TicketStatusLabels: Record<TicketStatus, string> = {
-  [TicketStatus.New]: 'New',
-  [TicketStatus.Open]: 'Open',
-  [TicketStatus.InProgress]: 'In Progress',
-  [TicketStatus.WaitingForCustomer]: 'Waiting For Customer',
-  [TicketStatus.Resolved]: 'Resolved',
-  [TicketStatus.Closed]: 'Closed',
+export const TicketStatusLabels: Record<number, string> = {
+  1: 'New',
+  2: 'Open',
+  3: 'In Progress',
+  4: 'Waiting For Customer',
+  5: 'Resolved',
+  6: 'Closed',
 };
 
-export const TicketPriorityLabels: Record<TicketPriority, string> = {
-  [TicketPriority.Low]: 'Low',
-  [TicketPriority.Medium]: 'Medium',
-  [TicketPriority.High]: 'High',
-  [TicketPriority.Urgent]: 'Urgent',
+export const TicketPriorityLabels: Record<number, string> = {
+  1: 'Low',
+  2: 'Medium',
+  3: 'High',
+  4: 'Urgent',
 };

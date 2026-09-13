@@ -16,10 +16,24 @@ export const PORTAL_ROUTES: Routes = [
           ),
       },
       {
+        path: 'tickets/create',
+        loadComponent: () =>
+          import('./components/portal-ticket-create/portal-ticket-create.component').then(
+            (m) => m.PortalTicketCreateComponent,
+          ),
+      },
+      {
         path: 'tickets/:id',
         loadComponent: () =>
           import('../tickets/components/ticket-details/ticket-details.component').then(
             (m) => m.TicketDetailsComponent,
+          ),
+      },
+      {
+        path: 'activate-device',
+        loadComponent: () =>
+          import('./components/portal-activate/portal-activate.component').then(
+            (m) => m.PortalActivateComponent,
           ),
       },
       { path: '', redirectTo: 'tickets', pathMatch: 'full' },

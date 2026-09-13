@@ -1,38 +1,193 @@
-<div class="dashboard-landing-pane">
-    <header class="welcome-box">
-        <h2>System Workspace Dashboard</h2>
-        <p>
-            Welcome back, <span class="highlight">{{ userEmail() }}</span>. Select an operational workspace node from
-            the index matrix below or
-            use the sidebar menu to begin.
-        </p>
+<div class="analytics-dashboard-workspace">
+    <header class="dashboard-header">
+        <div class="header-title">
+            <h2>Executive Analytics Console</h2>
+            <p>Welcome back, <span class="operator-highlight">{{ userEmail() }}</span>. Monitoring live tenant
+                performance metrics.</p>
+        </div>
+
+        <!-- Date Range Query Toolbar Controls -->
+        <div class="filter-toolbar-panel">
+            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="filter-flex-row">
+                <div class="input-date-group">
+                    <label for="dateFrom">From</label>
+                    <input id="dateFrom" type="date" formControlName="from" />
+                </div>
+                <div class="input-date-group">
+                    <label for="dateTo">To</label>
+                    <input id="dateTo" type="date" formControlName="to" />
+                </div>
+                <div class="toolbar-actions">
+                    <button type="submit" class="btn-filter-apply" [disabled]="isLoading()">Filter</button>
+                    <button type="button" class="btn-filter-reset" (click)="onResetFilters()"
+                        [disabled]="isLoading()">Reset</button>
+                </div>
+            </form>
+        </div>
     </header>
 
-    <div class="shortcut-grid-matrix">
-        <div class="shortcut-card" routerLink="/app/tickets">
-            <span class="card-icon">🎫</span>
-            <h3>Ticket Console</h3>
-            <p>
-                Monitor your active backlogs and update ticket lifecycle states.
-            </p>
-        </div>
+    @if (errorMessage()) {
+    <div class="analytics-error-banner" role="alert">
+        {{ errorMessage() }}
+    </div>
+    }
 
-        <div class="shortcut-card" routerLink="/app/management/teams">
-            <span class="card-icon">👥</span>
-            <h3>Team Rosters</h3>
-            <p>Configure team members and manage role allocations.</p>
+    @if (isLoading()) {
+    <div class="analytics-loading-block">Compiling statistics across database clusters...</div>
+    } @else
+    {
+    @if (metrics(); as data) {
+    <!-- Row 1: Ticket Overview Counter Cards -->
+    <div class="summary-cards-matrix">
+        <div class="stat-metric-card">
+            <span class="card-icon-tag">📋</span>
+            <div class="card-values">
+                <span class="m-val-text">{{ data.ticketOverview.totalTickets }}</span>
+                <span class="m-lbl-text">Total Backlog</span>
+            </div>
         </div>
-
-        <div class="shortcut-card" routerLink="/app/management/customers">
-            <span class="card-icon">🤝</span>
-            <h3>Client Directory</h3>
-            <p>Register client communication links and audit profiles.</p>
+        <div class="stat-metric-card border-open">
+            <span class="card-icon-tag color-open">🔓</span>
+            <div class="card-values">
+                <span class="m-val-text">{{ data.ticketOverview.openTickets }}</span>
+                <span class="m-lbl-text">Open Queue</span>
+            </div>
         </div>
-
-        <div class="shortcut-card" routerLink="/app/management/categories">
-            <span class="card-icon">🏷️</span>
-            <h3>Taxonomy Specs</h3>
-            <p>Adjust classification fields and edit ticket category labels.</p>
+        <div class="stat-metric-card border-progress">
+            <span class="card-icon-tag color-progress">⚙️</span>
+            <div class="card-values">
+                <span class="m-val-text">{{ data.ticketOverview.inProgressTickets }}</span>
+                <span class="m-lbl-text">In Progress</span>
+            </div>
+        </div>
+        <div class="stat-metric-card border-resolved">
+            <span class="card-icon-tag color-resolved">✅</span>
+            <div class="card-values">
+                <span class="m-val-text">{{ data.ticketOverview.resolvedTickets }}</span>
+                <span class="m-lbl-text">Resolved Settled</span>
+            </div>
         </div>
     </div>
+
+    <!-- Row 2: Secondary Status Details & Priority Distribution Cards -->
+    <div class="charts-distribution-grid">
+        <!-- Status Progress Breakdown Panel -->
+        <div class="chart-content-card">
+            <h3>Queue Status Distribution Breakdown</h3>
+            <div class="progress-bars-timeline">
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name">New (Unassigned)</span><span class="b-count">{{
+                            data.ticketOverview.newTickets }} cases</span></div>
+                    <progress class="semantic-progress" [value]="data.ticketOverview.newTickets"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name">Awaiting Client Response</span><span
+                            class="b-count">{{ data.ticketOverview.waitingForCustomerTickets }} cases</span></div>
+                    <progress class="semantic-progress" [value]="data.ticketOverview.waitingForCustomerTickets"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name">Closed Archive</span><span class="b-count">{{
+                            data.ticketOverview.closedTickets }} cases</span></div>
+                    <progress class="semantic-progress" [value]="data.ticketOverview.closedTickets"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Distribution Progress Bars Panel -->
+        <div class="chart-content-card">
+            <h3>Urgency Priority Share Weight</h3>
+            <div class="progress-bars-timeline">
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name font-bold">Critical / Urgent</span><span
+                            class="b-count">{{ data.priorityStatistics.critical }} cases</span></div>
+                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.critical"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name">High Priority</span><span class="b-count">{{
+                            data.priorityStatistics.high }} cases</span></div>
+                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.high"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name">Medium Weight</span><span class="b-count">{{
+                            data.priorityStatistics.medium }} cases</span></div>
+                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.medium"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+                <div class="bar-node-item">
+                    <div class="bar-labels-row"><span class="b-name">Low Priority</span><span class="b-count">{{
+                            data.priorityStatistics.low }} cases</span></div>
+                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.low"
+                        [max]="data.ticketOverview.totalTickets || 1"></progress>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: SLA Turnaround Performances & Scope Registries Matrix Split -->
+    <div class="leaderboards-split-grid">
+        <!-- Resolution Speeds Performance Block -->
+        <div class="leaderboard-data-card">
+            <h3>SLA Turnaround Performance Diagnostics</h3>
+            <div class="performance-metrics-list"
+                style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Gross Resolved Count</span>
+                    <span style="font-weight: 700; color: #16a34a;">{{ data.performance.resolvedCount }}</span>
+                </div>
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Gross Closed Count</span>
+                    <span style="font-weight: 700; color: #1e293b;">{{ data.performance.closedCount }}</span>
+                </div>
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Average Duration to Resolution</span>
+                    <span style="font-weight: 600; font-family: monospace; color: #2563eb;">{{
+                        data.performance.averageResolutionTime }}</span>
+                </div>
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Average Duration to Archive Closure</span>
+                    <span style="font-weight: 600; font-family: monospace; color: #475569;">{{
+                        data.performance.averageClosureTime }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workspace Scope Directory Registries Count Card -->
+        <div class="leaderboard-data-card">
+            <h3>Tenant Registry Scope Magnitudes</h3>
+            <div class="performance-metrics-list"
+                style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f0fdfa; border-radius: 6px; border-left: 4px solid #0d9488;">
+                    <span style="font-weight: 500; color: #0f766e;">Total Registered Customer Accounts</span>
+                    <span style="font-weight: 700; color: #0f766e;">{{ data.organizationCounts.totalCustomers }}</span>
+                </div>
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Active Operational Squads</span>
+                    <span style="font-weight: 700; color: #1e293b;">{{ data.organizationCounts.totalTeams }}</span>
+                </div>
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Assigned Corporate Service Agents</span>
+                    <span style="font-weight: 700; color: #1e293b;">{{ data.organizationCounts.totalAgents }}</span>
+                </div>
+                <div class="perf-item"
+                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                    <span style="font-weight: 500; color: #475569;">Taxonomy Classification Categories</span>
+                    <span style="font-weight: 700; color: #1e293b;">{{ data.organizationCounts.totalCategories }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+    }
 </div>

@@ -37,19 +37,59 @@
   gap: 1rem;
   max-height: 500px;
   overflow-y: auto;
-  padding-right: 0.5rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.timeline-stream-box::-webkit-scrollbar {
+  width: 6px;
+}
+.timeline-stream-box::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.timeline-stream-box::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .timeline-bubble-wrapper {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: flex-end;
+  gap: 0.6rem;
   max-width: 75%;
   align-self: flex-start;
+  animation: bubbleIn 0.25s ease-out;
 }
 
 .timeline-bubble-wrapper.bubble-mine {
   align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.bubble-avatar {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.bubble-mine .bubble-avatar {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.bubble-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
 .bubble-meta-header {
@@ -60,7 +100,7 @@
   padding: 0 0.25rem;
 }
 
-.timeline-mine .bubble-meta-header {
+.bubble-mine .bubble-meta-header {
   justify-content: flex-end;
 }
 
@@ -71,14 +111,15 @@
 .bubble-message-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 14px 14px 14px 4px;
   padding: 0.85rem 1.1rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .bubble-mine .bubble-message-card {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: transparent;
+  border-radius: 14px 14px 4px 14px;
 }
 
 .comment-text-paragraph {
@@ -87,6 +128,7 @@
   line-height: 1.5;
   color: #334155;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .bubble-mine .comment-text-paragraph {
@@ -121,6 +163,9 @@ textarea {
   background-color: #ffffff;
   resize: vertical;
   font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 textarea:focus {
   border-color: #2563eb;
@@ -148,9 +193,16 @@ button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
 }
 button:hover:not(:disabled) {
   background: #0f172a;
+  transform: translateY(-1px);
+}
+button:active:not(:disabled) {
+  transform: translateY(0);
 }
 button:disabled {
   opacity: 0.5;
@@ -167,6 +219,16 @@ button:disabled {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 .comment-alert-error {

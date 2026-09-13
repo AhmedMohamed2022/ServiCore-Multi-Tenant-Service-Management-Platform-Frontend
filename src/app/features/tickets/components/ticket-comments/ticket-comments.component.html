@@ -18,12 +18,16 @@
         } @else {
         @for (comment of comments(); track comment.id) {
         <div class="timeline-bubble-wrapper" [class.bubble-mine]="comment.userEmail === activeUserEmail()">
-            <div class="bubble-meta-header">
-                <span class="bubble-author">{{ comment.userEmail }}</span>
-                <span class="bubble-time">{{ comment.createdAt | date:'short' }}</span>
-            </div>
-            <div class="bubble-message-card">
-                <p class="comment-text-paragraph">{{ comment.content }}</p>
+            <div class="bubble-avatar" aria-hidden="true">{{ (comment.userEmail?.charAt(0) || '?') | uppercase }}</div>
+            <div class="bubble-content">
+                <div class="bubble-meta-header">
+                    <span class="bubble-author">{{ comment.userEmail === activeUserEmail() ? 'You' : comment.userEmail
+                        }}</span>
+                    <span class="bubble-time">{{ comment.createdAt | date:'short' }}</span>
+                </div>
+                <div class="bubble-message-card">
+                    <p class="comment-text-paragraph">{{ comment.content }}</p>
+                </div>
             </div>
         </div>
         }
@@ -34,11 +38,10 @@
     <div class="new-comment-submission-deck">
         <form [formGroup]="commentForm" (ngSubmit)="onSubmitComment()">
             <div class="form-group">
-                <label return="txtComment">Post Response Entry</label>
+                <label for="txtComment">Post Response Entry</label>
                 <textarea id="txtComment" formControlName="content" rows="4"
                     placeholder="Append diagnostic updates, cross-reference data clusters, or reply back to the account submitter..."
-                    [class.input-error]="commentForm.controls.content.touched && commentForm.controls.content.invalid"
-                    [disabled]="isSubmitting()">
+                    [class.input-error]="commentForm.controls.content.touched && commentForm.controls.content.invalid">
         </textarea>
 
                 @if (commentForm.controls.content.touched && commentForm.controls.content.errors?.['required']) {

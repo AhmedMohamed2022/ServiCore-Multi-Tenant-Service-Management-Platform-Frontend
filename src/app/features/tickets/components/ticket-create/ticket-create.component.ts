@@ -6,8 +6,10 @@ import { forkJoin } from 'rxjs';
 import { TicketService } from '../../../../core/services/ticket.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { CustomerService } from '../../../../core/services/customer.service';
+import { TeamService } from '../../../../core/services/team.service';
 import { CategoryDto } from '../../../management/models/category.model';
 import { CustomerDto } from '../../../management/models/customer.model';
+import { TeamDto } from '../../../management/models/team.model';
 import {
   TicketPriority,
   TicketPriorityLabels,
@@ -26,23 +28,22 @@ export class TicketCreateComponent implements OnInit {
   private readonly ticketService = inject(TicketService);
   private readonly categoryService = inject(CategoryService);
   private readonly customerService = inject(CustomerService);
+  private readonly teamService = inject(TeamService);
 
-  // Structural State Signals
   readonly categories = signal<CategoryDto[]>([]);
   readonly customers = signal<CustomerDto[]>([]);
+  readonly teams = signal<TeamDto[]>([]);
   readonly isLoadingOptions = signal<boolean>(false);
   readonly isSubmitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
-  // Expose the raw priority options list array to the template
-  protected readonly priorityOptions = Object.keys(TicketPriorityLabels)
-    .filter((key) => !isNaN(Number(key)))
-    .map((key) => ({
+  protected readonly priorityOptions = Object.keys(TicketPriorityLabels).map(
+    (key) => ({
       value: Number(key),
-      label: TicketPriorityLabels[Number(key) as TicketPriority],
-    }));
+      label: TicketPriorityLabels[Number(key)],
+    }),
+  );
 
-  // Form group definition mapping strictly to CreateTicketRequest properties
   readonly ticketForm = this.fb.nonNullable.group({
     title: [
       '',
@@ -51,6 +52,7 @@ export class TicketCreateComponent implements OnInit {
     description: ['', [Validators.required, Validators.minLength(10)]],
     categoryId: ['', [Validators.required]],
     customerId: ['', [Validators.required]],
+    teamId: ['', [Validators.required]],
     priority: [TicketPriority.Medium, [Validators.required]],
   });
 
@@ -62,14 +64,15 @@ export class TicketCreateComponent implements OnInit {
     this.isLoadingOptions.set(true);
     this.errorMessage.set(null);
 
-    // Parallel fetch lookups to populate form selector nodes safely
     forkJoin({
       cats: this.categoryService.getCategories(),
       custs: this.customerService.getCustomers(),
+      teams: this.teamService.getTeams(),
     }).subscribe({
       next: (res) => {
         this.categories.set(res.cats);
         this.customers.set(res.custs);
+        this.teams.set(res.teams);
         this.isLoadingOptions.set(false);
       },
       error: (err: Error) => {
@@ -90,10 +93,18 @@ export class TicketCreateComponent implements OnInit {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
-    // Extract exact raw mapping value records payload
-    const requestPayload = this.ticketForm.getRawValue();
+    const formValues = this.ticketForm.getRawValue();
 
-    this.ticketService.createTicket(requestPayload).subscribe({
+    const payload = {
+      customerId: formValues.customerId,
+      teamId: formValues.teamId,
+      categoryId: formValues.categoryId,
+      title: formValues.title.trim(),
+      description: formValues.description.trim(),
+      priority: Number(formValues.priority),
+    };
+
+    this.ticketService.createTicket(payload).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         this.router.navigate(['/app/tickets']);

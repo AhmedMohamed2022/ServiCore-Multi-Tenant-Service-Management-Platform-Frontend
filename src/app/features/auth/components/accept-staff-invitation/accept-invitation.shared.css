@@ -5,7 +5,11 @@
   width: 100vw;
   height: 100vh;
   background-color: #f1f5f9;
-  font-family: system-ui, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  box-sizing: border-box;
 }
 
 .invite-container {
@@ -21,7 +25,9 @@
   background: #ffffff;
   padding: 2.5rem;
   border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 h2 {
@@ -31,6 +37,7 @@ h2 {
   color: #0f172a;
   text-align: center;
 }
+
 .subtitle {
   margin: 0 0 2rem 0;
   font-size: 0.85rem;
@@ -45,6 +52,7 @@ h2 {
   gap: 0.375rem;
   margin-bottom: 1.5rem;
 }
+
 label {
   font-size: 0.85rem;
   font-weight: 600;
@@ -57,50 +65,84 @@ input {
   border-radius: 6px;
   font-size: 0.95rem;
   outline: none;
+  background-color: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.15s ease-in-out;
 }
 
 input:focus {
   border-color: #2563eb;
 }
 
+input.invalid {
+  border-color: #ef4444;
+}
+
 .err-txt {
   font-size: 0.75rem;
   color: #ef4444;
+  margin-top: 0.25rem;
 }
+
 .banner-err {
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   background: #fef2f2;
+  border: 1px solid #fee2e2;
   color: #b91c1c;
   border-radius: 6px;
   font-size: 0.85rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   text-align: center;
 }
+
 .banner-ok {
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   background: #f0fdf4;
+  border: 1px solid #dcfce7;
   color: #15803d;
   border-radius: 6px;
   font-size: 0.85rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   text-align: center;
 }
 
 button {
   width: 100%;
-  padding: 0.7rem;
+  padding: 0.75rem 1rem;
   background: #2563eb;
   color: #ffffff;
   border: none;
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.15s ease-in-out;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #1d4ed8;
 }
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

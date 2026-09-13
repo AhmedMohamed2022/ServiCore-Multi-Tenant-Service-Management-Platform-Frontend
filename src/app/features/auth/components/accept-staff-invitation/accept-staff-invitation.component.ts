@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
@@ -10,10 +10,10 @@ import { environment } from '../../../../../environments/environment';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './accept-staff-invitation.component.html',
-  styleUrls: ['./accept-invitation.shared.css'],
+  styleUrls: ['./accept-staff-invitation.component.css'],
 })
 export class AcceptStaffInvitationComponent implements OnInit {
-  @Input() token!: string; // Bound automatically from query string URL '?token=...'
+  @Input() token!: string; // Bound automatically from query string '?token=...' via router bindings
 
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
@@ -41,7 +41,6 @@ export class AcceptStaffInvitationComponent implements OnInit {
     this.isProcessing.set(true);
     this.errorMessage.set(null);
 
-    // Maps exactly to the baseline parameters expected by OrganizationInvitationsController
     const payload = {
       token: this.token,
       password: this.setupForm.getRawValue().password,
@@ -49,14 +48,14 @@ export class AcceptStaffInvitationComponent implements OnInit {
 
     this.http
       .post(
-        `${environment.apiBaseUrl}/organization-invitations/accept`,
+        `${environment.apiBaseUrl}/organization/invitations/accept`,
         payload,
       )
       .subscribe({
         next: () => {
           this.isProcessing.set(false);
           this.successMessage.set(
-            'Staff identity workspace configurations committed safely. Redirecting...',
+            'Staff identity workspace configurations committed safely.',
           );
           setTimeout(() => this.router.navigate(['/login']), 2500);
         },

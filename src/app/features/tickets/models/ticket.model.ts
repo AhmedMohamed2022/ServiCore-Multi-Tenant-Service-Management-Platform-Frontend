@@ -22,6 +22,7 @@ export interface CreateTicketRequest {
   description: string;
   categoryId: string;
   customerId: string;
+  teamId: string; // Fixed: Explicitly mapped required non-nullable parameter field
   priority: TicketPriority;
 }
 

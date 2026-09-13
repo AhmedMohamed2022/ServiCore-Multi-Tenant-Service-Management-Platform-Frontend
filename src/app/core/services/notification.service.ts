@@ -1,9 +1,11 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/services/auth.service';
+import { TenantContextService } from './tenant-context.service';
 import { NotificationDto } from '../models/notification.model';
+import { TicketCommentDto } from '../../features/tickets/models/comment.model';
 
 @Injectable({
   providedIn: 'root',
@@ -11,19 +13,20 @@ import { NotificationDto } from '../models/notification.model';
 export class NotificationService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly tenantContext = inject(TenantContextService);
   private readonly baseUrl = `${environment.apiBaseUrl}/notifications`;
 
-  // Dynamic native script asset loader proxy state properties
   private hubConnection: any | null = null;
 
-  // Structural State Signals
+  // Real-time Event Streaming Subject specifically for incoming ticket comments
+  readonly incomingCommentsStream$ = new Subject<TicketCommentDto>();
+
   readonly registryList = signal<NotificationDto[]>([]);
   readonly unreadCount = computed(
     () => this.registryList().filter((n) => !n.isRead).length,
   );
 
   constructor() {
-    // Automatically trigger real-time connections if a session token is active
     if (this.authService.token()) {
       this.loadHistoricalAlerts().subscribe({
         next: () => this.initializeRealtimeHubConnection(),
@@ -38,16 +41,20 @@ export class NotificationService {
   }
 
   markAlertAsRead(id: string): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/${id}/read`, {}).pipe(
-      tap(() => {
-        // Optimistically mutate single item read flag parameter property matches
-        this.registryList.update((list) =>
-          list.map((item) =>
-            item.id === id ? { ...item, isRead: true } : item,
-          ),
-        );
-      }),
-    );
+    return this.http.put<void>(`${this.baseUrl}/${id}/read`, {});
+  }
+
+  private buildHubUrl(): string {
+    const base = `${environment.apiBaseUrl.replace('/api', '')}/hubs/notifications`;
+    const organizationId = this.tenantContext.currentOrganizationId();
+
+    // WebSocket/SSE transports can't carry custom request headers from the
+    // browser, so — exactly like the JWT via accessTokenFactory — the org id
+    // has to travel as a query string parameter to survive every transport
+    // SignalR might negotiate down to.
+    return organizationId
+      ? `${base}?organizationId=${encodeURIComponent(organizationId)}`
+      : base;
   }
 
   private async initializeRealtimeHubConnection(): Promise<void> {
@@ -55,20 +62,16 @@ export class NotificationService {
     if (!activeToken || this.hubConnection) return;
 
     try {
-      // Modern pattern: Dynamically inject script wrapper arrays to support clean builds
       const signalR = await import('@microsoft/signalr');
 
       this.hubConnection = new signalR.HubConnectionBuilder()
-        .withUrl(
-          `${environment.apiBaseUrl.replace('/api', '')}/hubs/notifications`,
-          {
-            accessTokenFactory: () => activeToken,
-          },
-        )
+        .withUrl(this.buildHubUrl(), {
+          accessTokenFactory: () => activeToken,
+        })
         .withAutomaticReconnect()
         .build();
 
-      // Register the precise backend custom server-to-client invocation hook event name
+      // Monitor standard system notifications center updates
       this.hubConnection.on(
         'notification:new',
         (incomingAlert: NotificationDto) => {
@@ -76,9 +79,17 @@ export class NotificationService {
         },
       );
 
+      // Listen directly to the backend real-time comment broadcast event
+      this.hubConnection.on(
+        'ticket:comment-added',
+        (incomingComment: TicketCommentDto) => {
+          this.incomingCommentsStream$.next(incomingComment);
+        },
+      );
+
       await this.hubConnection.start();
     } catch (err) {
-      console.error('SignalR WebSocket session connectivity drop loop:', err);
+      console.error('SignalR Hub Connection initialization error:', err);
     }
   }
 

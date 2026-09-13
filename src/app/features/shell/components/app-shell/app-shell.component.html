@@ -20,7 +20,8 @@
                 <span class="nav-label">Ticket Console</span>
             </a>
 
-            <!-- Administration paths visibility will be secured via guards in next phase -->
+            <!-- Dynamic Role-Aware Workspace Protection Node Block -->
+            @if (isManagementAllowed()) {
             <span class="nav-section-label">Platform Administration</span>
             <a routerLink="/app/management/teams" routerLinkActive="active-node" class="nav-link-node">
                 <span class="nav-icon">👥</span>
@@ -34,6 +35,11 @@
                 <span class="nav-icon">🏷️</span>
                 <span class="nav-label">Taxonomy Specs</span>
             </a>
+            <a routerLink="/app/management/invitations" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">✉️</span>
+                <span class="nav-label">Issue Invitations</span>
+            </a>
+            }
         </nav>
 
         <div class="sidebar-footer">
@@ -51,6 +57,7 @@
                 <span class="context-breadcrumb">Workspace Portal</span>
             </div>
             <div class="bar-right-profile" *ngIf="authService.currentUser() as user">
+                <app-notification-tray></app-notification-tray>
                 <div class="user-meta">
                     <span class="user-display-name">{{ userEmail() }}</span>
                     <span class="user-system-id">ID: {{ userId().substring(0, 8) }}...</span>

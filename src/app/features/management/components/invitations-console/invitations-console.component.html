@@ -1,0 +1,100 @@
+<div class="invitations-workspace-container">
+    <header class="workspace-header">
+        <h2>Onboarding & Invitations Control Center</h2>
+        <p>Generate secure access links, add internal team operators, and onboard external client portal accounts</p>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="alert-banner-error" role="alert">
+        <span class="alert-txt">⚠️ {{ errorMessage() }}</span>
+        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
+    </div>
+    }
+
+    @if (successMessage()) {
+    <div class="alert-banner-success" role="alert">
+        <span class="alert-txt">✅ {{ successMessage() }}</span>
+        <button class="close-alert-btn" (click)="successMessage.set(null)">×</button>
+    </div>
+    }
+
+    <div class="split-forms-grid">
+        <!-- Left Pane Card: Staff Invitation Form -->
+        <section class="console-card">
+            <div class="card-headline">
+                <h3>Invite Internal Staff Personnel</h3>
+                <p>Dispatches an email activation token link routing to the team acceptance workspace page</p>
+            </div>
+
+            <form [formGroup]="staffForm" (ngSubmit)="onStaffInviteSubmit()">
+                <div class="form-group">
+                    <label for="staffEmail">Operator Email Address</label>
+                    <input id="staffEmail" type="email" formControlName="email" placeholder="agent@company.com"
+                        [class.field-invalid]="staffForm.controls.email.touched && staffForm.controls.email.invalid" />
+                    @if (staffForm.controls.email.touched && staffForm.controls.email.invalid) {
+                    <span class="error-validation-subtext">Corporate target email account path is required.</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label for="staffRole">Assigned Operational Security Role</label>
+                    <!-- Using explicit value selectors ensures exact backend enum mapping -->
+                    <select id="staffRole" formControlName="role">
+                        <option value="2">Manager (Operational Team Lead)</option>
+                        <option value="3">Agent (Queue Service Operator)</option>
+                    </select>
+                </div>
+
+                <div class="card-action-footer">
+                    <button type="submit" class="btn-primary-dispatch"
+                        [disabled]="staffForm.invalid || isStaffSubmitting()">
+                        @if (isStaffSubmitting()) {
+                        <span class="inline-spinner"></span> Issuing Token...
+                        } @else {
+                        Send Staff Invite
+                        }
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Right Pane Card: Customer Invitation Form -->
+        <section class="console-card color-shift-panel">
+            <div class="card-headline">
+                <h3>Onboard External Customer Client</h3>
+                <p>Generates an invitation for an existing CRM customer profile using their unique system identifier
+                    GUID</p>
+            </div>
+
+            <form [formGroup]="customerForm" (ngSubmit)="onCustomerInviteSubmit()">
+                <div class="form-group">
+                    <label for="customerSelect">Target Customer Profile</label>
+                    <select id="customerSelect" formControlName="customerId" [disabled]="isCustomersLoading()">
+                        <option value="" disabled selected>
+                            {{ isCustomersLoading() ? 'Syncing profiles list database...' : '-- Choose Existing
+                            Client--' }}
+                        </option>
+                        @for (cust of customersList(); track cust.id) {
+                        <option [value]="cust.id">{{ cust.name }} ({{ cust.email }})</option>
+                        }
+                    </select>
+                    @if (customerForm.controls.customerId.touched && customerForm.controls.customerId.invalid) {
+                    <span class="error-validation-subtext">Selecting a target customer record configuration is
+                        required.</span>
+                    }
+                </div>
+
+                <div class="card-action-footer">
+                    <button type="submit" class="btn-success-dispatch"
+                        [disabled]="customerForm.invalid || isCustomerSubmitting()">
+                        @if (isCustomerSubmitting()) {
+                        <span class="inline-spinner"></span> Deploying Channel...
+                        } @else {
+                        Send Customer Invite
+                        }
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>

@@ -3,8 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  CreateTicketRequest,
   TicketDto,
+  CreateTicketRequest,
   UpdateTicketRequest,
 } from '../../features/tickets/models/ticket.model';
 
@@ -33,7 +33,7 @@ export class TicketService {
 
   assignTicket(id: string, agentId: string): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/${id}/assign`, {
-      userId: agentId,
+      agentId,
     });
   }
 
@@ -41,7 +41,24 @@ export class TicketService {
     return this.http.post<void>(`${this.baseUrl}/${id}/unassign`, {});
   }
 
-  updateStatus(id: string, status: number): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/${id}/status`, { status });
+  // --- Realigned Action Lifecycle Implementations ---
+  openTicket(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/open`, {});
+  }
+
+  startTicket(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/start`, {});
+  }
+
+  waitForCustomer(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/wait-for-customer`, {});
+  }
+
+  resolveTicket(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/resolve`, {});
+  }
+
+  closeTicket(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/close`, {});
   }
 }

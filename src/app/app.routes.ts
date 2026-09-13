@@ -80,6 +80,14 @@ export const routes: Routes = [
             (m) => m.TaxonomySpecsComponent,
           ),
       },
+      {
+        path: 'management/invitations',
+        loadComponent: () =>
+          import('./features/management/components/invitations-console/invitations-console.component').then(
+            (m) => m.InvitationsConsoleComponent,
+          ),
+      },
+
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

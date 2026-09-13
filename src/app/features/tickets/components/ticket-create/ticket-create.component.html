@@ -29,8 +29,19 @@
                 @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['required']) {
                 <span class="error-msg-text">A brief summary title subject is required.</span>
                 }
-                @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['minlength']) {
-                <span class="error-msg-text">Title descriptions must be at least 5 characters.</span>
+            </div>
+
+            <div class="form-group">
+                <label for="teamId">Responsible Operational Squad (Team Assignment)</label>
+                <select id="teamId" formControlName="teamId"
+                    [class.field-error]="ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid">
+                    <option value="" disabled selected>-- Select Target Operational Team --</option>
+                    @for (t of teams(); track t.id) {
+                    <option [value]="t.id">{{ t.name }}</option>
+                    }
+                </select>
+                @if (ticketForm.controls.teamId.touched && ticketForm.controls.teamId.errors?.['required']) {
+                <span class="error-msg-text">Allocating an initial managing team squad is required.</span>
                 }
             </div>
 
@@ -78,14 +89,11 @@
             <div class="form-group">
                 <label for="description">Detailed Description Context</label>
                 <textarea id="description" formControlName="description" rows="6"
-                    placeholder="Provide a comprehensive operational log entry regarding technical symptoms, replication maps, or hardware impacts..."
+                    placeholder="Provide a comprehensive operational log entry regarding technical symptoms..."
                     [class.field-error]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid">
           </textarea>
                 @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
                 <span class="error-msg-text">Detailed context documentation logs are required.</span>
-                }
-                @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
-                <span class="error-msg-text">Description entries must be at least 10 characters long.</span>
                 }
             </div>
 

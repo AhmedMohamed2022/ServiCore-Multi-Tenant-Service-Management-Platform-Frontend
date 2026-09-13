@@ -210,3 +210,127 @@ select:focus {
   color: #b91c1c;
   font-size: 0.875rem;
 }
+/* ... [Keep all previous styles intact and append the following at the bottom] ... */
+
+.static-read-only-metrics {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.m-lbl {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.m-badge-val {
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  width: max-content;
+  margin-top: 0.15rem;
+}
+
+.m-text-val {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+/* ... [Keep all previous sidebar styles and append at the bottom] ... */
+
+.btn-wf-action {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+  text-align: center;
+}
+
+.btn-open {
+  background-color: #f59e0b;
+}
+.btn-open:hover:not(:disabled) {
+  background-color: #d97706;
+}
+
+.btn-start {
+  background-color: #2563eb;
+}
+.btn-start:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.btn-wait {
+  background-color: #64748b;
+}
+.btn-wait:hover:not(:disabled) {
+  background-color: #475569;
+}
+
+.btn-resolve {
+  background-color: #10b981;
+}
+.btn-resolve:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-close {
+  background-color: #0f172a;
+}
+.btn-close:hover:not(:disabled) {
+  background-color: #000000;
+}
+
+.status-pill {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  width: max-content;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.state-0 {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+.state-1 {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+.state-2 {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+.state-3 {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+.state-4 {
+  background-color: #d1fae5;
+  color: #059669;
+}
+.state-5 {
+  background-color: #fee2e2;
+  color: #cbd5e1;
+  text-decoration: line-through;
+}

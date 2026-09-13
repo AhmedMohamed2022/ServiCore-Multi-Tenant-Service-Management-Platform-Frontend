@@ -1,0 +1,87 @@
+<div class="portal-create-workspace"
+    style="padding: 2rem; font-family: system-ui, sans-serif; max-width: 700px; margin: 0 auto;">
+    <header class="workspace-header" style="margin-bottom: 2rem;">
+        <div class="breadcrumb-nav">
+            <a routerLink="/portal/tickets"
+                style="font-size: 0.875rem; color: #0284c7; text-decoration: none; font-weight: 500;">← Back to Support
+                Requests</a>
+        </div>
+        <h2 style="font-size: 1.5rem; color: #0f172a; margin: 0.5rem 0 0 0;">Open New Support Request</h2>
+        <p style="font-size: 0.9rem; color: #64748b; margin: 0.25rem 0 0 0;">Provide detailed parameters regarding your
+            operational or technical issue to notify engineering support teams.</p>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="alert-error-banner"
+        style="padding: 0.75rem 1rem; background-color: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px; color: #b91c1c; margin-bottom: 1.5rem; font-size: 0.875rem;">
+        {{ errorMessage() }}
+    </div>
+    }
+
+    <div class="form-container-card"
+        style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        @if (isLoadingOptions()) {
+        <div class="loading-overlay" style="text-align: center; color: #64748b; padding: 2rem;">
+            Syncing classification domains...
+        </div>
+        } @else {
+        <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
+
+            <div class="form-group"
+                style="display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1.5rem;">
+                <label for="title" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Request Summary
+                    Subject</label>
+                <input id="title" type="text" formControlName="title"
+                    placeholder="Brief title summary of the service request"
+                    style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none;" />
+            </div>
+
+            <div class="split-form-row" style="display: flex; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 0.375rem;">
+                    <label for="categoryId" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Classification
+                        Category</label>
+                    <select id="categoryId" formControlName="categoryId"
+                        style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; background: #ffffff;">
+                        <option value="" disabled selected>-- Select Field Classification --</option>
+                        @for (cat of categories(); track cat.id) {
+                        <option [value]="cat.id">{{ cat.name }}</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 0.375rem;">
+                    <label for="priority" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Urgency
+                        Tier</label>
+                    <select id="priority" formControlName="priority"
+                        style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; background: #ffffff;">
+                        @for (opt of priorityOptions; track opt.value) {
+                        <option [value]="opt.value">{{ opt.label }}</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group"
+                style="display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1.5rem;">
+                <label for="description" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Detailed Symptoms
+                    & Logs Context</label>
+                <textarea id="description" formControlName="description" rows="6"
+                    placeholder="Provide a comprehensive operational log entry regarding technical symptoms, replication parameters, or system blockages..."
+                    style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; font-family: inherit; resize: vertical;">
+          </textarea>
+            </div>
+
+            <div class="form-actions-footer"
+                style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 2rem;">
+                <button type="button" routerLink="/portal/tickets" [disabled]="isSubmitting()"
+                    style="padding: 0.65rem 1.25rem; font-size: 0.925rem; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; color: #475569; border: 1px solid #cbd5e1;">Discard</button>
+                <button type="submit" [disabled]="ticketForm.invalid || isSubmitting()"
+                    style="padding: 0.65rem 1.25rem; font-size: 0.925rem; font-weight: 600; border-radius: 6px; cursor: pointer; background: #0284c7; color: #ffffff; border: none;">
+                    {{ isSubmitting() ? 'Transmitting Request...' : 'Submit Request' }}
+                </button>
+            </div>
+
+        </form>
+        }
+    </div>
+</div>

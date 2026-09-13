@@ -2,11 +2,18 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../../core/auth/services/auth.service';
+import { NotificationTrayComponent } from '../../../shell/components/notification-tray/notification-tray.component';
 
 @Component({
   selector: 'app-portal-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    NotificationTrayComponent,
+  ],
   templateUrl: './portal-shell.component.html',
   styleUrls: ['./portal-shell.component.css'],
 })

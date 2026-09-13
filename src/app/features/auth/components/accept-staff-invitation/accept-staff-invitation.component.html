@@ -3,19 +3,37 @@
         <h2>Join Operational Team</h2>
         <p class="subtitle">Complete your secure profile configuration to connect to your assigned tenant space</p>
 
-        @if (errorMessage()) { <div class="banner-err">{{ errorMessage() }}</div> }
-        @if (successMessage()) { <div class="banner-ok">{{ successMessage() }}</div> }
+        @if (errorMessage()) {
+        <div class="banner-err" role="alert">
+            {{ errorMessage() }}
+        </div>
+        }
+
+        @if (successMessage()) {
+        <div class="banner-ok" role="alert">
+            {{ successMessage() }}
+        </div>
+        }
 
         <form [formGroup]="setupForm" (ngSubmit)="onCompleteStaffOnboarding()" *ngIf="token && !successMessage()">
             <div class="input-block">
                 <label for="sPass">Account Security Password</label>
-                <input id="sPass" type="password" formControlName="password" placeholder="••••••••" />
-                @if (setupForm.controls.password.touched && setupForm.controls.password.invalid) {
-                <span class="err-txt">Passwords must be at least 6 characters.</span>
+                <input id="sPass" type="password" formControlName="password" placeholder="••••••••"
+                    [class.invalid]="setupForm.controls.password.touched && setupForm.controls.password.invalid" />
+                @if (setupForm.controls.password.touched && setupForm.controls.password.errors?.['required']) {
+                <span class="err-txt">Password creation is required to unlock profiles.</span>
+                }
+                @if (setupForm.controls.password.touched && setupForm.controls.password.errors?.['minlength']) {
+                <span class="err-txt">Passwords must contain at least 6 alpha characters.</span>
                 }
             </div>
+
             <button type="submit" [disabled]="setupForm.invalid || isProcessing()">
-                {{ isProcessing() ? 'Configuring System Profile...' : 'Activate Roster Identity' }}
+                @if (isProcessing()) {
+                <span class="spinner"></span> Activating Account...
+                } @else {
+                Activate Roster Identity
+                }
             </button>
         </form>
     </div>

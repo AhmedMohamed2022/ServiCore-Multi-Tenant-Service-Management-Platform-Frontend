@@ -1,7 +1,8 @@
 import { Component, inject, OnInit, signal, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
 import { TicketService } from '../../../../core/services/ticket.service';
 import { TeamService } from '../../../../core/services/team.service';
 import { TicketDto } from '../../models/ticket.model';
@@ -32,6 +33,7 @@ export class TicketDetailsComponent implements OnInit {
 
   private readonly ticketService = inject(TicketService);
   private readonly teamService = inject(TeamService);
+  private readonly router = inject(Router);
 
   // Structural State Signals
   readonly ticket = signal<TicketDto | null>(null);
@@ -40,17 +42,16 @@ export class TicketDetailsComponent implements OnInit {
   readonly isActionLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
-  protected readonly statuses = Object.keys(TicketStatusLabels)
-    .filter((k) => !isNaN(Number(k)))
-    .map((k) => ({
-      value: Number(k),
-      label: TicketStatusLabels[Number(k) as TicketStatus],
-    }));
+  // Safe UI Context Flags
+  readonly isCustomerPortal = signal<boolean>(false);
 
   protected readonly statusLabels = TicketStatusLabels;
   protected readonly priorityLabels = TicketPriorityLabels;
+  protected readonly ticketStatusEnum = TicketStatus;
 
   ngOnInit(): void {
+    // Discern url segment origins before pulling database variables
+    this.isCustomerPortal.set(this.router.url.includes('/portal/'));
     this.loadTicketContext();
   }
 
@@ -69,7 +70,11 @@ export class TicketDetailsComponent implements OnInit {
       next: (ticketData) => {
         this.ticket.set(ticketData);
         this.isLoading.set(false);
-        this.loadAvailableStaffPool();
+
+        // Safeguard roster querying: Customers must never download staff lists
+        if (!this.isCustomerPortal()) {
+          this.loadAvailableStaffPool();
+        }
       },
       error: (err: Error) => {
         this.errorMessage.set(err.message);
@@ -81,7 +86,8 @@ export class TicketDetailsComponent implements OnInit {
   loadAvailableStaffPool(): void {
     this.teamService.getTeams().subscribe({
       next: (teams) => {
-        if (teams.length > 0) {
+        // Fixed: Safely check for array entries and read the index [0] id property
+        if (teams && teams.length > 0) {
           this.teamService.getTeamMembers(teams[0].id).subscribe((members) => {
             this.availableAgents.set(members);
           });
@@ -90,11 +96,32 @@ export class TicketDetailsComponent implements OnInit {
     });
   }
 
-  onStatusChange(event: Event): void {
-    const statusVal = Number((event.target as HTMLSelectElement).value);
+  executeWorkflowTransition(
+    action: 'open' | 'start' | 'wait' | 'resolve' | 'close',
+  ): void {
     this.isActionLoading.set(true);
+    this.errorMessage.set(null);
 
-    this.ticketService.updateStatus(this.id, statusVal).subscribe({
+    let stream$: Observable<void>;
+    switch (action) {
+      case 'open':
+        stream$ = this.ticketService.openTicket(this.id);
+        break;
+      case 'start':
+        stream$ = this.ticketService.startTicket(this.id);
+        break;
+      case 'wait':
+        stream$ = this.ticketService.waitForCustomer(this.id);
+        break;
+      case 'resolve':
+        stream$ = this.ticketService.resolveTicket(this.id);
+        break;
+      case 'close':
+        stream$ = this.ticketService.closeTicket(this.id);
+        break;
+    }
+
+    stream$.subscribe({
       next: () => {
         this.isActionLoading.set(false);
         this.loadTicketContext();
@@ -109,6 +136,7 @@ export class TicketDetailsComponent implements OnInit {
   onAssignAgent(event: Event): void {
     const agentId = (event.target as HTMLSelectElement).value;
     this.isActionLoading.set(true);
+    this.errorMessage.set(null);
 
     if (!agentId) {
       this.ticketService.unassignTicket(this.id).subscribe({
