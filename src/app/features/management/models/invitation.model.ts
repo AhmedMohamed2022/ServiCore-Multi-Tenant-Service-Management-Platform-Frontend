@@ -9,8 +9,11 @@ export interface InviteCustomerRequest {
 
 export interface OrganizationInvitationDto {
   id: string;
+  organizationId: string;
   email: string;
-  role: number;
-  isAccepted: boolean;
+  role: string; // Backend serializes the enum via .ToString(), e.g. "Manager" / "Agent"
   createdAt: string;
+  expiresAt: string;
+  isAccepted: boolean;
+  isRevoked: boolean;
 }

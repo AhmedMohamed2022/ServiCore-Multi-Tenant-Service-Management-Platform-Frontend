@@ -62,3 +62,11 @@ button {
 button:hover:not(:disabled) {
   background: #0369a1;
 }
+.org-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.org-choice-btn {
+  text-align: left;
+}

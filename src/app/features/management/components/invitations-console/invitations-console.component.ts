@@ -7,6 +7,7 @@ import { CustomerDto } from '../../models/customer.model';
 import {
   InviteOrganizationMemberRequest,
   InviteCustomerRequest,
+  OrganizationInvitationDto,
 } from '../../models/invitation.model';
 
 @Component({
@@ -28,6 +29,13 @@ export class InvitationsConsoleComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
+  // Staff invitations list (backend supports list + revoke).
+  // Customer invitations have no GetAll endpoint on the backend yet, so
+  // there is nothing to list here for them — see class-level note below.
+  readonly staffInvitations = signal<OrganizationInvitationDto[]>([]);
+  readonly isInvitationsLoading = signal<boolean>(false);
+  readonly revokingInvitationId = signal<string | null>(null);
+
   // Forms use tracking strings for values to ensure clean browser option mapping
   readonly staffForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -40,6 +48,59 @@ export class InvitationsConsoleComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadActiveCustomers();
+    this.loadStaffInvitations();
+  }
+
+  loadStaffInvitations(): void {
+    this.isInvitationsLoading.set(true);
+    this.invitationService.getInvitations().subscribe({
+      next: (data) => {
+        this.staffInvitations.set(data);
+        this.isInvitationsLoading.set(false);
+      },
+      error: (err: Error) => {
+        this.errorMessage.set(
+          `Failed to retrieve pending invitations: ${err.message}`,
+        );
+        this.isInvitationsLoading.set(false);
+      },
+    });
+  }
+
+  revokeStaffInvitation(invitation: OrganizationInvitationDto): void {
+    this.revokingInvitationId.set(invitation.id);
+    this.clearAlertMessages();
+
+    this.invitationService.revokeStaffInvitation(invitation.id).subscribe({
+      next: () => {
+        this.revokingInvitationId.set(null);
+        this.successMessage.set(`Invitation for ${invitation.email} revoked.`);
+        this.loadStaffInvitations();
+      },
+      error: (err: Error) => {
+        this.errorMessage.set(err.message);
+        this.revokingInvitationId.set(null);
+      },
+    });
+  }
+
+  // A pending invitation is one that hasn't been accepted, hasn't been
+  // revoked, and hasn't passed its expiry timestamp.
+  isPending(invitation: OrganizationInvitationDto): boolean {
+    return (
+      !invitation.isAccepted &&
+      !invitation.isRevoked &&
+      new Date(invitation.expiresAt).getTime() > Date.now()
+    );
+  }
+
+  invitationStatusLabel(invitation: OrganizationInvitationDto): string {
+    if (invitation.isAccepted) return 'Accepted';
+    if (invitation.isRevoked) return 'Revoked';
+    if (new Date(invitation.expiresAt).getTime() <= Date.now()) {
+      return 'Expired';
+    }
+    return 'Pending';
   }
 
   loadActiveCustomers(): void {
@@ -82,6 +143,7 @@ export class InvitationsConsoleComponent implements OnInit {
         this.successMessage.set(
           'Staff invitation link generated successfully.',
         );
+        this.loadStaffInvitations();
       },
       error: (err: Error) => {
         this.errorMessage.set(err.message);

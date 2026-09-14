@@ -9,7 +9,7 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Do not append bearer tokens to anonymous invitation acceptance endpoints
   const isAcceptStaffRoute = cleanUrl.endsWith(
-    'organization-invitations/accept',
+    'organization/invitations/accept',
   );
   const isAcceptCustomerRoute = cleanUrl.endsWith(
     'customer-invitations/accept',

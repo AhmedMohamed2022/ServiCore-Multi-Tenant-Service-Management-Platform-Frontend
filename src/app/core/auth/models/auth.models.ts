@@ -29,3 +29,11 @@ export interface OrganizationSummary {
   name: string;
   createdAt: string;
 }
+
+// One entry per organization a customer's account is linked to.
+// Returned by GET /customers/mine — see CustomerAccessService.
+export interface CustomerMembership {
+  customerId: string;
+  organizationId: string;
+  organizationName: string;
+}

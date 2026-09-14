@@ -64,20 +64,15 @@
                         }}</span>
                 </div>
 
-                <!-- Fixed: Customers see a read-only metadata block, hiding internal dropdowns -->
-                @if (isCustomerPortal()) {
-                <div class="static-read-only-metrics"
-                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div class="metric-row" style="display: flex; flex-direction: column; gap: 0.25rem;">
-                        <span
-                            style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Assigned
-                            Expert:</span>
-                        <span style="font-size: 0.9rem; font-weight: 600; color: #1e293b;">{{
-                            currentTicket.assignedAgentName || 'Awaiting Allocation' }}</span>
-                    </div>
-                </div>
-                } @else {
-                <!-- Operational administrative action buttons for staff members -->
+                <!-- Gated on the viewer's actual permissions (isManagementAllowed /
+                     isAssignedAgent), never on which route they landed on. A staff
+                     account with no rights on this ticket (e.g. an Agent it isn't
+                     assigned to) falls through to the same read-only block a
+                     customer sees. -->
+                @if (isManagementAllowed()) {
+                <!-- Owner/Manager: CanManageTickets — open, assign/unassign, close.
+                     Start/wait/resolve are never offered here: those require the
+                     Agent role, which Owner/Manager accounts don't hold. -->
                 <div class="workflow-actions-panel">
                     <span class="m-lbl">Permitted Extensions Actions</span>
                     <div class="action-buttons-stack"
@@ -88,19 +83,12 @@
                             [disabled]="isActionLoading()">Accept & Open Ticket</button>
                         }
 
-                        @if (currentTicket.status === ticketStatusEnum.Open || currentTicket.status ===
-                        ticketStatusEnum.WaitingForCustomer) {
-                        <button type="button" class="btn-wf-action btn-start"
-                            (click)="executeWorkflowTransition('start')" [disabled]="isActionLoading()">Mark
-                            In-Progress</button>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.InProgress) {
-                        <button type="button" class="btn-wf-action btn-wait" (click)="executeWorkflowTransition('wait')"
-                            [disabled]="isActionLoading()">Awaiting Client Input</button>
-                        <button type="button" class="btn-wf-action btn-resolve"
-                            (click)="executeWorkflowTransition('resolve')" [disabled]="isActionLoading()">Mark Case
-                            Resolved</button>
+                        @if (currentTicket.status === ticketStatusEnum.Open ||
+                        currentTicket.status === ticketStatusEnum.InProgress ||
+                        currentTicket.status === ticketStatusEnum.WaitingForCustomer) {
+                        <span class="completion-notice-txt"
+                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">This ticket is with its
+                            assigned agent. No management action is needed at this stage.</span>
                         }
 
                         @if (currentTicket.status === ticketStatusEnum.Resolved) {
@@ -127,6 +115,58 @@
                         <option [value]="agent.userId">{{ agent.name || 'System Agent' }}</option>
                         }
                     </select>
+                </div>
+                } @else if (isAssignedAgent()) {
+                <!-- The assigned Agent: CanWorkAssignedTickets — start, wait-for-
+                     customer, resolve. No assignment dropdown and no open/close:
+                     those require Owner/Manager. -->
+                <div class="workflow-actions-panel">
+                    <span class="m-lbl">Permitted Extensions Actions</span>
+                    <div class="action-buttons-stack"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+
+                        @if (currentTicket.status === ticketStatusEnum.New) {
+                        <span class="completion-notice-txt"
+                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">Waiting on a manager to
+                            open this ticket.</span>
+                        }
+
+                        @if (currentTicket.status === ticketStatusEnum.Open ||
+                        currentTicket.status === ticketStatusEnum.WaitingForCustomer) {
+                        <button type="button" class="btn-wf-action btn-start"
+                            (click)="executeWorkflowTransition('start')" [disabled]="isActionLoading()">Mark
+                            In-Progress</button>
+                        }
+
+                        @if (currentTicket.status === ticketStatusEnum.InProgress) {
+                        <button type="button" class="btn-wf-action btn-wait" (click)="executeWorkflowTransition('wait')"
+                            [disabled]="isActionLoading()">Awaiting Client
+                            Input</button>
+                        <button type="button" class="btn-wf-action btn-resolve"
+                            (click)="executeWorkflowTransition('resolve')" [disabled]="isActionLoading()">Mark Case
+                            Resolved</button>
+                        }
+
+                        @if (currentTicket.status === ticketStatusEnum.Resolved ||
+                        currentTicket.status === ticketStatusEnum.Closed) {
+                        <span class="completion-notice-txt"
+                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">No further action needed
+                            from you on this ticket.</span>
+                        }
+                    </div>
+                </div>
+                } @else {
+                <!-- Read-only: customers, and any staff account with no rights on
+                     this particular ticket. -->
+                <div class="static-read-only-metrics"
+                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div class="metric-row" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <span
+                            style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Assigned
+                            Expert:</span>
+                        <span style="font-size: 0.9rem; font-weight: 600; color: #1e293b;">{{
+                            currentTicket.assignedAgentName || 'Awaiting Allocation' }}</span>
+                    </div>
                 </div>
                 }
 

@@ -97,4 +97,65 @@
             </form>
         </section>
     </div>
+
+    <!-- Pending / historical staff invitations -->
+    <section class="console-card invitations-list-card">
+        <div class="card-headline">
+            <h3>Staff Invitations</h3>
+            <p>Every internal invitation sent for this organization. Pending invitations can be revoked before
+                they're accepted.</p>
+        </div>
+
+        @if (isInvitationsLoading()) {
+        <p class="list-status-text">Loading invitations...</p>
+        } @else if (staffInvitations().length === 0) {
+        <p class="list-status-text">No staff invitations have been sent yet.</p>
+        } @else {
+        <table class="invitations-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Sent</th>
+                    <th>Expires</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (invitation of staffInvitations(); track invitation.id) {
+                <tr>
+                    <td>{{ invitation.email }}</td>
+                    <td>{{ invitation.role }}</td>
+                    <td>
+                        <span class="status-pill"
+                            [ngClass]="'status-' + invitationStatusLabel(invitation).toLowerCase()">
+                            {{ invitationStatusLabel(invitation) }}
+                        </span>
+                    </td>
+                    <td>{{ invitation.createdAt | date:'mediumDate' }}</td>
+                    <td>{{ invitation.expiresAt | date:'mediumDate' }}</td>
+                    <td class="row-action-cell">
+                        @if (isPending(invitation)) {
+                        <button type="button" class="btn-revoke" [disabled]="revokingInvitationId() === invitation.id"
+                            (click)="revokeStaffInvitation(invitation)">
+                            @if (revokingInvitationId() === invitation.id) {
+                            <span class="inline-spinner"></span> Revoking...
+                            } @else {
+                            Revoke
+                            }
+                        </button>
+                        }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+
+        <p class="list-status-text customer-invites-note">
+            Customer invitations aren't listed here yet — the backend doesn't currently expose an endpoint to fetch
+            them.
+        </p>
+    </section>
 </div>

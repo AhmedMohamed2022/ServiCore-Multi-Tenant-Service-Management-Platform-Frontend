@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { managementGuard } from './core/guards/management.guard';
+import { reportsGuard } from './core/guards/reports.guard';
 
 export const routes: Routes = [
   // =========================================================================
@@ -33,6 +35,14 @@ export const routes: Routes = [
         (m) => m.AcceptCustomerInvitationComponent,
       ),
   },
+  {
+    path: 'select-organization',
+    loadComponent: () =>
+      import('./features/auth/components/select-organization/select-organization.component').then(
+        (m) => m.SelectOrganizationComponent,
+      ),
+    canActivate: [authGuard],
+  },
 
   // =========================================================================
   // 2. PROTECTED INTERNAL SQUAD PLATFORM WORKSPACE (Staff / Operators Only)
@@ -47,6 +57,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
@@ -65,6 +76,7 @@ export const routes: Routes = [
           import('./features/management/components/team-roster/team-roster.component').then(
             (m) => m.TeamRosterComponent,
           ),
+        canActivate: [managementGuard],
       },
       {
         path: 'management/customers',
@@ -72,6 +84,7 @@ export const routes: Routes = [
           import('./features/management/components/client-directory/client-directory.component').then(
             (m) => m.ClientDirectoryComponent,
           ),
+        canActivate: [managementGuard],
       },
       {
         path: 'management/categories',
@@ -79,12 +92,62 @@ export const routes: Routes = [
           import('./features/management/components/taxonomy-specs/taxonomy-specs.component').then(
             (m) => m.TaxonomySpecsComponent,
           ),
+        canActivate: [managementGuard],
       },
       {
         path: 'management/invitations',
         loadComponent: () =>
           import('./features/management/components/invitations-console/invitations-console.component').then(
             (m) => m.InvitationsConsoleComponent,
+          ),
+        canActivate: [managementGuard],
+      },
+      {
+        path: 'reports/tickets',
+        canActivate: [reportsGuard],
+        loadComponent: () =>
+          import('./features/dashboard/views/ticket-statistics/ticket-statistics.component').then(
+            (m) => m.TicketStatisticsComponent,
+          ),
+      },
+      {
+        path: 'reports/teams',
+        canActivate: [reportsGuard],
+        loadComponent: () =>
+          import('./features/dashboard/views/team-statistics/team-statistics.component').then(
+            (m) => m.TeamStatisticsComponent,
+          ),
+      },
+      {
+        path: 'reports/agents',
+        canActivate: [reportsGuard],
+        loadComponent: () =>
+          import('./features/dashboard/views/agent-statistics/agent-statistics.component').then(
+            (m) => m.AgentStatisticsComponent,
+          ),
+      },
+      {
+        path: 'reports/customers',
+        canActivate: [reportsGuard],
+        loadComponent: () =>
+          import('./features/dashboard/views/customer-statistics/customer-statistics.component').then(
+            (m) => m.CustomerStatisticsComponent,
+          ),
+      },
+      {
+        path: 'reports/categories',
+        canActivate: [reportsGuard],
+        loadComponent: () =>
+          import('./features/dashboard/views/category-statistics/category-statistics.component').then(
+            (m) => m.CategoryStatisticsComponent,
+          ),
+      },
+      {
+        path: 'reports/time-series',
+        canActivate: [reportsGuard],
+        loadComponent: () =>
+          import('./features/dashboard/views/ticket-time-series/ticket-time-series.component').then(
+            (m) => m.TicketTimeSeriesComponent,
           ),
       },
 

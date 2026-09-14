@@ -11,10 +11,6 @@
 
         <nav class="navigation-matrix">
             <span class="nav-section-label">Core Operations</span>
-            <a routerLink="/app/dashboard" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">📊</span>
-                <span class="nav-label">Dashboard</span>
-            </a>
             <a routerLink="/app/tickets" routerLinkActive="active-node" class="nav-link-node">
                 <span class="nav-icon">🎫</span>
                 <span class="nav-label">Ticket Console</span>
@@ -22,6 +18,10 @@
 
             <!-- Dynamic Role-Aware Workspace Protection Node Block -->
             @if (isManagementAllowed()) {
+            <a routerLink="/app/dashboard" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
             <span class="nav-section-label">Platform Administration</span>
             <a routerLink="/app/management/teams" routerLinkActive="active-node" class="nav-link-node">
                 <span class="nav-icon">👥</span>
@@ -38,6 +38,32 @@
             <a routerLink="/app/management/invitations" routerLinkActive="active-node" class="nav-link-node">
                 <span class="nav-icon">✉️</span>
                 <span class="nav-label">Issue Invitations</span>
+            </a>
+
+            <span class="nav-section-label">Reports</span>
+            <a routerLink="/app/reports/tickets" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Ticket Statistics</span>
+            </a>
+            <a routerLink="/app/reports/time-series" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">📅</span>
+                <span class="nav-label">Volume Over Time</span>
+            </a>
+            <a routerLink="/app/reports/teams" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">Team Performance</span>
+            </a>
+            <a routerLink="/app/reports/agents" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🥇</span>
+                <span class="nav-label">Agent Leaderboard</span>
+            </a>
+            <a routerLink="/app/reports/customers" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🧾</span>
+                <span class="nav-label">Customer Statistics</span>
+            </a>
+            <a routerLink="/app/reports/categories" routerLinkActive="active-node" class="nav-link-node">
+                <span class="nav-icon">🗂️</span>
+                <span class="nav-label">Category Statistics</span>
             </a>
             }
         </nav>
@@ -56,11 +82,21 @@
             <div class="bar-left-context">
                 <span class="context-breadcrumb">Workspace Portal</span>
             </div>
-            <div class="bar-right-profile" *ngIf="authService.currentUser() as user">
+            <!-- Unconditional, like PortalShellComponent's bar-right: this
+                 route is already behind authGuard (token presence, checked
+                 synchronously), so there's no reason to also wait on the
+                 async GET /auth/me round trip before showing the header
+                 chrome. Gating the whole block (notification tray included)
+                 on currentUser() used to tear it down and rebuild it on
+                 every hard refresh, since currentUser() is still null for
+                 the first render or two after reload while fetchMe() is
+                 in flight. Profile fields just render blank in the
+                 meantime and fill in once fetchMe() resolves. -->
+            <div class="bar-right-profile">
                 <app-notification-tray></app-notification-tray>
                 <div class="user-meta">
                     <span class="user-display-name">{{ userEmail() }}</span>
-                    <span class="user-system-id">ID: {{ userId().substring(0, 8) }}...</span>
+                    <span class="user-system-id">{{ userIdShort() }}</span>
                 </div>
                 <div class="avatar-placeholder">👤</div>
             </div>

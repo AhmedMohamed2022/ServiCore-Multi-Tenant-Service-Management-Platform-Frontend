@@ -1,0 +1,48 @@
+<div class="organization-selection-page">
+    <div class="organization-selection-card">
+        <header class="selection-header">
+            <h1>Select Organization</h1>
+            <p>
+                Your account has access to multiple organizations.
+                Select the organization you want to work with.
+            </p>
+        </header>
+
+        @if (errorMessage()) {
+        <div class="error-banner" role="alert">
+            {{ errorMessage() }}
+        </div>
+        }
+
+        <div class="organization-list">
+            @for (organization of organizations(); track organization.id) {
+            <button type="button" class="organization-card" [disabled]="isSelecting()"
+                (click)="selectOrganization(organization)">
+                <div class="organization-details">
+                    <span class="organization-name">
+                        {{ organization.name }}
+                    </span>
+
+                    <span class="organization-meta">
+                        Organization ID: {{ organization.id }}
+                    </span>
+                </div>
+
+                <span class="organization-arrow">
+                    →
+                </span>
+            </button>
+            }
+        </div>
+
+        @if (organizations().length === 0) {
+        <div class="empty-state">
+            <p>No organizations are available for this account.</p>
+        </div>
+        }
+
+        <button type="button" class="logout-button" (click)="logout()">
+            Sign out
+        </button>
+    </div>
+</div>

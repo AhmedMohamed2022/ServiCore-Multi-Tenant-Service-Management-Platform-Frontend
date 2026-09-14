@@ -1,0 +1,95 @@
+<div class="report-view-container">
+    <header class="report-view-header">
+        <div>
+            <h2>Ticket Volume Over Time</h2>
+            <p>Daily new, resolved, and closed ticket counts across the selected date range.</p>
+        </div>
+
+        <div class="report-filter-toolbar">
+            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="report-filter-row">
+                <div class="report-filter-group">
+                    <label for="tsFromDate">From</label>
+                    <input id="tsFromDate" type="date" formControlName="from" />
+                </div>
+                <div class="report-filter-group">
+                    <label for="tsToDate">To</label>
+                    <input id="tsToDate" type="date" formControlName="to" />
+                </div>
+                <div class="report-filter-actions">
+                    <button type="submit" class="btn-report-apply" [disabled]="isLoading()">Filter</button>
+                    <button type="button" class="btn-report-reset" (click)="onResetFilters()"
+                        [disabled]="isLoading()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="report-error-banner" role="alert">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+    <div class="report-loading-block">Loading time series...</div>
+    } @else if (points().length === 0) {
+    <div class="report-empty-block">No ticket activity found for this range.</div>
+    } @else {
+
+    <div class="report-table-card chart-card">
+        <div class="chart-legend">
+            <span class="legend-item"><span class="swatch swatch-new"></span> New</span>
+            <span class="legend-item"><span class="swatch swatch-resolved"></span> Resolved</span>
+            <span class="legend-item"><span class="swatch swatch-closed"></span> Closed</span>
+        </div>
+
+        <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="volume-chart">
+            <!-- Gridlines + y-axis labels -->
+            @for (tick of yAxisTicks(); track tick.y) {
+            <line x1="40" [attr.x2]="chartWidth - 20" [attr.y1]="tick.y" [attr.y2]="tick.y" class="grid-line" />
+            <text x="4" [attr.y]="tick.y + 4" class="axis-label">{{ tick.value }}</text>
+            }
+
+            <!-- x-axis date labels -->
+            @for (label of xAxisLabels(); track label.x) {
+            <text [attr.x]="label.x" [attr.y]="chartHeight - 8" class="axis-label x-axis-label" text-anchor="middle">{{
+                label.label }}</text>
+            }
+
+            <polyline [attr.points]="newTicketsLine()" class="chart-line line-new" />
+            <polyline [attr.points]="resolvedTicketsLine()" class="chart-line line-resolved" />
+            <polyline [attr.points]="closedTicketsLine()" class="chart-line line-closed" />
+        </svg>
+    </div>
+
+    <div class="report-table-card">
+        <h3>Daily Breakdown</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>New</th>
+                    <th>Open</th>
+                    <th>In Progress</th>
+                    <th>Waiting on Customer</th>
+                    <th>Resolved</th>
+                    <th>Closed</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (point of points(); track point.date) {
+                <tr>
+                    <td>{{ point.date | date:'mediumDate' }}</td>
+                    <td>{{ point.totalTickets }}</td>
+                    <td>{{ point.newTickets }}</td>
+                    <td>{{ point.openTickets }}</td>
+                    <td>{{ point.inProgressTickets }}</td>
+                    <td>{{ point.waitingForCustomerTickets }}</td>
+                    <td class="metric-good">{{ point.resolvedTickets }}</td>
+                    <td>{{ point.closedTickets }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>

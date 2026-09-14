@@ -1,0 +1,131 @@
+<div class="report-view-container">
+    <header class="report-view-header">
+        <div>
+            <h2>Ticket Statistics</h2>
+            <p>Status, priority, and category breakdowns across all tickets in this organization.</p>
+        </div>
+
+        <div class="report-filter-toolbar">
+            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="report-filter-row">
+                <div class="report-filter-group">
+                    <label for="tsFrom">From</label>
+                    <input id="tsFrom" type="date" formControlName="from" />
+                </div>
+                <div class="report-filter-group">
+                    <label for="tsTo">To</label>
+                    <input id="tsTo" type="date" formControlName="to" />
+                </div>
+                <div class="report-filter-actions">
+                    <button type="submit" class="btn-report-apply" [disabled]="isLoading()">Filter</button>
+                    <button type="button" class="btn-report-reset" (click)="onResetFilters()"
+                        [disabled]="isLoading()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="report-error-banner" role="alert">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+    <div class="report-loading-block">Loading ticket statistics...</div>
+    } @else
+    {
+
+
+    @if (data(); as stats) {
+
+    <div class="report-cards-grid">
+        <div class="report-summary-card">
+            <span class="val">{{ stats.performance.resolvedCount }}</span>
+            <span class="lbl">Resolved</span>
+        </div>
+        <div class="report-summary-card">
+            <span class="val">{{ stats.performance.closedCount }}</span>
+            <span class="lbl">Closed</span>
+        </div>
+        <div class="report-summary-card">
+            <span class="val">{{ stats.performance.averageResolutionTime || '—' }}</span>
+            <span class="lbl">Avg. Resolution Time</span>
+        </div>
+        <div class="report-summary-card">
+            <span class="val">{{ stats.performance.averageClosureTime || '—' }}</span>
+            <span class="lbl">Avg. Closure Time</span>
+        </div>
+    </div>
+
+    <div class="report-table-card">
+        <h3>Status Distribution</h3>
+        @if (stats.statusDistribution.length === 0) {
+        <p class="report-empty-block">No tickets found for this range.</p>
+        } @else {
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Ticket Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of stats.statusDistribution; track row.status) {
+                <tr>
+                    <td>{{ statusLabels[row.status] || row.status }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+    </div>
+
+    <div class="report-table-card">
+        <h3>Priority Distribution</h3>
+        @if (stats.priorityDistribution.length === 0) {
+        <p class="report-empty-block">No tickets found for this range.</p>
+        } @else {
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Priority</th>
+                    <th>Ticket Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of stats.priorityDistribution; track row.priority) {
+                <tr>
+                    <td>{{ priorityLabels[row.priority] || row.priority }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+    </div>
+
+    <div class="report-table-card">
+        <h3>Category Distribution</h3>
+        @if (stats.categoryDistribution.length === 0) {
+        <p class="report-empty-block">No tickets found for this range.</p>
+        } @else {
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Ticket Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of stats.categoryDistribution; track row.categoryId) {
+                <tr>
+                    <td>{{ row.categoryName }}</td>
+                    <td>{{ row.ticketCount }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        }
+    </div>
+    }
+    }
+</div>

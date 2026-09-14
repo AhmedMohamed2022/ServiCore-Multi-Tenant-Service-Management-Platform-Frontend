@@ -27,6 +27,14 @@ export class AppShellComponent implements OnInit {
   readonly userEmail = () => this.authService.currentUser()?.email || '';
   readonly userId = () => this.authService.currentUser()?.userId || '';
 
+  // Safe now that the template no longer gates rendering on currentUser()
+  // being non-null — profile fields can briefly be empty right after a
+  // hard refresh, before GET /auth/me resolves.
+  readonly userIdShort = () => {
+    const id = this.userId();
+    return id ? `ID: ${id.substring(0, 8)}...` : '';
+  };
+
   // There is no "roles" field on the user anywhere in the backend — role is
   // purely a per-organization membership fact. Rather than guessing at it
   // client-side, ask the server directly using an endpoint it already gates

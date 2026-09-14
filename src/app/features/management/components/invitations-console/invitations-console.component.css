@@ -190,3 +190,84 @@ button:disabled {
     transform: rotate(360deg);
   }
 }
+
+.invitations-list-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.list-status-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.customer-invites-note {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #e2e8f0;
+  font-style: italic;
+}
+
+.invitations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.invitations-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.invitations-table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.status-accepted {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.status-revoked {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status-expired {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.row-action-cell {
+  text-align: right;
+}
+
+.btn-revoke {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  background-color: #ef4444;
+}
+
+.btn-revoke:hover:not(:disabled) {
+  background-color: #dc2626;
+}

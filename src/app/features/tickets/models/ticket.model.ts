@@ -7,6 +7,7 @@ export interface TicketDto {
   status: TicketStatus;
   priority: TicketPriority;
   organizationId: string;
+  teamId: string;
   categoryId: string;
   categoryName?: string;
   customerId: string;

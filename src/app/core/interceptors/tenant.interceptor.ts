@@ -13,8 +13,9 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
   const isRegisterRoute = cleanUrl.endsWith('auth/register');
   const isLoginRoute = cleanUrl.endsWith('auth/login');
   const isOrganizationsMineRoute = cleanUrl.endsWith('organizations/mine');
+  const isCustomersMineRoute = cleanUrl.endsWith('customers/mine');
   const isAcceptStaffRoute = cleanUrl.endsWith(
-    'organization-invitations/accept',
+    'organization/invitations/accept',
   );
   const isAcceptCustomerRoute = cleanUrl.endsWith(
     'customer-invitations/accept',
@@ -27,6 +28,7 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
     isRegisterRoute ||
     isLoginRoute ||
     isOrganizationsMineRoute ||
+    isCustomersMineRoute ||
     isAcceptStaffRoute ||
     isAcceptCustomerRoute ||
     isSignalRHubRoute; // <-- Safely true now

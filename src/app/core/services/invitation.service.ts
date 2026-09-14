@@ -33,4 +33,12 @@ export class InvitationService {
   getInvitations(): Observable<OrganizationInvitationDto[]> {
     return this.http.get<OrganizationInvitationDto[]>(this.staffApiUrl);
   }
+
+  // POST /api/organization/invitations/{invitationId}/revoke — [CanManageStaff]
+  revokeStaffInvitation(invitationId: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.staffApiUrl}/${invitationId}/revoke`,
+      {},
+    );
+  }
 }

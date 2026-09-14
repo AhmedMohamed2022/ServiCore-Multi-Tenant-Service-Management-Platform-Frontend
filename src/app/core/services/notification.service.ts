@@ -14,44 +14,89 @@ export class NotificationService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly tenantContext = inject(TenantContextService);
+
   private readonly baseUrl = `${environment.apiBaseUrl}/notifications`;
 
   private hubConnection: any | null = null;
 
-  // Real-time Event Streaming Subject specifically for incoming ticket comments
   readonly incomingCommentsStream$ = new Subject<TicketCommentDto>();
 
   readonly registryList = signal<NotificationDto[]>([]);
+
   readonly unreadCount = computed(
     () => this.registryList().filter((n) => !n.isRead).length,
   );
 
   constructor() {
+    /*
+     * Authentication owns the session lifecycle.
+     *
+     * NotificationService only reacts to it by terminating
+     * the realtime connection and clearing notification state.
+     */
+    this.authService.sessionEnded$.subscribe(() => {
+      this.terminateHubSession();
+    });
+
     if (this.authService.token()) {
       this.loadHistoricalAlerts().subscribe({
-        next: () => this.initializeRealtimeHubConnection(),
+        error: (err) => {
+          console.error('Failed to load notifications:', err);
+        },
       });
+
+      /*
+       * Realtime delivery is independent from historical
+       * notification retrieval.
+       */
+      void this.initializeRealtimeHubConnection();
     }
   }
 
   loadHistoricalAlerts(): Observable<NotificationDto[]> {
-    return this.http
-      .get<NotificationDto[]>(this.baseUrl)
-      .pipe(tap((alerts) => this.registryList.set(alerts)));
+    return this.http.get<NotificationDto[]>(this.baseUrl).pipe(
+      tap((alerts) => {
+        this.registryList.set(alerts);
+      }),
+    );
   }
 
   markAlertAsRead(id: string): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/${id}/read`, {});
+    return this.http.post<void>(`${this.baseUrl}/${id}/read`, {}).pipe(
+      tap(() => {
+        this.registryList.update((current) =>
+          current.map((notification) =>
+            notification.id === id
+              ? {
+                  ...notification,
+                  isRead: true,
+                }
+              : notification,
+          ),
+        );
+      }),
+    );
   }
 
   private buildHubUrl(): string {
-    const base = `${environment.apiBaseUrl.replace('/api', '')}/hubs/notifications`;
+    const base = `${environment.apiBaseUrl.replace(
+      '/api',
+      '',
+    )}/hubs/notifications`;
+
     const organizationId = this.tenantContext.currentOrganizationId();
 
-    // WebSocket/SSE transports can't carry custom request headers from the
-    // browser, so — exactly like the JWT via accessTokenFactory — the org id
-    // has to travel as a query string parameter to survive every transport
-    // SignalR might negotiate down to.
+    /*
+     * SignalR browser transports cannot rely on arbitrary
+     * custom headers, so the tenant identifier is sent as
+     * a query parameter.
+     *
+     * Backend NotificationHub reads:
+     *
+     *   ?organizationId={organizationId}
+     *
+     * and validates it through TenantResolver.
+     */
     return organizationId
       ? `${base}?organizationId=${encodeURIComponent(organizationId)}`
       : base;
@@ -59,10 +104,35 @@ export class NotificationService {
 
   private async initializeRealtimeHubConnection(): Promise<void> {
     const activeToken = this.authService.token();
-    if (!activeToken || this.hubConnection) return;
+
+    if (!activeToken || this.hubConnection) {
+      return;
+    }
+
+    const organizationId = this.tenantContext.currentOrganizationId();
+
+    /*
+     * A SignalR connection without a tenant is not useful for
+     * this application because all groups are tenant-scoped.
+     */
+    if (!organizationId) {
+      return;
+    }
 
     try {
       const signalR = await import('@microsoft/signalr');
+
+      /*
+       * The session may have ended while the dynamic SignalR
+       * module was loading.
+       */
+      if (
+        !this.authService.token() ||
+        this.authService.token() !== activeToken ||
+        !this.tenantContext.currentOrganizationId()
+      ) {
+        return;
+      }
 
       this.hubConnection = new signalR.HubConnectionBuilder()
         .withUrl(this.buildHubUrl(), {
@@ -71,7 +141,6 @@ export class NotificationService {
         .withAutomaticReconnect()
         .build();
 
-      // Monitor standard system notifications center updates
       this.hubConnection.on(
         'notification:new',
         (incomingAlert: NotificationDto) => {
@@ -79,7 +148,6 @@ export class NotificationService {
         },
       );
 
-      // Listen directly to the backend real-time comment broadcast event
       this.hubConnection.on(
         'ticket:comment-added',
         (incomingComment: TicketCommentDto) => {
@@ -89,15 +157,34 @@ export class NotificationService {
 
       await this.hubConnection.start();
     } catch (err) {
+      /*
+       * If startup fails, don't leave a half-created
+       * connection object behind.
+       */
+      this.hubConnection = null;
+
       console.error('SignalR Hub Connection initialization error:', err);
     }
   }
 
   terminateHubSession(): void {
-    if (this.hubConnection) {
-      this.hubConnection.stop();
-      this.hubConnection = null;
-    }
+    const connection = this.hubConnection;
+
+    this.hubConnection = null;
+
+    /*
+     * Clear client-side realtime state immediately.
+     */
     this.registryList.set([]);
+
+    /*
+     * stop() returns a Promise. We intentionally don't block
+     * logout/navigation waiting for the transport to close.
+     */
+    if (connection) {
+      void connection.stop().catch((err: unknown) => {
+        console.error('SignalR Hub Connection termination error:', err);
+      });
+    }
   }
 }

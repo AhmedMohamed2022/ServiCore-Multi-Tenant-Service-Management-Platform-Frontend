@@ -1,0 +1,66 @@
+<p>team-statistics works!</p>
+<div class="report-view-container">
+    <header class="report-view-header">
+        <div>
+            <h2>Team Performance</h2>
+            <p>Ticket load and outcomes broken down by team, ranked by total ticket volume.</p>
+        </div>
+
+        <div class="report-filter-toolbar">
+            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="report-filter-row">
+                <div class="report-filter-group">
+                    <label for="teamFrom">From</label>
+                    <input id="teamFrom" type="date" formControlName="from" />
+                </div>
+                <div class="report-filter-group">
+                    <label for="teamTo">To</label>
+                    <input id="teamTo" type="date" formControlName="to" />
+                </div>
+                <div class="report-filter-actions">
+                    <button type="submit" class="btn-report-apply" [disabled]="isLoading()">Filter</button>
+                    <button type="button" class="btn-report-reset" (click)="onResetFilters()"
+                        [disabled]="isLoading()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </header>
+
+    @if (errorMessage()) {
+    <div class="report-error-banner" role="alert">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+    <div class="report-loading-block">Loading team statistics...</div>
+    } @else if (teams().length === 0) {
+    <div class="report-empty-block">No teams found for this range.</div>
+    } @else {
+    <div class="report-table-card">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Team</th>
+                    <th>Members</th>
+                    <th>Total Tickets</th>
+                    <th>Active</th>
+                    <th>Resolved</th>
+                    <th>Closed</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (team of teams(); track team.teamId; let i = $index) {
+                <tr>
+                    <td class="rank-cell">{{ i + 1 }}</td>
+                    <td>{{ team.teamName }}</td>
+                    <td>{{ team.memberCount }}</td>
+                    <td>{{ team.totalTickets }}</td>
+                    <td>{{ team.activeTickets }}</td>
+                    <td class="metric-good">{{ team.resolvedTickets }}</td>
+                    <td>{{ team.closedTickets }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>

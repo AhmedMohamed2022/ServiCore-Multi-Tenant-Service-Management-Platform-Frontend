@@ -2,9 +2,13 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { CustomerTicketService } from '../../../../core/services/customer-ticket.service';
+import { forkJoin } from 'rxjs';
+import { TicketService } from '../../../../core/services/ticket.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { TeamService } from '../../../../core/services/team.service';
+import { TenantContextService } from '../../../../core/services/tenant-context.service';
 import { CategoryDto } from '../../../management/models/category.model';
+import { TeamDto } from '../../../management/models/team.model';
 import {
   TicketPriority,
   TicketPriorityLabels,
@@ -20,10 +24,13 @@ import {
 export class PortalTicketCreateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly portalService = inject(CustomerTicketService);
+  private readonly ticketService = inject(TicketService);
   private readonly categoryService = inject(CategoryService);
+  private readonly teamService = inject(TeamService);
+  private readonly tenantContext = inject(TenantContextService);
 
   readonly categories = signal<CategoryDto[]>([]);
+  readonly teams = signal<TeamDto[]>([]);
   readonly isLoadingOptions = signal<boolean>(false);
   readonly isSubmitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
@@ -42,18 +49,29 @@ export class PortalTicketCreateComponent implements OnInit {
     ],
     description: ['', [Validators.required, Validators.minLength(10)]],
     categoryId: ['', [Validators.required]],
+    teamId: ['', [Validators.required]],
     priority: [TicketPriority.Medium, [Validators.required]],
   });
 
   ngOnInit(): void {
-    this.loadAvailableCategories();
+    this.loadDropdownDataOptions();
   }
 
-  loadAvailableCategories(): void {
+  loadDropdownDataOptions(): void {
     this.isLoadingOptions.set(true);
-    this.categoryService.getCategories().subscribe({
-      next: (data) => {
-        this.categories.set(data);
+    this.errorMessage.set(null);
+
+    // Categories and teams are org-wide lookups, not staff-only endpoints —
+    // GET /categories and GET /teams both work for an authenticated
+    // customer once the X-Organization-Id header is set, same as they do
+    // for staff.
+    forkJoin({
+      cats: this.categoryService.getCategories(),
+      teams: this.teamService.getTeams(),
+    }).subscribe({
+      next: (res) => {
+        this.categories.set(res.cats);
+        this.teams.set(res.teams);
         this.isLoadingOptions.set(false);
       },
       error: (err: Error) => {
@@ -71,27 +89,39 @@ export class PortalTicketCreateComponent implements OnInit {
       return;
     }
 
+    const customerId = this.tenantContext.currentCustomerId();
+    if (!customerId) {
+      // Shouldn't happen behind portalTenantGuard, but fail loudly rather
+      // than silently sending Guid.Empty to the backend if it ever does.
+      this.errorMessage.set(
+        'Your account context is missing. Please sign out and back in.',
+      );
+      return;
+    }
+
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
     const formValues = this.ticketForm.getRawValue();
 
-    this.portalService
-      .createPortalTicket(
-        formValues.title,
-        formValues.description,
-        formValues.categoryId,
-        Number(formValues.priority),
-      )
-      .subscribe({
-        next: () => {
-          this.isSubmitting.set(false);
-          this.router.navigate(['/portal/tickets']);
-        },
-        error: (err: Error) => {
-          this.errorMessage.set(err.message);
-          this.isSubmitting.set(false);
-        },
-      });
+    const payload = {
+      customerId,
+      teamId: formValues.teamId,
+      categoryId: formValues.categoryId,
+      title: formValues.title.trim(),
+      description: formValues.description.trim(),
+      priority: Number(formValues.priority),
+    };
+
+    this.ticketService.createTicket(payload).subscribe({
+      next: () => {
+        this.isSubmitting.set(false);
+        this.router.navigate(['/portal/tickets']);
+      },
+      error: (err: Error) => {
+        this.errorMessage.set(err.message);
+        this.isSubmitting.set(false);
+      },
+    });
   }
 }
