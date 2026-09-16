@@ -1,16 +1,25 @@
 import { Component, inject, OnInit, signal, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
+import { PasswordFieldComponent } from '../shared/password-field.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
 @Component({
   selector: 'app-accept-customer-invitation',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthLayoutComponent,
+    PasswordFieldComponent,
+    IconComponent,
+    AlertComponent,
+  ],
   templateUrl: './accept-customer-invitation.component.html',
-  styleUrls: ['./accept-customer-invitation.component.css'],
 })
 export class AcceptCustomerInvitationComponent implements OnInit {
   @Input() token!: string;
@@ -30,7 +39,7 @@ export class AcceptCustomerInvitationComponent implements OnInit {
   ngOnInit(): void {
     if (!this.token) {
       this.errorMessage.set(
-        'Missing expected profile account onboarding token signature parameters.',
+        'This invitation link is missing its token. Ask your service provider to send a fresh link.',
       );
     }
   }
@@ -52,14 +61,14 @@ export class AcceptCustomerInvitationComponent implements OnInit {
         next: () => {
           this.isProcessing.set(false);
           this.successMessage.set(
-            'Client space profile activated successfully. Routing back to sign in panel...',
+            'Your portal account is ready. Taking you to sign in.',
           );
           setTimeout(() => this.router.navigate(['/login']), 2500);
         },
         error: (err) => {
           this.errorMessage.set(
             err.error?.error ||
-              'Failed to complete customer account creation updates.',
+              'We could not activate your account. The invitation may have expired.',
           );
           this.isProcessing.set(false);
         },

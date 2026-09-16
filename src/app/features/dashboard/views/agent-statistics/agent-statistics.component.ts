@@ -1,66 +1,107 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Component, computed, inject, OnInit } from '@angular/core';
+import { NgxChartsModule } from '@swimlane/ngx-charts';
+
 import { ReportingService } from '../../../../core/services/reporting.service';
 import { AgentStatisticsData } from '../../models/reporting.model';
+import {
+  ReportViewBase,
+  share,
+  sumEntityTotals,
+} from '../shared/report-base';
+import { ReportRangeComponent } from '../shared/report-range.component';
+
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { StatCardComponent } from '../../../../shared/ui/stat-card/stat-card.component';
+import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
+import {
+  AlertComponent,
+  EmptyStateComponent,
+  LoadingStateComponent,
+} from '../../../../shared/ui/states/states.component';
+import {
+  CATEGORICAL_COLOR_SCHEME,
+  ChartCardComponent,
+} from '../../../../shared/charts/chart-theme';
 
 @Component({
   selector: 'app-agent-statistics',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    NgxChartsModule,
+    ReportRangeComponent,
+    PageHeaderComponent,
+    StatCardComponent,
+    AvatarComponent,
+    AlertComponent,
+    EmptyStateComponent,
+    LoadingStateComponent,
+    ChartCardComponent,
+  ],
   templateUrl: './agent-statistics.component.html',
-  styleUrls: ['./agent-statistics.component.css'],
 })
-export class AgentStatisticsComponent implements OnInit {
+export class AgentStatisticsComponent
+  extends ReportViewBase<AgentStatisticsData>
+  implements OnInit
+{
   private readonly reportingService = inject(ReportingService);
-  private readonly fb = inject(FormBuilder);
 
-  readonly agents = signal<AgentStatisticsData[]>([]);
-  readonly isLoading = signal<boolean>(false);
-  readonly errorMessage = signal<string | null>(null);
+  readonly chartColors = CATEGORICAL_COLOR_SCHEME;
 
-  readonly filterForm = this.fb.group({
-    from: [''],
-    to: [''],
+  readonly totals = computed(() =>
+    sumEntityTotals(
+      this.rows().map((a) => ({
+        totalTickets: a.assignedTickets,
+        activeTickets: a.activeTickets,
+        resolvedTickets: a.resolvedTickets,
+        closedTickets: a.closedTickets,
+      })),
+    ),
+  );
+
+  /**
+   * Resolution rate across the whole team. Derived only from fields the
+   * endpoint returns — resolved and closed over assigned — rather than being
+   * an invented performance score.
+   */
+  readonly resolutionRate = computed(() => {
+    const t = this.totals();
+    return share(t.resolved + t.closed, t.total);
   });
+
+  readonly busiestAgent = computed(() => {
+    const ranked = [...this.rows()].sort(
+      (a, b) => b.activeTickets - a.activeTickets,
+    );
+    return ranked[0] ?? null;
+  });
+
+  /** Top ten by resolved volume; more than that is unreadable as bars. */
+  readonly chartData = computed(() =>
+    [...this.rows()]
+      .sort((a, b) => b.resolvedTickets - a.resolvedTickets)
+      .slice(0, 10)
+      .map((agent) => ({
+        name: agent.agentUserName || agent.agentId.substring(0, 8),
+        value: agent.resolvedTickets,
+      })),
+  );
 
   ngOnInit(): void {
     this.fetchData();
   }
 
   fetchData(): void {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
-    const formValues = this.filterForm.value;
-    const filters = {
-      from: formValues.from
-        ? new Date(formValues.from).toISOString()
-        : undefined,
-      to: formValues.to ? new Date(formValues.to).toISOString() : undefined,
-    };
-
-    this.reportingService.getAgentStatistics(filters).subscribe({
-      next: (result) => {
-        // Leaderboard: rank agents by resolved tickets, most first.
-        this.agents.set(
+    this.beginLoad();
+    this.reportingService.getAgentStatistics(this.range()).subscribe(
+      this.handle((result) =>
+        this.rows.set(
           [...result].sort((a, b) => b.resolvedTickets - a.resolvedTickets),
-        );
-        this.isLoading.set(false);
-      },
-      error: (err: Error) => {
-        this.errorMessage.set(err.message);
-        this.isLoading.set(false);
-      },
-    });
+        ),
+      ),
+    );
   }
 
-  onApplyFilters(): void {
-    this.fetchData();
-  }
-
-  onResetFilters(): void {
-    this.filterForm.reset();
-    this.fetchData();
+  shareOf(value: number, total: number): number {
+    return share(value, total);
   }
 }

@@ -1,46 +1,70 @@
-<div class="portal-layout-frame">
-    <!-- Left Side: Sandboxed Sidebar Drawer Navigation -->
-    <aside class="portal-sidebar">
-        <div class="portal-brand">
-            <span class="brand-logo">🤝</span>
-            <h1 class="brand-title">Client Hub</h1>
+<a href="#portalMainContent" class="sc-skip-link">Skip to main content</a>
+
+<div class="flex min-h-screen flex-col bg-surface-muted">
+
+    <header class="sticky top-0 z-shell border-b border-line bg-surface/90 backdrop-blur">
+        <div class="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 sm:px-6">
+            <!-- Brand -->
+            <a routerLink="/portal/tickets" class="flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center rounded-sc bg-brand-600 text-white">
+                    <sc-icon name="support_agent" size="sm" [filled]="true" />
+                </span>
+                <span class="text-[15px] font-bold tracking-tight text-ink">
+                    ServiCore
+                    <span class="ml-1 font-medium text-ink-subtle">Support</span>
+                </span>
+            </a>
+
+            <div class="flex-1"></div>
+
+            <div class="flex items-center gap-1">
+                <app-notification-tray />
+
+                <button type="button" class="sc-btn sc-btn-ghost h-9 gap-2 px-2" [matMenuTriggerFor]="portalMenu"
+                    aria-label="Account menu">
+                    <sc-avatar [name]="customerEmail()" size="xs" />
+                    <span class="hidden max-w-[180px] truncate text-[13px] font-medium text-ink-muted sm:inline">
+                        {{ customerEmail() }}
+                    </span>
+                    <sc-icon name="expand_more" size="sm" class="hidden text-ink-subtle sm:inline-flex" />
+                </button>
+            </div>
         </div>
 
-        <nav class="portal-nav-links">
-            <span class="section-tag">Service Account Desk</span>
-            <a routerLink="/portal/tickets" routerLinkActive="active-portal-node" class="nav-node">
-                <span class="node-icon">📋</span>
-                <span class="node-label">My Support Cases</span>
-            </a>
-            <a routerLink="/portal/activate-device" routerLinkActive="active-portal-node" class="nav-node">
-                <span class="node-icon">🏢</span>
-                <span class="node-label">Switch Organization</span>
-            </a>
+        <!-- Horizontal navigation — two destinations, so tabs beat a drawer. -->
+        <nav class="mx-auto w-full max-w-5xl px-4 sm:px-6" aria-label="Portal navigation">
+            <ul class="-mb-px flex items-center gap-1">
+                <li>
+                    <a routerLink="/portal/tickets" routerLinkActive="sc-portal-tab-active" class="sc-portal-tab">
+                        <sc-icon name="confirmation_number" size="sm" />
+                        My tickets
+                    </a>
+                </li>
+                <li>
+                    <a routerLink="/portal/activate-device" routerLinkActive="sc-portal-tab-active"
+                        class="sc-portal-tab">
+                        <sc-icon name="apartment" size="sm" />
+                        Organization
+                    </a>
+                </li>
+            </ul>
         </nav>
+    </header>
 
-        <div class="portal-sidebar-footer">
-            <button (click)="onLogout()" class="portal-logout-btn">
-                <span class="btn-icon">🚪</span>
-                <span class="btn-label">Sign Out</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Right Side: Content Frame Workspace -->
-    <div class="portal-viewport-box">
-        <header class="portal-top-bar">
-            <div class="bar-left">
-                <span class="badge-portal">Secure Customer Connection</span>
-            </div>
-            <div class="bar-right">
-                <app-notification-tray></app-notification-tray>
-                <span class="account-email">{{ customerEmail() }}</span>
-                <div class="account-avatar">👤</div>
-            </div>
-        </header>
-
-        <main class="portal-primary-view">
-            <router-outlet></router-outlet>
-        </main>
-    </div>
+    <main id="portalMainContent" class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6" tabindex="-1">
+        <router-outlet />
+    </main>
 </div>
+
+<mat-menu #portalMenu="matMenu" xPosition="before">
+    <div class="border-b border-line px-3.5 py-2.5">
+        <p class="truncate text-[13px] font-semibold text-ink">{{ customerEmail() }}</p>
+        <p class="mt-0.5 text-2xs text-ink-subtle">Customer account</p>
+    </div>
+    <button type="button" mat-menu-item (click)="onLogout()">
+        <span class="flex items-center gap-2.5 text-[13px] text-danger-700">
+            <sc-icon name="logout" size="sm" />
+            Sign out
+        </span>
+    </button>
+</mat-menu>

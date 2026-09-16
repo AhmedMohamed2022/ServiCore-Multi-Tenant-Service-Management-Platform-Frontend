@@ -1,7 +1,17 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, switchMap, map, catchError, of, Subject } from 'rxjs';
+import {
+  Observable,
+  tap,
+  switchMap,
+  map,
+  catchError,
+  of,
+  Subject,
+  retry,
+  timer,
+} from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { TenantContextService } from '../../services/tenant-context.service';
 import { CustomerAccessService } from '../../services/customer-access.service';
@@ -79,6 +89,56 @@ export class AuthService {
     return this.http.post<RegisterResponse>(
       `${this.baseUrl}/register`,
       request,
+    );
+  }
+
+  /**
+   * Resolves the signed-in user's identity, fetching it if it isn't already
+   * held.
+   *
+   * This is what authGuard awaits before letting a navigation through. Fixes
+   * a real bug: `currentUser` used to be populated only by the one-shot
+   * `fetchMe()` call fired from `initializeSession()`'s constructor, with no
+   * retry. If that single request lost a race at cold boot — several other
+   * services (PermissionsService, AgentDirectoryService, NotificationService,
+   * the shell's own data loads) all fire their first requests at the same
+   * moment on a hard refresh — or hit any transient failure that wasn't a
+   * 401, `currentUser` stayed `null` for the rest of that page load. Nothing
+   * ever retried it. Every name in the account menu and every avatar that
+   * reads `currentUser()?.email` rendered blank (the avatar falls back to
+   * "?" for an empty name), and the only fix was a full logout/login, which
+   * happens to fire a fresh, independent `fetchMe()` as part of `login()`.
+   *
+   * `ensureUserLoaded` is called from `authGuard` on every navigation, not
+   * just once at bootstrap, so a transient miss on refresh gets a real retry
+   * (with a short backoff) and, failing that, another chance on the very
+   * next navigation — rather than a single unrepeatable attempt.
+   */
+  ensureUserLoaded(): Observable<boolean> {
+    if (this.currentUser()) {
+      return of(true);
+    }
+
+    if (!this.token()) {
+      return of(false);
+    }
+
+    return this.fetchMe().pipe(
+      retry({ count: 2, delay: (_, attempt) => timer(attempt * 300) }),
+      map(() => true),
+      catchError((err) => {
+        if (err?.status === 401) {
+          // The token itself is invalid — this is the one case where giving
+          // up and sending the person back to sign in is correct.
+          this.logout();
+        }
+        // Any other failure (network blip, a 5xx during a cold backend
+        // start): leave the token in place. The guard still allows
+        // navigation — see authGuard — and the next call to
+        // ensureUserLoaded (the next navigation, or a manual refresh) tries
+        // again, instead of stranding the person on a blank screen.
+        return of(false);
+      }),
     );
   }
 

@@ -1,99 +1,223 @@
-<div class="management-workspace-container">
-    <header class="workspace-header">
-        <h2>Team Operations & Rosters</h2>
-        <p>Configure internal departments, squad configurations, and agent workspace assignments</p>
-    </header>
+<sc-page-header title="Teams"
+    description="Service teams and who is on them. A ticket can only be assigned to a member of its own team."
+    [breadcrumbs]="[{ label: 'Management' }, { label: 'Teams' }]">
+    <button slot="actions" type="button" class="sc-btn sc-btn-secondary" (click)="loadTeams()"
+        [disabled]="isTeamLoading()">
+        <sc-icon name="refresh" size="sm" />
+        <span class="hidden sm:inline">Refresh</span>
+    </button>
+</sc-page-header>
 
-    @if (errorMessage()) {
-    <div class="alert-banner-error" role="alert">
-        {{ errorMessage() }}
-        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
-    </div>
-    }
+@if (errorMessage()) {
+<sc-alert tone="error" title="Something went wrong" class="mb-4 block" [dismissible]="true"
+    (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
+}
 
-    <div class="workspace-split-layout">
-        <!-- Left Pane: Operational Team Registry Grid -->
-        <section class="registry-pane">
-            <div class="action-card">
-                <h3>Provision New Service Team</h3>
-                <form [formGroup]="teamForm" (ngSubmit)="onCreateTeamSubmit()">
-                    <div class="form-group-row">
-                        <input type="text" formControlName="name" placeholder="e.g., Tier 2 Network Security"
-                            [class.input-error]="teamForm.controls.name.touched && teamForm.controls.name.invalid" />
-                        <button type="submit" [disabled]="teamForm.invalid">Create Squad</button>
-                    </div>
-                    @if (teamForm.controls.name.touched && teamForm.controls.name.errors?.['minlength']) {
-                    <span class="field-error-msg">Team designation must be at least 3 characters long.</span>
-                    }
-                </form>
-            </div>
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
 
-            <div class="data-grid-list">
-                <h4>Available Operational Units</h4>
-                @if (isTeamLoading()) {
-                <div class="loading-state-block">Indexing database clusters...</div>
-                } @else if (teams().length === 0) {
-                <div class="empty-state-block">No registered team architectures located within this workspace.</div>
-                } @else {
-                <div class="grid-cards-wrapper">
-                    @for (team of teams(); track team.id) {
-                    <div class="team-data-card" [class.selected-card]="selectedTeam()?.id === team.id"
-                        (click)="onSelectTeam(team)">
-                        <div class="card-details">
-                            <span class="team-title-text">{{ team.name }}</span>
-                            <span class="team-status-tag" [class.tag-active]="team.isActive">
-                                {{ team.isActive ? 'Operational' : 'Suspended' }}
-                            </span>
-                        </div>
-                        <span class="arrow-indicator">➔</span>
-                    </div>
-                    }
+    <!-- ==================================================================
+         Teams
+         ================================================================== -->
+    <div class="flex min-w-0 flex-col gap-5">
+        <section class="sc-card">
+            <div class="border-b border-line p-3">
+                <div class="relative">
+                    <sc-icon name="search" size="sm"
+                        class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
+                    <label for="teamSearch" class="sc-sr-only">Search teams</label>
+                    <input id="teamSearch" type="search" class="sc-input pl-9" placeholder="Search teams"
+                        [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
                 </div>
+            </div>
+
+            @if (isTeamLoading()) {
+            <div class="p-3">
+                <sc-loading-state label="Loading teams" [count]="4" />
+            </div>
+            } @else if (visibleTeams().length === 0) {
+            @if (searchTerm().trim()) {
+            <sc-empty-state icon="search_off" title="No teams match"
+                description="Try a different search term." actionLabel="Clear search"
+                (action)="searchTerm.set('')" />
+            } @else {
+            <sc-empty-state icon="groups" title="No teams yet"
+                description="Create a team so tickets have somewhere to be routed." />
+            }
+            } @else {
+            <ul class="divide-y divide-line">
+                @for (team of visibleTeams(); track team.id) {
+                <li>
+                    <button type="button" class="sc-team-row" [class.sc-team-selected]="selectedTeam()?.id === team.id"
+                        (click)="onSelectTeam(team)" [attr.aria-current]="selectedTeam()?.id === team.id">
+                        <span class="min-w-0 flex-1 text-left">
+                            <span class="block truncate text-[13px] font-semibold text-ink">{{ team.name }}</span>
+                            @if (team.description) {
+                            <span class="mt-0.5 block truncate text-xs text-ink-subtle">{{ team.description }}</span>
+                            }
+                        </span>
+                        <sc-icon name="chevron_right" size="sm" class="text-ink-subtle" />
+                    </button>
+                </li>
                 }
-            </div>
-        </section>
-
-        <!-- Right Pane: Active Allocation Console Drawer -->
-        <section class="allocation-pane">
-            @if (selectedTeam(); as team) {
-            <div class="pane-headline-box">
-                <h3>Allocations Dashboard: <span class="highlight-text">{{ team.name }}</span></h3>
-                <p class="meta-txt">System Identity Token: {{ team.id }}</p>
-            </div>
-
-            <div class="action-card color-shift-card">
-                <h4>Assign Corporate Operator Identity</h4>
-                <form [formGroup]="memberForm" (ngSubmit)="onAddMemberSubmit()">
-                    <div class="form-group-row">
-                        <input type="text" formControlName="userId" placeholder="Paste Target Identity User GUID String"
-                            [class.input-error]="memberForm.controls.userId.touched && memberForm.controls.userId.invalid" /><button
-                            type="submit" class="btn-success" [disabled]="memberForm.invalid">Attach Identity</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="data-grid-list">
-                <h4>Active Members Allocation Roster</h4>
-                @if (isMemberLoading()) {
-                <div class="loading-state-block">Querying roster arrays...</div>
-                } @else if (currentMembers().length === 0) {
-                <div class="empty-state-block">No assigned internal personnel matching this squad profile block.</div>
-                } @else {
-                <div class="grid-cards-wrapper">
-                    @for (member of currentMembers(); track member.userId) {
-                    <div class="member-data-card">
-                        <div class="card-details">
-                            <span class="member-name-text">{{ member.name }}</span>
-                            <span class="member-role-tag">{{ member.role }}</span>
-                        </div>
-                        <button class="btn-danger" (click)="onRemoveMember(member.userId)">Remove</button>
-                    </div>
-                    }
-                </div>
-                }
-
-            </div>
+            </ul>
             }
         </section>
+
+        <!-- Create / edit team -->
+        <section class="sc-card" aria-labelledby="teamFormHeading">
+            <div class="sc-card-header">
+                <h2 id="teamFormHeading" class="sc-card-title">
+                    {{ isEditingTeam() ? 'Edit team' : 'New team' }}
+                </h2>
+                @if (isEditingTeam()) {
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelTeamEdit()">Cancel</button>
+                }
+            </div>
+
+            <form class="sc-card-body flex flex-col gap-4" [formGroup]="teamForm" (ngSubmit)="onSubmitTeam()">
+                <div>
+                    <label for="teamName" class="sc-label">Name</label>
+                    <input id="teamName" type="text" class="sc-input" formControlName="name"
+                        placeholder="Tier 2 Support"
+                        [class.sc-input-invalid]="teamForm.controls.name.touched && teamForm.controls.name.invalid" />
+                    @if (teamForm.controls.name.touched && teamForm.controls.name.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use between 3 and 60 characters.</p>
+                    }
+                </div>
+
+                <div>
+                    <label for="teamDescription" class="sc-label">
+                        Description <span class="font-normal text-ink-subtle">(optional)</span>
+                    </label>
+                    <textarea id="teamDescription" class="sc-textarea" formControlName="description" rows="2"
+                        placeholder="What this team handles."></textarea>
+                </div>
+
+                <button type="submit" class="sc-btn sc-btn-primary"
+                    [disabled]="teamForm.invalid || isSavingTeam()">
+                    <sc-icon [name]="isEditingTeam() ? 'save' : 'add'" size="sm" />
+                    {{ isEditingTeam() ? 'Save changes' : 'Create team' }}
+                </button>
+            </form>
+        </section>
+    </div>
+
+    <!-- ==================================================================
+         Selected team
+         ================================================================== -->
+    <div class="min-w-0">
+        @if (selectedTeam(); as team) {
+        <section class="sc-card" aria-labelledby="rosterHeading">
+            <div class="sc-card-header">
+                <div class="min-w-0">
+                    <h2 id="rosterHeading" class="sc-card-title truncate">{{ team.name }}</h2>
+                    <p class="mt-0.5 text-xs text-ink-subtle">
+                        {{ roster().length }} {{ roster().length === 1 ? 'member' : 'members' }}
+                        · created {{ team.createdAt | date:'MMM d, y' }}
+                    </p>
+                </div>
+                <div class="flex shrink-0 items-center gap-1">
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onEditTeam(team)">
+                        <sc-icon name="edit" size="sm" />
+                        <span class="hidden sm:inline">Edit</span>
+                    </button>
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700"
+                        (click)="onDeactivateTeam(team)">
+                        <sc-icon name="do_not_disturb_on" size="sm" />
+                        <span class="hidden sm:inline">Deactivate</span>
+                    </button>
+                </div>
+            </div>
+
+            @if (team.description) {
+            <p class="border-b border-line px-5 py-3 text-[13px] text-ink-muted">{{ team.description }}</p>
+            }
+
+            <!-- Add member -->
+            <div class="border-b border-line p-4">
+                @if (isDirectoryAvailable() && !useManualUserId()) {
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="sc-btn sc-btn-primary" [matMenuTriggerFor]="agentMenu"
+                        [disabled]="isAddingMember() || addableAgents().length === 0">
+                        <sc-icon name="person_add" size="sm" />
+                        Add member
+                    </button>
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="useManualUserId.set(true)">
+                        Add by user ID
+                    </button>
+                    @if (addableAgents().length === 0) {
+                    <p class="text-xs text-ink-subtle">Every agent in this organization is already on this team.</p>
+                    }
+                </div>
+                <p class="sc-hint">
+                    Lists agents in this organization. Owners and managers aren't included — add those by user ID.
+                </p>
+                } @else {
+                <form class="flex flex-wrap items-start gap-2" [formGroup]="memberForm"
+                    (ngSubmit)="onAddMemberSubmit()">
+                    <div class="min-w-[220px] flex-1">
+                        <label for="memberUserId" class="sc-label">User ID</label>
+                        <input id="memberUserId" type="text" class="sc-input" formControlName="userId"
+                            placeholder="00000000-0000-0000-0000-000000000000"
+                            [class.sc-input-invalid]="memberForm.controls.userId.touched && memberForm.controls.userId.invalid" />
+                        <p class="sc-hint">The person must already be a member of this organization.</p>
+                    </div>
+                    <button type="submit" class="sc-btn sc-btn-primary mt-[26px]"
+                        [disabled]="memberForm.invalid || isAddingMember()">
+                        <sc-icon name="person_add" size="sm" />
+                        Add
+                    </button>
+                    @if (isDirectoryAvailable()) {
+                    <button type="button" class="sc-btn sc-btn-ghost mt-[26px]" (click)="useManualUserId.set(false)">
+                        Pick from list
+                    </button>
+                    }
+                </form>
+                }
+            </div>
+
+            <!-- Roster -->
+            @if (isMemberLoading()) {
+            <div class="p-3">
+                <sc-loading-state label="Loading members" [count]="4" />
+            </div>
+            } @else if (roster().length === 0) {
+            <sc-empty-state icon="person_off" title="No members on this team"
+                description="Tickets routed here can't be assigned to anyone until someone joins." />
+            } @else {
+            <ul class="divide-y divide-line">
+                @for (entry of roster(); track entry.userId) {
+                <li class="flex items-center gap-3 p-4">
+                    <sc-avatar [name]="entry.isNamed ? entry.name : entry.userId" size="sm" />
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-[13px] font-semibold text-ink"
+                            [class.text-ink-subtle]="!entry.isNamed">
+                            {{ entry.name }}
+                        </p>
+                        <p class="text-xs text-ink-subtle">Joined {{ entry.joinedAt | date:'MMM d, y' }}</p>
+                    </div>
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm text-danger-700"
+                        (click)="onRemoveMember(entry)" [attr.aria-label]="'Remove ' + entry.name">
+                        <sc-icon name="person_remove" size="sm" />
+                    </button>
+                </li>
+                }
+            </ul>
+            }
+        </section>
+        } @else {
+        <section class="sc-card">
+            <sc-empty-state icon="groups" title="Select a team"
+                description="Pick a team on the left to see and manage its members." />
+        </section>
+        }
     </div>
 </div>
+
+<mat-menu #agentMenu="matMenu">
+    @for (agent of addableAgents(); track agent.userId) {
+    <button type="button" mat-menu-item (click)="onPickAgent(agent.userId)">
+        <span class="text-[13px]">{{ agent.name }}</span>
+    </button>
+    }
+</mat-menu>

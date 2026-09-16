@@ -1,16 +1,25 @@
 import { Component, inject, OnInit, signal, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
+import { PasswordFieldComponent } from '../shared/password-field.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
 @Component({
   selector: 'app-accept-staff-invitation',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthLayoutComponent,
+    PasswordFieldComponent,
+    IconComponent,
+    AlertComponent,
+  ],
   templateUrl: './accept-staff-invitation.component.html',
-  styleUrls: ['./accept-staff-invitation.component.css'],
 })
 export class AcceptStaffInvitationComponent implements OnInit {
   @Input() token!: string; // Bound automatically from query string '?token=...' via router bindings
@@ -30,7 +39,7 @@ export class AcceptStaffInvitationComponent implements OnInit {
   ngOnInit(): void {
     if (!this.token) {
       this.errorMessage.set(
-        'Missing or expired critical security onboarding verification token parameter link.',
+        'This invitation link is missing its token. Ask whoever invited you to send a fresh link.',
       );
     }
   }
@@ -55,14 +64,14 @@ export class AcceptStaffInvitationComponent implements OnInit {
         next: () => {
           this.isProcessing.set(false);
           this.successMessage.set(
-            'Staff identity workspace configurations committed safely.',
+            'Your account is ready. Taking you to sign in.',
           );
           setTimeout(() => this.router.navigate(['/login']), 2500);
         },
         error: (err) => {
           this.errorMessage.set(
             err.error?.error ||
-              'Failed to complete registration onboarding setup.',
+              'We could not complete your setup. The invitation may have expired.',
           );
           this.isProcessing.set(false);
         },

@@ -1,131 +1,146 @@
-<div class="report-view-container">
-    <header class="report-view-header">
-        <div>
-            <h2>Ticket Statistics</h2>
-            <p>Status, priority, and category breakdowns across all tickets in this organization.</p>
-        </div>
+<sc-page-header title="Ticket statistics"
+    description="Where tickets sit, how urgent they are, and how long they take to finish."
+    [breadcrumbs]="[{ label: 'Reports' }, { label: 'Tickets' }]">
+    <sc-report-range slot="actions" (rangeChange)="onRangeChange($event)" />
+</sc-page-header>
 
-        <div class="report-filter-toolbar">
-            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="report-filter-row">
-                <div class="report-filter-group">
-                    <label for="tsFrom">From</label>
-                    <input id="tsFrom" type="date" formControlName="from" />
-                </div>
-                <div class="report-filter-group">
-                    <label for="tsTo">To</label>
-                    <input id="tsTo" type="date" formControlName="to" />
-                </div>
-                <div class="report-filter-actions">
-                    <button type="submit" class="btn-report-apply" [disabled]="isLoading()">Filter</button>
-                    <button type="button" class="btn-report-reset" (click)="onResetFilters()"
-                        [disabled]="isLoading()">Reset</button>
-                </div>
-            </form>
-        </div>
-    </header>
+@if (errorMessage()) {
+<sc-alert tone="error" title="Report unavailable" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+}
 
-    @if (errorMessage()) {
-    <div class="report-error-banner" role="alert">{{ errorMessage() }}</div>
-    }
-
-    @if (isLoading()) {
-    <div class="report-loading-block">Loading ticket statistics...</div>
-    } @else
-    {
-
-
-    @if (data(); as stats) {
-
-    <div class="report-cards-grid">
-        <div class="report-summary-card">
-            <span class="val">{{ stats.performance.resolvedCount }}</span>
-            <span class="lbl">Resolved</span>
-        </div>
-        <div class="report-summary-card">
-            <span class="val">{{ stats.performance.closedCount }}</span>
-            <span class="lbl">Closed</span>
-        </div>
-        <div class="report-summary-card">
-            <span class="val">{{ stats.performance.averageResolutionTime || '—' }}</span>
-            <span class="lbl">Avg. Resolution Time</span>
-        </div>
-        <div class="report-summary-card">
-            <span class="val">{{ stats.performance.averageClosureTime || '—' }}</span>
-            <span class="lbl">Avg. Closure Time</span>
-        </div>
-    </div>
-
-    <div class="report-table-card">
-        <h3>Status Distribution</h3>
-        @if (stats.statusDistribution.length === 0) {
-        <p class="report-empty-block">No tickets found for this range.</p>
-        } @else {
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Ticket Count</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (row of stats.statusDistribution; track row.status) {
-                <tr>
-                    <td>{{ statusLabels[row.status] || row.status }}</td>
-                    <td>{{ row.count }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-        }
-    </div>
-
-    <div class="report-table-card">
-        <h3>Priority Distribution</h3>
-        @if (stats.priorityDistribution.length === 0) {
-        <p class="report-empty-block">No tickets found for this range.</p>
-        } @else {
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Priority</th>
-                    <th>Ticket Count</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (row of stats.priorityDistribution; track row.priority) {
-                <tr>
-                    <td>{{ priorityLabels[row.priority] || row.priority }}</td>
-                    <td>{{ row.count }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-        }
-    </div>
-
-    <div class="report-table-card">
-        <h3>Category Distribution</h3>
-        @if (stats.categoryDistribution.length === 0) {
-        <p class="report-empty-block">No tickets found for this range.</p>
-        } @else {
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Category</th>
-                    <th>Ticket Count</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (row of stats.categoryDistribution; track row.categoryId) {
-                <tr>
-                    <td>{{ row.categoryName }}</td>
-                    <td>{{ row.ticketCount }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-        }
-    </div>
-    }
-    }
+@if (isLoading()) {
+<div class="sc-card p-5">
+    <sc-loading-state label="Loading ticket statistics" [count]="6" />
 </div>
+} @else if (!hasData()) {
+<div class="sc-card">
+    <sc-empty-state icon="confirmation_number" title="No tickets in this period"
+        description="Widen the date range to see the distribution across statuses and priorities." />
+</div>
+} @else {
+
+@if (stats(); as s) {
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <sc-stat-card label="Total tickets" [value]="totalTickets()" icon="confirmation_number" tone="info" />
+    <sc-stat-card label="Active workload" [value]="activeTickets()" icon="pending_actions" tone="warn"
+        hint="Open, in progress, or waiting" />
+    <sc-stat-card label="Avg. resolution" [value]="s.performance.averageResolutionTime | scDuration"
+        icon="timer" tone="success" [hint]="s.performance.resolvedCount + ' resolved'" />
+    <sc-stat-card label="Avg. time to close" [value]="s.performance.averageClosureTime | scDuration"
+        icon="lock_clock" tone="neutral" [hint]="s.performance.closedCount + ' closed'" />
+</div>
+
+<!-- Critical work is called out rather than left to be spotted in a chart. -->
+@if (criticalCount() > 0) {
+<sc-alert tone="warn" title="Critical tickets in this period" class="mt-4 block">
+    {{ criticalCount() }} of {{ totalTickets() }} tickets
+    ({{ shareOf(criticalCount(), totalTickets()) }}%) were raised at Critical priority.
+</sc-alert>
+}
+
+<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+
+    <sc-chart-card title="Status distribution" description="Every status in workflow order, including empty ones.">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="h-[280px]">
+                <ngx-charts-advanced-pie-chart [results]="statusChartData()" [scheme]="statusColors"
+                    [gradient]="false" />
+            </div>
+
+            <ul class="flex flex-col justify-center gap-2.5 px-1">
+                @for (row of statusBreakdown(); track row.status) {
+                <li>
+                    <div class="flex items-center justify-between gap-3 text-[13px]">
+                        <span class="flex min-w-0 items-center gap-2">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" [style.background-color]="row.color"
+                                aria-hidden="true"></span>
+                            <sc-ticket-status-badge [status]="row.status" />
+                        </span>
+                        <span class="shrink-0 tabular-nums text-ink-muted">
+                            {{ row.count }} <span class="text-ink-subtle">· {{ row.percent }}%</span>
+                        </span>
+                    </div>
+                    <span class="sc-meter mt-1.5 block" aria-hidden="true">
+                        <span class="sc-meter-fill" [style.width.%]="row.percent"
+                            [style.background-color]="row.color"></span>
+                    </span>
+                </li>
+                }
+            </ul>
+        </div>
+    </sc-chart-card>
+
+    <sc-chart-card title="Priority mix" description="How urgent the incoming work was.">
+        <div class="h-[280px]">
+            <ngx-charts-pie-chart [results]="priorityChartData()" [scheme]="priorityColors" [doughnut]="true"
+                [arcWidth]="0.35" [labels]="false" [legend]="true" [legendPosition]="legendBelow" />
+        </div>
+
+        <ul class="mt-2 flex flex-col gap-2 px-1">
+            @for (row of priorityBreakdown(); track row.priority) {
+            <li class="flex items-center justify-between gap-3 text-[13px]">
+                <sc-ticket-priority-badge [priority]="row.priority" />
+                <span class="shrink-0 tabular-nums text-ink-muted">
+                    {{ row.count }} <span class="text-ink-subtle">· {{ row.percent }}%</span>
+                </span>
+            </li>
+            }
+        </ul>
+    </sc-chart-card>
+</div>
+
+<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+
+    <sc-chart-card title="Tickets by category" description="Top ten categories by volume.">
+        <div class="h-[320px]">
+            <ngx-charts-bar-horizontal [results]="categoryChartData()" [scheme]="categoryColors" [xAxis]="true"
+                [yAxis]="true" [roundEdges]="false" />
+        </div>
+    </sc-chart-card>
+
+    <section class="sc-card min-w-0">
+        <div class="sc-card-header">
+            <h2 class="sc-card-title">Category breakdown</h2>
+            <p class="text-xs text-ink-subtle">{{ categoryRows().length }} categories</p>
+        </div>
+
+        @if (categoryRows().length === 0) {
+        <sc-empty-state icon="sell" title="No categorised tickets"
+            description="Tickets in this period have no category distribution to report." />
+        } @else {
+        <div class="overflow-x-auto">
+            <table class="sc-table">
+                <caption class="sc-sr-only">Tickets per category</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Category</th>
+                        <th scope="col" class="text-right">Tickets</th>
+                        <th scope="col" class="w-32">Share</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of categoryRows(); track row.categoryId) {
+                    <tr>
+                        <td class="max-w-[220px] truncate font-medium text-ink">{{ row.categoryName }}</td>
+                        <td class="text-right tabular-nums">{{ row.ticketCount }}</td>
+                        <td>
+                            <span class="flex items-center gap-2">
+                                <span class="sc-meter" aria-hidden="true">
+                                    <span class="sc-meter-fill"
+                                        [style.width.%]="shareOf(row.ticketCount, totalTickets())"></span>
+                                </span>
+                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-ink-subtle">
+                                    {{ shareOf(row.ticketCount, totalTickets()) }}%
+                                </span>
+                            </span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </section>
+</div>
+}
+}

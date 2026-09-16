@@ -1,15 +1,24 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/services/auth.service';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
+import { PasswordFieldComponent } from '../shared/password-field.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthLayoutComponent,
+    PasswordFieldComponent,
+    IconComponent,
+    AlertComponent,
+  ],
   templateUrl: './register.component.html',
-  styleUrls: ['./register.component.css'],
 })
 export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
@@ -43,7 +52,10 @@ export class RegisterComponent {
         this.successMessage.set(
           `Organization "${res.organizationName}" provisioned successfully!`,
         );
-        setTimeout(() => this.router.navigate(['/auth/login']), 2500);
+        // The login route is registered at the top level as '/login'.
+        // This used to navigate to '/auth/login', which does not exist, so a
+        // successful registration dead-ended on the success message.
+        setTimeout(() => this.router.navigate(['/login']), 2500);
       },
       error: (err: Error) => {
         this.isLoading.set(false);

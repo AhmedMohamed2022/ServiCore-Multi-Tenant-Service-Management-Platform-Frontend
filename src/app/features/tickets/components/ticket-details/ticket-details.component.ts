@@ -1,88 +1,132 @@
-import {
-  Component,
-  inject,
-  OnInit,
-  signal,
-  computed,
-  Input,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Component, computed, inject, Input, OnInit, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { catchError, Observable, of } from 'rxjs';
+
 import { TicketService } from '../../../../core/services/ticket.service';
 import { TeamService } from '../../../../core/services/team.service';
-import { InvitationService } from '../../../../core/services/invitation.service';
+import { CustomerService } from '../../../../core/services/customer.service';
+import { CategoryService } from '../../../../core/services/category.service';
+import { PermissionsService } from '../../../../core/services/permissions.service';
+import { AgentDirectoryService } from '../../../../core/services/agent-directory.service';
 import { AuthService } from '../../../../core/auth/services/auth.service';
+
 import { TicketDto } from '../../models/ticket.model';
 import { TeamMemberDto } from '../../../management/models/team.model';
+import { CustomerDto } from '../../../management/models/customer.model';
 import {
   TicketStatus,
-  TicketPriority,
+  TICKET_STATUS_ORDER,
+  TicketStatusIcons,
   TicketStatusLabels,
-  TicketPriorityLabels,
 } from '../../models/ticket-enums.model';
+
 import { TicketCommentsComponent } from '../ticket-comments/ticket-comments.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
+import {
+  AlertComponent,
+  LoadingStateComponent,
+} from '../../../../shared/ui/states/states.component';
+import { ConfirmService } from '../../../../shared/ui/confirm-dialog/confirm-dialog.component';
+import { ToastService } from '../../../../shared/ui/toast/toast.service';
+import {
+  TicketPriorityBadgeComponent,
+  TicketStatusBadgeComponent,
+} from '../../../../shared/ticket/ticket-badges.component';
+
+type WorkflowAction = 'open' | 'start' | 'wait' | 'resolve' | 'close';
+
+/** One node of the lifecycle rail in the right column. */
+interface WorkflowStep {
+  readonly status: TicketStatus;
+  readonly label: string;
+  readonly icon: string;
+  readonly state: 'done' | 'current' | 'upcoming';
+}
 
 @Component({
   selector: 'app-ticket-details',
   standalone: true,
   imports: [
-    CommonModule,
+    DatePipe,
     RouterLink,
-    ReactiveFormsModule,
+    FormsModule,
+    MatMenuModule,
+    MatTooltipModule,
     TicketCommentsComponent,
+    PageHeaderComponent,
+    IconComponent,
+    AvatarComponent,
+    AlertComponent,
+    LoadingStateComponent,
+    TicketStatusBadgeComponent,
+    TicketPriorityBadgeComponent,
   ],
   templateUrl: './ticket-details.component.html',
   styleUrls: ['./ticket-details.component.css'],
 })
 export class TicketDetailsComponent implements OnInit {
-  // Bound cleanly via withComponentInputBinding() matching the ':id' param string
+  // Bound via withComponentInputBinding() against the ':id' route param.
   @Input() id!: string;
 
   private readonly ticketService = inject(TicketService);
   private readonly teamService = inject(TeamService);
-  private readonly invitationService = inject(InvitationService);
+  private readonly customerService = inject(CustomerService);
+  private readonly categoryService = inject(CategoryService);
+  private readonly permissions = inject(PermissionsService);
+  private readonly agentDirectory = inject(AgentDirectoryService);
   private readonly authService = inject(AuthService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
-  // Structural State Signals
   readonly ticket = signal<TicketDto | null>(null);
-  readonly availableAgents = signal<TeamMemberDto[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly isActionLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
-  // Used only to pick which "back" link to render (/app vs /portal). This is
-  // navigation cosmetics, not a permission decision, so a URL check is fine
-  // here — it never gates a staff control.
+  /**
+   * Context the ticket itself does not carry. TicketDto is ids only, so every
+   * human-readable label on this page comes from one of these lookups. Each
+   * one fails independently: a 403 on customers must not blank out the
+   * conversation.
+   */
+  readonly customer = signal<CustomerDto | null>(null);
+  readonly categoryName = signal<string | null>(null);
+  readonly teamName = signal<string | null>(null);
+  readonly teamMembers = signal<TeamMemberDto[]>([]);
+
+  /**
+   * Route-based only, and only ever used to pick which "back" link to render.
+   * It never gates a control — see the permission signals below.
+   */
   readonly isCustomerPortal = signal<boolean>(false);
 
-  // Real permission signals. Neither of these is inferred from the route or
-  // from the JWT's decoded `role` claim (see AuthService.fetchMe) — that
-  // claim isn't scoped to the active organization and AppShellComponent
-  // deliberately avoids trusting it. Instead we ask the server the same way
-  // AppShellComponent does: hit a real endpoint that's already gated with the
-  // policy we care about and read the 200/403 outcome.
-  //
-  // CanManageTickets (Owner/Manager) requires exactly the same role set as
-  // CanManageStaff, which is what OrganizationInvitationsController's GET
-  // endpoint enforces — the same probe AppShellComponent already performs —
-  // so a successful call to it is authoritative for ticket-management rights
-  // too, with no extra request needed.
-  readonly isManagementAllowed = signal<boolean>(false);
+  /**
+   * Unchanged probe strategy, now read from the shared cache. The JWT's role
+   * claim is not scoped to the active organization, so it is not trusted;
+   * instead PermissionsService reads the 200/403 outcome of an endpoint the
+   * server already gates with the policy we care about. CanManageStaff (the
+   * invitations GET) needs the same role set as CanManageTickets, so one
+   * probe answers for both.
+   */
+  readonly isManagementAllowed = this.permissions.canManage;
 
-  // There is no side-effect-free endpoint gated by CanWorkAssignedTickets to
-  // probe (start/wait-for-customer/resolve all mutate the ticket), so this is
-  // derived from the ticket's own AssignedAgentId — real data returned by the
-  // server for this specific ticket, not a guessed or cached role. The
-  // backend re-checks both the Agent role and this same assignment fact on
-  // every lifecycle call regardless, so this only ever controls which
-  // buttons we *offer*, never what's actually allowed.
+  /**
+   * No side-effect-free endpoint is gated by CanWorkAssignedTickets (start,
+   * wait and resolve all mutate), so this is derived from the ticket's own
+   * AssignedAgentId — server data about this specific ticket, not a guessed
+   * role. The backend re-checks both the Agent role and the assignment on
+   * every lifecycle call, so this only decides which buttons we offer.
+   */
   readonly isAssignedAgent = computed<boolean>(() => {
     const currentTicket = this.ticket();
     const currentUserId = this.authService.currentUser()?.userId;
-
     return (
       !!currentTicket &&
       !!currentUserId &&
@@ -90,27 +134,140 @@ export class TicketDetailsComponent implements OnInit {
     );
   });
 
-  protected readonly statusLabels = TicketStatusLabels;
-  protected readonly priorityLabels = TicketPriorityLabels;
-  protected readonly ticketStatusEnum = TicketStatus;
+  readonly isReadOnlyViewer = computed(
+    () => !this.isManagementAllowed() && !this.isAssignedAgent(),
+  );
 
-  // Guards against firing the roster request twice: it depends on both the
-  // ticket (for its teamId) and the management probe, which resolve
-  // independently and in no guaranteed order.
+  /**
+   * Explains what happens next, and who moves it, whenever the current
+   * viewer's role has no header button to click at the ticket's current
+   * status.
+   *
+   * Bug this fixes: the header only shows a button for specific
+   * role+status combinations — Owner/Manager get Open (New) and Close
+   * (Resolved); the assigned Agent gets Start, Wait and Resolve. Those two
+   * branches are mutually exclusive (`@if (isManagementAllowed()) {…} @else
+   * if (isAssignedAgent()) {…}`), which is correct — the backend's
+   * CanWorkAssignedTickets policy requires the Agent role specifically, so a
+   * Manager can never legitimately be the assigned agent. But that left a
+   * real gap: for Open, InProgress and WaitingForCustomer — three of the six
+   * statuses — a Manager viewing the ticket saw no header button and no
+   * explanation for why, because the old fallback message only covered
+   * viewers who were neither a manager nor the assigned agent. A Manager
+   * testing the app without any Agent teammates set up had no way to tell
+   * "there's nothing for me to click here" from "the controls are broken."
+   */
+  readonly workflowHint = computed<string | null>(() => {
+    const t = this.ticket();
+    if (!t || this.isCustomerPortal()) return null;
+
+    const status = t.status;
+    const assignee = this.assigneeName();
+
+    if (this.isManagementAllowed()) {
+      switch (status) {
+        case TicketStatus.Open:
+          return assignee
+            ? `Waiting on ${assignee} to start work. Reassign it below if needed.`
+            : 'Assign an agent below so work can begin.';
+        case TicketStatus.InProgress:
+          return `${assignee ?? 'The assigned agent'} is actively working this ticket.`;
+        case TicketStatus.WaitingForCustomer:
+          return `Waiting on the customer's reply. ${assignee ?? 'The assigned agent'} can resume once they respond.`;
+        default:
+          // New and Resolved already have a header button.
+          return null;
+      }
+    }
+
+    if (this.isAssignedAgent()) {
+      if (status === TicketStatus.Resolved) {
+        return "Resolved. A manager will close it once they're satisfied with the outcome.";
+      }
+      // Open, WaitingForCustomer and InProgress already have a header button.
+      return null;
+    }
+
+    return 'Workflow actions are available to this ticket\'s assigned agent and to organization managers.';
+  });
+
+  readonly isClosed = computed(
+    () => this.ticket()?.status === TicketStatus.Closed,
+  );
+
+  /**
+   * Display name for whoever the ticket is assigned to. AgentDirectoryService
+   * is the only userId -> name source in the API and it is Manager-gated, so
+   * an Agent viewing their own ticket sees the abbreviated id instead. That is
+   * still better than the previous behaviour, which read a field
+   * (`assignedAgentName`) the server has never sent and therefore always
+   * printed "Awaiting Allocation" even on an assigned ticket.
+   */
+  readonly assigneeName = computed<string | null>(() => {
+    const agentId = this.ticket()?.assignedAgentId;
+    if (!agentId) return null;
+    if (agentId === this.authService.currentUser()?.userId) return 'You';
+    return this.agentDirectory.labelFor(agentId, 'Agent');
+  });
+
+  /** Agent options for the assignment menu, labelled as well as we can. */
+  readonly assignableAgents = computed(() =>
+    this.teamMembers().map((member) => ({
+      userId: member.userId,
+      name: this.agentDirectory.labelFor(member.userId, 'Agent'),
+      isCurrent: member.userId === this.ticket()?.assignedAgentId,
+    })),
+  );
+
+  /**
+   * The lifecycle rail. Statuses are shown in their real workflow order and
+   * marked done/current/upcoming — no status can be set directly from it, so
+   * it cannot become a backdoor around the transition rules.
+   */
+  readonly workflowSteps = computed<WorkflowStep[]>(() => {
+    const current = this.ticket()?.status;
+    if (!current) return [];
+
+    return TICKET_STATUS_ORDER.map((status) => ({
+      status,
+      label: TicketStatusLabels[status],
+      icon: TicketStatusIcons[status],
+      state:
+        status < current ? 'done' : status === current ? 'current' : 'upcoming',
+    }));
+  });
+
+  readonly breadcrumbs = computed(() => [
+    {
+      label: this.isCustomerPortal() ? 'My tickets' : 'Tickets',
+      link: this.isCustomerPortal() ? '/portal/tickets' : '/app/tickets',
+    },
+    { label: this.shortId() },
+  ]);
+
+  readonly shortId = computed(() =>
+    this.ticket() ? `#${this.ticket()!.id.substring(0, 8)}` : '',
+  );
+
+  protected readonly TicketStatus = TicketStatus;
+
+  /**
+   * Guards against firing the roster request twice: it depends on both the
+   * ticket (for its teamId) and the management probe, which resolve
+   * independently and in no guaranteed order.
+   */
   private rosterRequested = false;
 
   ngOnInit(): void {
-    // Discern url segment origins before pulling database variables
     this.isCustomerPortal.set(this.router.url.includes('/portal/'));
+    this.agentDirectory.loadIfPermitted();
     this.loadTicketContext();
     this.probeManagementPermission();
   }
 
   loadTicketContext(): void {
     if (!this.id) {
-      this.errorMessage.set(
-        'Missing expected ticket unique tracking token parameter reference.',
-      );
+      this.errorMessage.set('No ticket was specified in the address.');
       return;
     }
 
@@ -121,6 +278,7 @@ export class TicketDetailsComponent implements OnInit {
       next: (ticketData) => {
         this.ticket.set(ticketData);
         this.isLoading.set(false);
+        this.loadTicketRelations(ticketData);
         this.maybeLoadAvailableStaffPool();
       },
       error: (err: Error) => {
@@ -130,21 +288,34 @@ export class TicketDetailsComponent implements OnInit {
     });
   }
 
-  // See isManagementAllowed above for why this specific endpoint is a valid
-  // stand-in for a CanManageTickets probe.
   probeManagementPermission(): void {
-    this.invitationService.getInvitations().subscribe({
-      next: () => {
-        this.isManagementAllowed.set(true);
-        this.maybeLoadAvailableStaffPool();
-      },
-      error: () => this.isManagementAllowed.set(false),
+    this.permissions.probeCanManage().subscribe(() => {
+      this.maybeLoadAvailableStaffPool();
     });
   }
 
-  // Only management ever sees the assignment dropdown, so only load the
-  // staff roster once we know both (a) who's allowed to see it and (b) which
-  // team the ticket actually belongs to.
+  /**
+   * Customer, category and team names. All three are best-effort: the page is
+   * useful without them and none of them may take the ticket down with it.
+   */
+  private loadTicketRelations(ticket: TicketDto): void {
+    this.customerService
+      .getCustomerById(ticket.customerId)
+      .pipe(catchError(() => of(null)))
+      .subscribe((customer) => this.customer.set(customer));
+
+    this.categoryService
+      .getCategoryById(ticket.categoryId)
+      .pipe(catchError(() => of(null)))
+      .subscribe((category) => this.categoryName.set(category?.name ?? null));
+
+    // The brief calls out that Team was never shown on this page at all.
+    this.teamService
+      .getTeamById(ticket.teamId)
+      .pipe(catchError(() => of(null)))
+      .subscribe((team) => this.teamName.set(team?.name ?? null));
+  }
+
   private maybeLoadAvailableStaffPool(): void {
     if (this.rosterRequested) return;
 
@@ -152,87 +323,120 @@ export class TicketDetailsComponent implements OnInit {
     if (!this.isManagementAllowed() || !currentTicket) return;
 
     this.rosterRequested = true;
-    this.loadAvailableStaffPool(currentTicket.teamId);
+
+    // Loaded from the ticket's own teamId rather than teams()[0], so the
+    // dropdown can only offer agents the backend's TeamMemberExistsAsync
+    // check in AssignAsync will actually accept.
+    this.teamService
+      .getTeamMembers(currentTicket.teamId)
+      .pipe(catchError(() => of([])))
+      .subscribe((members) => this.teamMembers.set(members));
   }
 
-  loadAvailableStaffPool(teamId: string): void {
-    // Fixed: this used to always load teams()[0]'s members regardless of
-    // which team the ticket belonged to, so the dropdown could offer agents
-    // who aren't on the ticket's actual team — the backend's
-    // TeamMemberExistsAsync check in AssignAsync would then reject them.
-    // Loading straight from the ticket's own teamId removes the
-    // getTeams()/teams()[0] indirection entirely, so there's no longer a
-    // "wrong team" to accidentally pick.
-    this.teamService.getTeamMembers(teamId).subscribe({
-      next: (members) => this.availableAgents.set(members),
-      error: (err: Error) => this.errorMessage.set(err.message),
-    });
+  // ---------------------------------------------------------------------
+  // Workflow
+  // ---------------------------------------------------------------------
+
+  executeWorkflowTransition(action: WorkflowAction): void {
+    if (action === 'close') {
+      this.confirm
+        .ask({
+          title: 'Close this ticket?',
+          message:
+            'Closing archives the ticket. No further messages can be added to the conversation afterwards.',
+          confirmLabel: 'Close ticket',
+          tone: 'danger',
+        })
+        .subscribe((confirmed) => {
+          if (confirmed) this.runTransition(action);
+        });
+      return;
+    }
+
+    this.runTransition(action);
   }
 
-  executeWorkflowTransition(
-    action: 'open' | 'start' | 'wait' | 'resolve' | 'close',
-  ): void {
+  private runTransition(action: WorkflowAction): void {
     this.isActionLoading.set(true);
     this.errorMessage.set(null);
 
-    let stream$: Observable<void>;
-    switch (action) {
-      case 'open':
-        stream$ = this.ticketService.openTicket(this.id);
-        break;
-      case 'start':
-        stream$ = this.ticketService.startTicket(this.id);
-        break;
-      case 'wait':
-        stream$ = this.ticketService.waitForCustomer(this.id);
-        break;
-      case 'resolve':
-        stream$ = this.ticketService.resolveTicket(this.id);
-        break;
-      case 'close':
-        stream$ = this.ticketService.closeTicket(this.id);
-        break;
-    }
+    const streams: Record<WorkflowAction, () => Observable<void>> = {
+      open: () => this.ticketService.openTicket(this.id),
+      start: () => this.ticketService.startTicket(this.id),
+      wait: () => this.ticketService.waitForCustomer(this.id),
+      resolve: () => this.ticketService.resolveTicket(this.id),
+      close: () => this.ticketService.closeTicket(this.id),
+    };
 
-    stream$.subscribe({
+    const messages: Record<WorkflowAction, string> = {
+      open: 'Ticket opened.',
+      start: 'Ticket moved to In Progress.',
+      wait: 'Ticket is now waiting for the customer.',
+      resolve: 'Ticket marked as resolved.',
+      close: 'Ticket closed.',
+    };
+
+    streams[action]().subscribe({
       next: () => {
         this.isActionLoading.set(false);
+        this.toast.success(messages[action]);
         this.loadTicketContext();
       },
       error: (err: Error) => {
         this.errorMessage.set(err.message);
+        this.toast.error(err.message);
         this.isActionLoading.set(false);
       },
     });
   }
 
-  onAssignAgent(event: Event): void {
-    const agentId = (event.target as HTMLSelectElement).value;
+  onAssignAgent(agentId: string): void {
+    if (agentId === this.ticket()?.assignedAgentId) return;
+
     this.isActionLoading.set(true);
     this.errorMessage.set(null);
 
-    if (!agentId) {
-      this.ticketService.unassignTicket(this.id).subscribe({
-        next: () => {
-          this.isActionLoading.set(false);
-          this.loadTicketContext();
-        },
-        error: (err: Error) => {
-          this.errorMessage.set(err.message);
-          this.isActionLoading.set(false);
-        },
+    this.ticketService.assignTicket(this.id, agentId).subscribe({
+      next: () => {
+        this.isActionLoading.set(false);
+        this.toast.success('Ticket assigned.');
+        this.loadTicketContext();
+      },
+      error: (err: Error) => {
+        this.errorMessage.set(err.message);
+        this.toast.error(err.message);
+        this.isActionLoading.set(false);
+      },
+    });
+  }
+
+  onUnassign(): void {
+    this.confirm
+      .ask({
+        title: 'Return this ticket to the queue?',
+        message:
+          'The current assignee loses access to the start, wait and resolve actions until someone is assigned again.',
+        confirmLabel: 'Unassign',
+        tone: 'danger',
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) return;
+
+        this.isActionLoading.set(true);
+        this.errorMessage.set(null);
+
+        this.ticketService.unassignTicket(this.id).subscribe({
+          next: () => {
+            this.isActionLoading.set(false);
+            this.toast.success('Ticket returned to the queue.');
+            this.loadTicketContext();
+          },
+          error: (err: Error) => {
+            this.errorMessage.set(err.message);
+            this.toast.error(err.message);
+            this.isActionLoading.set(false);
+          },
+        });
       });
-    } else {
-      this.ticketService.assignTicket(this.id, agentId).subscribe({
-        next: () => {
-          this.isActionLoading.set(false);
-          this.loadTicketContext();
-        },
-        error: (err: Error) => {
-          this.errorMessage.set(err.message);
-          this.isActionLoading.set(false);
-        },
-      });
-    }
   }
 }

@@ -1,109 +1,282 @@
-<div class="ticket-workspace-pane">
-    <header class="pane-headline">
-        <div class="headline-left">
-            <h2>Enterprise Ticket Console</h2>
-            <p>Monitor tenant service backlogs, distribute ownership fields, and audit issue updates</p>
+<sc-page-header title="Tickets" description="Every service request in this organization.">
+    <a slot="actions" routerLink="/app/tickets/create" class="sc-btn sc-btn-primary">
+        <sc-icon name="add" size="sm" />
+        New ticket
+    </a>
+</sc-page-header>
 
-            <!-- Operational Action Controls Row Panel -->
-            <div class="header-action-toolbar" style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center;">
-                <button routerLink="/app/tickets/create" class="btn-primary">Add Ticket</button>
-                <span class="context-tip-text" style="font-size: 0.85rem; color: #64748b;">
-                    💡 Click individual line-item records in the matrix registry below to view conversation audits and
-                    edit workflow states.
-                </span>
-            </div>
-        </div>
-    </header>
+<!-- ======================================================================
+     Queue summary. Each tile is also a filter shortcut.
+     ====================================================================== -->
+<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="statusFilter() === 'ALL'"
+        (click)="setStatusFilter('ALL')" [attr.aria-pressed]="statusFilter() === 'ALL'">
+        <span class="sc-summary-value">{{ totalCount() }}</span>
+        <span class="sc-summary-label">All tickets</span>
+    </button>
 
-    <!-- Metric Counter Summary Strip Cards -->
-    <div class="metrics-dashboard-strip">
-        <div class="metric-card" (click)="setFilter('ALL')" [class.active-card]="statusFilter() === 'ALL'">
-            <span class="m-val">{{ totalCount() }}</span>
-            <span class="m-lbl">Total Backlog</span>
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="statusFilter() === 'ACTIVE'"
+        (click)="setStatusFilter('ACTIVE')" [attr.aria-pressed]="statusFilter() === 'ACTIVE'">
+        <span class="sc-summary-value">{{ activeCount() }}</span>
+        <span class="sc-summary-label">Active workload</span>
+    </button>
+
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="assignmentFilter() === 'UNASSIGNED'"
+        (click)="setAssignmentFilter(assignmentFilter() === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')"
+        [attr.aria-pressed]="assignmentFilter() === 'UNASSIGNED'">
+        <span class="sc-summary-value">{{ unassignedCount() }}</span>
+        <span class="sc-summary-label">Unassigned</span>
+    </button>
+
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="priorityFilter() === 4"
+        (click)="setPriorityFilter(priorityFilter() === 4 ? 'ALL' : 4)"
+        [attr.aria-pressed]="priorityFilter() === 4">
+        <span class="sc-summary-value" [class.text-danger-700]="criticalCount() > 0">
+            {{ criticalCount() }}
+        </span>
+        <span class="sc-summary-label">Critical &amp; open</span>
+    </button>
+</div>
+
+@if (errorMessage()) {
+<sc-alert tone="error" title="Couldn't load tickets" class="mt-4 block">{{ errorMessage() }}</sc-alert>
+}
+
+<!-- ======================================================================
+     Toolbar
+     ====================================================================== -->
+<div class="sc-card mt-4">
+    <div class="flex flex-wrap items-center gap-2 border-b border-line p-3">
+        <div class="relative min-w-[200px] flex-1">
+            <sc-icon name="search" size="sm"
+                class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
+            <label for="ticketSearch" class="sc-sr-only">Search tickets</label>
+            <input id="ticketSearch" type="search" class="sc-input pl-9"
+                placeholder="Search by title, customer, category or agent"
+                [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
         </div>
-        <div class="metric-card card-new" (click)="setFilter('0')" [class.active-card]="statusFilter() === '0'">
-            <span class="m-val">{{ newCount() }}</span>
-            <span class="m-lbl">Unassigned New</span>
-        </div>
-        <div class="metric-card card-active" (click)="setFilter('2')" [class.active-card]="statusFilter() === '2'">
-            <span class="m-val">{{ activeCount() }}</span>
-            <span class="m-lbl">Active Processing</span>
-        </div>
-        <div class="metric-card card-resolved" (click)="setFilter('4')" [class.active-card]="statusFilter() === '4'">
-            <span class="m-val">{{ resolvedCount() }}</span>
-            <span class="m-lbl">Resolved Closures</span>
-        </div>
+
+        <!-- Status -->
+        <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="statusMenu">
+            <sc-icon name="filter_list" size="sm" />
+            <span>
+                @if (statusFilter() === 'ALL') { Status }
+                @else if (statusFilter() === 'ACTIVE') { Active }
+                @else { {{ statusLabels[$any(statusFilter())] }} }
+            </span>
+            <sc-icon name="expand_more" size="xs" />
+        </button>
+
+        <!-- Priority -->
+        <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="priorityMenu">
+            <sc-icon name="flag" size="sm" />
+            <span>
+                @if (priorityFilter() === 'ALL') { Priority }
+                @else { {{ priorityLabels[$any(priorityFilter())] }} }
+            </span>
+            <sc-icon name="expand_more" size="xs" />
+        </button>
+
+        <!-- Sort -->
+        <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="sortMenu"
+            matTooltip="Change sort order">
+            <sc-icon name="swap_vert" size="sm" />
+            <span class="hidden sm:inline">Sort</span>
+        </button>
+
+        @if (hasActiveFilters()) {
+        <button type="button" class="sc-btn sc-btn-ghost" (click)="clearFilters()">
+            <sc-icon name="close" size="sm" />
+            Clear
+        </button>
+        }
     </div>
 
-    @if (errorMessage()) {
-    <div class="alert-error-banner" role="alert">
-        {{ errorMessage() }}
+    <!-- ==================================================================
+         Results
+         ================================================================== -->
+    @if (isLoading()) {
+    <div class="p-3">
+        <sc-loading-state label="Loading tickets" [count]="6" />
     </div>
+    } @else if (filteredTickets().length === 0) {
+    @if (hasActiveFilters()) {
+    <sc-empty-state icon="search_off" title="No tickets match these filters"
+        description="Try a different search term or clear the filters." actionLabel="Clear filters"
+        (action)="clearFilters()" />
+    } @else {
+    <sc-empty-state icon="confirmation_number" title="No tickets yet"
+        description="When a request comes in it will appear in this queue." />
     }
+    } @else {
 
-    <!-- Data Display Grid Board Layout -->
-    <div class="grid-layout-container">
-        <div class="controls-toolbar">
-            <div class="filter-tab-row">
-                <button (click)="setFilter('ALL')" [class.selected-tab]="statusFilter() === 'ALL'">All Tasks</button>
-                <button (click)="setFilter('0')" [class.selected-tab]="statusFilter() === '0'">New</button>
-                <button (click)="setFilter('2')" [class.selected-tab]="statusFilter() === '2'">In Progress</button>
-                <button (click)="setFilter('3')" [class.selected-tab]="statusFilter() === '3'">Awaiting Client</button>
-                <button (click)="setFilter('4')" [class.selected-tab]="statusFilter() === '4'">Resolved</button>
-            </div>
-        </div>
-
-        @if (isLoading()) {
-        <div class="loading-state-block">Gathering support issues registry matrices...</div>
-        } @else if (filteredTickets().length === 0) {
-        <div class="empty-state-block">No outstanding ticket issues mapped to this classification scope.</div>
-        } @else {
-        <table class="data-grid-table">
+    <!-- Desktop table -->
+    <div class="hidden overflow-x-auto md:block">
+        <table class="sc-table">
+            <caption class="sc-sr-only">
+                Tickets, sorted by {{ sortKey() }}
+            </caption>
             <thead>
                 <tr>
-                    <th>Ticket Reference Details</th>
-                    <th>Classification</th>
-                    <th>Status Indicator</th>
-                    <th>Priority Tier</th>
-                    <th>Assigned Agent</th>
+                    <th scope="col">Ticket</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Assignee</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Created</th>
+                    <th scope="col"><span class="sc-sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
-                @for (ticket of filteredTickets(); track ticket.id) {
-                <tr class="interactive-row">
-                    <td>
-                        <div class="detail-cell-box">
-                            <!-- The dynamic entry row link wraps around the ticket title text -->
-                            <span class="t-title" [routerLink]="['/app/tickets', ticket.id]"
-                                style="cursor: pointer; color: #2563eb; font-weight: 600;">
-                                {{ ticket.title }}
-                            </span>
-                            <span class="t-id">Token Ref ID: {{ ticket.id }}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="txt-category">{{ ticket.categoryName || 'General Issue' }}</span>
-                    </td>
-                    <td>
-                        <span class="status-badge" [class.badge-new]="ticket.status === 1"
-                            [class.badge-progress]="ticket.status === 2" [class.badge-resolved]="ticket.status === 4">
-                            {{ statusLabels[ticket.status] }}
+                @for (ticket of pagedTickets(); track ticket.id) {
+                <tr class="sc-row-interactive" [class.sc-row-critical]="ticket.priority === 4">
+                    <td class="max-w-[320px]">
+                        <a [routerLink]="['/app/tickets', ticket.id]"
+                            class="block truncate font-semibold text-ink hover:text-brand-700 hover:underline underline-offset-2">
+                            {{ ticket.title }}
+                        </a>
+                        <span class="mt-0.5 block font-mono text-2xs text-ink-subtle">
+                            #{{ ticket.id.substring(0, 8) }}
+                            @if (teamNameFor(ticket)) {
+                            <span class="ml-1.5 font-sans">· {{ teamNameFor(ticket) }}</span>
+                            }
                         </span>
                     </td>
+                    <td><sc-ticket-status-badge [status]="ticket.status" /></td>
+                    <td><sc-ticket-priority-badge [priority]="ticket.priority" /></td>
+                    <td class="max-w-[160px] truncate">{{ customerNameFor(ticket) || '—' }}</td>
                     <td>
-                        <span class="priority-text text-p-{{ ticket.priority }}">
-                            {{ priorityLabels[ticket.priority] }}
+                        @if (assigneeNameFor(ticket); as assignee) {
+                        <span class="flex items-center gap-2">
+                            <sc-avatar [name]="assignee" size="xs" />
+                            <span class="max-w-[120px] truncate">{{ assignee }}</span>
                         </span>
+                        } @else {
+                        <span class="sc-badge sc-badge-neutral">
+                            <sc-icon name="person_off" size="xs" />
+                            Unassigned
+                        </span>
+                        }
                     </td>
-                    <td>
-                        <span class="agent-assignment-name">
-                            {{ ticket.assignedAgentName || 'Unassigned Queue' }}
-                        </span>
+                    <td class="max-w-[140px] truncate">{{ categoryNameFor(ticket) || '—' }}</td>
+                    <td class="whitespace-nowrap text-ink-subtle">
+                        {{ ticket.createdAt | date:'MMM d, y' }}
+                    </td>
+                    <td class="w-10">
+                        <a [routerLink]="['/app/tickets', ticket.id]" class="sc-btn sc-btn-ghost sc-btn-icon"
+                            [attr.aria-label]="'Open ticket ' + ticket.title">
+                            <sc-icon name="chevron_right" size="sm" />
+                        </a>
                     </td>
                 </tr>
                 }
             </tbody>
         </table>
-        }
     </div>
+
+    <!-- Mobile cards: the same rows, not a horizontally scrolling table -->
+    <ul class="divide-y divide-line md:hidden">
+        @for (ticket of pagedTickets(); track ticket.id) {
+        <li>
+            <a [routerLink]="['/app/tickets', ticket.id]" class="block p-4 transition-colors hover:bg-surface-muted"
+                [class.sc-row-critical]="ticket.priority === 4">
+                <p class="text-[13px] font-semibold text-ink">{{ ticket.title }}</p>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <sc-ticket-status-badge [status]="ticket.status" />
+                    <sc-ticket-priority-badge [priority]="ticket.priority" />
+                </div>
+                <dl class="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <div class="flex gap-1.5">
+                        <dt class="text-ink-subtle">Customer</dt>
+                        <dd class="truncate text-ink-muted">{{ customerNameFor(ticket) || '—' }}</dd>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <dt class="text-ink-subtle">Assignee</dt>
+                        <dd class="truncate text-ink-muted">{{ assigneeNameFor(ticket) || 'Unassigned' }}</dd>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <dt class="text-ink-subtle">Created</dt>
+                        <dd class="text-ink-muted">{{ ticket.createdAt | date:'MMM d' }}</dd>
+                    </div>
+                </dl>
+            </a>
+        </li>
+        }
+    </ul>
+
+    <!-- Pagination -->
+    @if (pageCount() > 1) {
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
+        <p class="text-xs text-ink-subtle">
+            Showing {{ pageIndex() * pageSize() + 1 }}–{{ (pageIndex() * pageSize()) + pagedTickets().length }}
+            of {{ filteredTickets().length }}
+        </p>
+        <div class="flex items-center gap-1">
+            <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm sc-btn-icon"
+                (click)="goToPage(pageIndex() - 1)" [disabled]="pageIndex() === 0" aria-label="Previous page">
+                <sc-icon name="chevron_left" size="sm" />
+            </button>
+            <span class="px-2 text-xs tabular-nums text-ink-muted">
+                {{ pageIndex() + 1 }} / {{ pageCount() }}
+            </span>
+            <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm sc-btn-icon"
+                (click)="goToPage(pageIndex() + 1)" [disabled]="pageIndex() >= pageCount() - 1"
+                aria-label="Next page">
+                <sc-icon name="chevron_right" size="sm" />
+            </button>
+        </div>
+    </div>
+    }
+    }
 </div>
+
+<!-- ======================================================================
+     Filter menus
+     ====================================================================== -->
+<mat-menu #statusMenu="matMenu">
+    <button type="button" mat-menu-item (click)="setStatusFilter('ALL')">
+        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
+            All statuses <span class="tabular-nums text-ink-subtle">{{ totalCount() }}</span>
+        </span>
+    </button>
+    <button type="button" mat-menu-item (click)="setStatusFilter('ACTIVE')">
+        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
+            Active only <span class="tabular-nums text-ink-subtle">{{ activeCount() }}</span>
+        </span>
+    </button>
+    @for (status of statusOrder; track status) {
+    <button type="button" mat-menu-item (click)="setStatusFilter(status)">
+        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
+            {{ statusLabels[status] }}
+            <span class="tabular-nums text-ink-subtle">{{ statusCounts().get(status) || 0 }}</span>
+        </span>
+    </button>
+    }
+</mat-menu>
+
+<mat-menu #priorityMenu="matMenu">
+    <button type="button" mat-menu-item (click)="setPriorityFilter('ALL')">
+        <span class="text-[13px]">All priorities</span>
+    </button>
+    @for (priority of priorityOrder; track priority) {
+    <button type="button" mat-menu-item (click)="setPriorityFilter(priority)">
+        <span class="text-[13px]">{{ priorityLabels[priority] }}</span>
+    </button>
+    }
+</mat-menu>
+
+<mat-menu #sortMenu="matMenu">
+    <button type="button" mat-menu-item (click)="setSort('created')">
+        <span class="text-[13px]">Newest first</span>
+    </button>
+    <button type="button" mat-menu-item (click)="setSort('priority')">
+        <span class="text-[13px]">Highest priority</span>
+    </button>
+    <button type="button" mat-menu-item (click)="setSort('status')">
+        <span class="text-[13px]">Workflow order</span>
+    </button>
+    <button type="button" mat-menu-item (click)="setSort('title')">
+        <span class="text-[13px]">Title A–Z</span>
+    </button>
+</mat-menu>

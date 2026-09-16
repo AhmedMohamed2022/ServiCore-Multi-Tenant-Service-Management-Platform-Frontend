@@ -1,110 +1,136 @@
-<div class="app-layout-wrapper">
-    <!-- Sidebar Navigation Drawer -->
-    <aside class="sidebar-container">
-        <div class="sidebar-brand">
-            <span class="brand-logo">⚙️</span>
-            <h1 class="brand-title">ServiCore</h1>
-        </div>
+<a href="#mainContent" class="sc-skip-link">Skip to main content</a>
 
-        <!-- Active Multi-Tenant Workspace Selector Integration -->
-        <app-tenant-switcher></app-tenant-switcher>
+<mat-sidenav-container class="sc-shell" [hasBackdrop]="isHandset()">
 
-        <nav class="navigation-matrix">
-            <span class="nav-section-label">Core Operations</span>
-            <a routerLink="/app/tickets" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🎫</span>
-                <span class="nav-label">Ticket Console</span>
-            </a>
+    <!-- ===================================================================
+         Sidebar. `side` mode on desktop keeps it as a permanent column;
+         `over` mode below lg turns it into an overlay drawer, which also
+         gives us focus trapping and Escape-to-close from the CDK.
+         =================================================================== -->
+    <mat-sidenav #drawer class="sc-sidebar" [mode]="isHandset() ? 'over' : 'side'"
+        [opened]="isHandset() ? isDrawerOpen() : true" (closedStart)="isDrawerOpen.set(false)"
+        [fixedInViewport]="isHandset()">
 
-            <!-- Dynamic Role-Aware Workspace Protection Node Block -->
-            @if (isManagementAllowed()) {
-            <a routerLink="/app/dashboard" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">📊</span>
-                <span class="nav-label">Dashboard</span>
-            </a>
-            <span class="nav-section-label">Platform Administration</span>
-            <a routerLink="/app/management/teams" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">👥</span>
-                <span class="nav-label">Team Rosters</span>
-            </a>
-            <a routerLink="/app/management/customers" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🤝</span>
-                <span class="nav-label">Client Directory</span>
-            </a>
-            <a routerLink="/app/management/categories" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🏷️</span>
-                <span class="nav-label">Taxonomy Specs</span>
-            </a>
-            <a routerLink="/app/management/invitations" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">✉️</span>
-                <span class="nav-label">Issue Invitations</span>
-            </a>
-
-            <span class="nav-section-label">Reports</span>
-            <a routerLink="/app/reports/tickets" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">📈</span>
-                <span class="nav-label">Ticket Statistics</span>
-            </a>
-            <a routerLink="/app/reports/time-series" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">📅</span>
-                <span class="nav-label">Volume Over Time</span>
-            </a>
-            <a routerLink="/app/reports/teams" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🏆</span>
-                <span class="nav-label">Team Performance</span>
-            </a>
-            <a routerLink="/app/reports/agents" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🥇</span>
-                <span class="nav-label">Agent Leaderboard</span>
-            </a>
-            <a routerLink="/app/reports/customers" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🧾</span>
-                <span class="nav-label">Customer Statistics</span>
-            </a>
-            <a routerLink="/app/reports/categories" routerLinkActive="active-node" class="nav-link-node">
-                <span class="nav-icon">🗂️</span>
-                <span class="nav-label">Category Statistics</span>
-            </a>
-            }
-        </nav>
-
-        <div class="sidebar-footer">
-            <button (click)="onLogoutClick()" class="logout-btn">
-                <span class="btn-icon">🚪</span>
-                <span class="btn-label">Terminate Session</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Primary Presentation Workspace Viewport Wrapper -->
-    <div class="main-viewport-container">
-        <header class="top-app-bar">
-            <div class="bar-left-context">
-                <span class="context-breadcrumb">Workspace Portal</span>
+        <div class="flex h-full flex-col">
+            <!-- Brand -->
+            <div class="flex items-center gap-2.5 px-4 py-4">
+                <span
+                    class="flex h-8 w-8 items-center justify-center rounded-sc bg-brand-600 text-white">
+                    <sc-icon name="support_agent" size="sm" [filled]="true" />
+                </span>
+                <span class="text-[15px] font-bold tracking-tight text-white">ServiCore</span>
             </div>
-            <!-- Unconditional, like PortalShellComponent's bar-right: this
-                 route is already behind authGuard (token presence, checked
-                 synchronously), so there's no reason to also wait on the
-                 async GET /auth/me round trip before showing the header
-                 chrome. Gating the whole block (notification tray included)
-                 on currentUser() used to tear it down and rebuild it on
-                 every hard refresh, since currentUser() is still null for
-                 the first render or two after reload while fetchMe() is
-                 in flight. Profile fields just render blank in the
-                 meantime and fill in once fetchMe() resolves. -->
-            <div class="bar-right-profile">
-                <app-notification-tray></app-notification-tray>
-                <div class="user-meta">
-                    <span class="user-display-name">{{ userEmail() }}</span>
-                    <span class="user-system-id">{{ userIdShort() }}</span>
+
+            <!-- Active organization -->
+            <div class="px-2 pb-3">
+                <app-tenant-switcher />
+            </div>
+
+            <div class="mx-4 h-px bg-white/10"></div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
+                @for (group of visibleGroups(); track group.id) {
+                <div class="mb-1">
+                    @if (group.collapsible) {
+                    <button type="button"
+                        class="flex w-full items-center gap-1 rounded px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-slate-200"
+                        [attr.aria-expanded]="!isCollapsed(group.id)" (click)="toggleGroup(group.id)">
+                        <span class="flex-1 text-left">{{ group.label }}</span>
+                        <sc-icon [name]="isCollapsed(group.id) ? 'expand_more' : 'expand_less'" size="xs" />
+                    </button>
+                    } @else {
+                    <p class="px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-400">
+                        {{ group.label }}
+                    </p>
+                    }
+
+                    @if (!group.collapsible || !isCollapsed(group.id)) {
+                    <ul class="mt-0.5 space-y-0.5">
+                        @for (item of group.items; track item.link) {
+                        <li>
+                            <a [routerLink]="item.link" routerLinkActive="sc-nav-active"
+                                [routerLinkActiveOptions]="{ exact: !!item.exact }" (click)="onNavigate()"
+                                class="sc-nav-link">
+                                <sc-icon [name]="item.icon" size="sm" />
+                                <span class="truncate">{{ item.label }}</span>
+                            </a>
+                        </li>
+                        }
+                    </ul>
+                    }
                 </div>
-                <div class="avatar-placeholder">👤</div>
+                }
+            </nav>
+
+            <!-- Account -->
+            <div class="border-t border-white/10 p-2">
+                <button type="button" class="sc-account-btn" [matMenuTriggerFor]="accountMenu"
+                    aria-label="Account menu">
+                    <sc-avatar [name]="userEmail()" size="sm" />
+                    <span class="min-w-0 flex-1 text-left">
+                        <span class="block truncate text-[13px] font-medium text-white">
+                            {{ userEmail() || 'Signed in' }}
+                        </span>
+                        <span class="block text-2xs text-slate-400">Staff account</span>
+                    </span>
+                    <sc-icon name="more_vert" size="sm" class="text-slate-400" />
+                </button>
+            </div>
+        </div>
+    </mat-sidenav>
+
+    <!-- ===================================================================
+         Content
+         =================================================================== -->
+    <mat-sidenav-content class="sc-content">
+        <header class="sc-topbar">
+            @if (isHandset()) {
+            <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon" (click)="toggleDrawer()"
+                aria-label="Open navigation menu">
+                <sc-icon name="menu" />
+            </button>
+            }
+
+            <div class="min-w-0 flex-1">
+                <span class="text-[13px] font-medium text-ink-muted">Workspace</span>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <app-notification-tray />
+
+                <button type="button" class="sc-btn sc-btn-ghost h-9 gap-2 px-2"
+                    [matMenuTriggerFor]="accountMenu" aria-label="Account menu">
+                    <sc-avatar [name]="userEmail()" size="xs" />
+                    <span class="hidden max-w-[180px] truncate text-[13px] font-medium text-ink-muted sm:inline">
+                        {{ userEmail() }}
+                    </span>
+                    <sc-icon name="expand_more" size="sm" class="hidden text-ink-subtle sm:inline-flex" />
+                </button>
             </div>
         </header>
 
-        <!-- Main Dynamic Route Viewport -->
-        <main class="primary-content-viewport">
-            <router-outlet></router-outlet>
+        <main id="mainContent" class="sc-main" tabindex="-1">
+            <div class="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
+                <router-outlet />
+            </div>
         </main>
+    </mat-sidenav-content>
+</mat-sidenav-container>
+
+<!-- Shared by the sidebar footer and the top bar, so there is exactly one
+     account menu definition. -->
+<mat-menu #accountMenu="matMenu" xPosition="before">
+    <div class="border-b border-line px-3.5 py-2.5">
+        <p class="truncate text-[13px] font-semibold text-ink">{{ userEmail() }}</p>
+        @if (userId()) {
+        <p class="mt-0.5 font-mono text-2xs text-ink-subtle">{{ userId().substring(0, 8) }}</p>
+        }
     </div>
-</div>
+    <button type="button" mat-menu-item (click)="onLogoutClick()">
+        <span class="flex items-center gap-2.5 text-[13px] text-danger-700">
+            <sc-icon name="logout" size="sm" />
+            Sign out
+        </span>
+    </button>
+</mat-menu>

@@ -1,100 +1,99 @@
-<div class="portal-create-workspace"
-    style="padding: 2rem; font-family: system-ui, sans-serif; max-width: 700px; margin: 0 auto;">
-    <header class="workspace-header" style="margin-bottom: 2rem;">
-        <div class="breadcrumb-nav">
-            <a routerLink="/portal/tickets"
-                style="font-size: 0.875rem; color: #0284c7; text-decoration: none; font-weight: 500;">← Back to Support
-                Requests</a>
-        </div>
-        <h2 style="font-size: 1.5rem; color: #0f172a; margin: 0.5rem 0 0 0;">Open New Support Request</h2>
-        <p style="font-size: 0.9rem; color: #64748b; margin: 0.25rem 0 0 0;">Provide detailed parameters regarding your
-            operational or technical issue to notify engineering support teams.</p>
-    </header>
+<sc-page-header title="New request"
+    description="Tell your support team what's happening — the more detail, the faster it moves."
+    [breadcrumbs]="[{ label: 'My tickets', link: '/portal/tickets' }, { label: 'New request' }]" />
 
-    @if (errorMessage()) {
-    <div class="alert-error-banner"
-        style="padding: 0.75rem 1rem; background-color: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px; color: #b91c1c; margin-bottom: 1.5rem; font-size: 0.875rem;">
-        {{ errorMessage() }}
-    </div>
-    }
-
-    <div class="form-container-card"
-        style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+<div class="mx-auto max-w-2xl">
+    <section class="sc-card">
         @if (isLoadingOptions()) {
-        <div class="loading-overlay" style="text-align: center; color: #64748b; padding: 2rem;">
-            Syncing classification domains...
+        <div class="p-5">
+            <sc-loading-state label="Loading request options" [count]="4" />
         </div>
         } @else {
-        <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
+        <form class="sc-card-body flex flex-col gap-5" [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
 
-            <div class="form-group"
-                style="display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1.5rem;">
-                <label for="title" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Request Summary
-                    Subject</label>
-                <input id="title" type="text" formControlName="title"
-                    placeholder="Brief title summary of the service request"
-                    style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none;" />
+            @if (errorMessage()) {
+            <sc-alert tone="error" title="Couldn't submit your request" class="block">{{ errorMessage() }}</sc-alert>
+            }
+
+            <div>
+                <label for="title" class="sc-label">Subject</label>
+                <input id="title" type="text" class="sc-input" formControlName="title"
+                    placeholder="A short summary of the issue"
+                    [class.sc-input-invalid]="ticketForm.controls.title.touched && ticketForm.controls.title.invalid" />
+                @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['required']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Give your request a subject.</p>
+                } @else if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use at least five characters.</p>
+                }
             </div>
 
-            <div class="split-form-row" style="display: flex; gap: 1.5rem; margin-bottom: 1.5rem;">
-                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 0.375rem;">
-                    <label for="categoryId" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Classification
-                        Category</label>
-                    <select id="categoryId" formControlName="categoryId"
-                        style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; background: #ffffff;">
-                        <option value="" disabled selected>-- Select Field Classification --</option>
-                        @for (cat of categories(); track cat.id) {
-                        <option [value]="cat.id">{{ cat.name }}</option>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="categoryId" class="sc-label">Category</label>
+                    <select id="categoryId" class="sc-select" formControlName="categoryId"
+                        [class.sc-input-invalid]="ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid">
+                        <option value="" disabled>Choose a category</option>
+                        @for (category of categories(); track category.id) {
+                        <option [value]="category.id">{{ category.name }}</option>
                         }
                     </select>
+                    @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Pick the closest category.</p>
+                    }
                 </div>
 
-                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 0.375rem;">
-                    <label for="teamId" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Support
-                        Team</label>
-                    <select id="teamId" formControlName="teamId"
-                        style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; background: #ffffff;">
-                        <option value="" disabled selected>-- Select Support Team --</option>
-                        @for (t of teams(); track t.id) {
-                        <option [value]="t.id">{{ t.name }}</option>
+                <div>
+                    <label for="teamId" class="sc-label">Team</label>
+                    <select id="teamId" class="sc-select" formControlName="teamId"
+                        [class.sc-input-invalid]="ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid">
+                        <option value="" disabled>Choose a team</option>
+                        @for (team of teams(); track team.id) {
+                        <option [value]="team.id">{{ team.name }}</option>
                         }
                     </select>
+                    @if (ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Choose who should handle this.</p>
+                    }
                 </div>
             </div>
 
-            <div class="form-group"
-                style="display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1.5rem; max-width: 50%;">
-                <label for="priority" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Urgency
-                    Tier</label>
-                <select id="priority" formControlName="priority"
-                    style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; background: #ffffff;">
-                    @for (opt of priorityOptions; track opt.value) {
-                    <option [value]="opt.value">{{ opt.label }}</option>
+            <div class="max-w-[220px]">
+                <label for="priority" class="sc-label">Priority</label>
+                <select id="priority" class="sc-select" formControlName="priority">
+                    @for (option of priorityOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
                     }
                 </select>
+                <p class="sc-hint">Reserve Critical for something blocking your work right now.</p>
             </div>
 
-            <div class="form-group"
-                style="display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1.5rem;">
-                <label for="description" style="font-size: 0.85rem; font-weight: 600; color: #334155;">Detailed Symptoms
-                    & Logs Context</label>
-                <textarea id="description" formControlName="description" rows="6"
-                    placeholder="Provide a comprehensive operational log entry regarding technical symptoms, replication parameters, or system blockages..."
-                    style="padding: 0.65rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.925rem; outline: none; font-family: inherit; resize: vertical;">
-          </textarea>
+            <div>
+                <label for="description" class="sc-label">Details</label>
+                <textarea id="description" class="sc-textarea" formControlName="description" rows="6"
+                    placeholder="What happened, what you expected, and any steps to reproduce it."
+                    [class.sc-input-invalid]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid"></textarea>
+                @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Describe the issue.</p>
+                } @else if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10 characters.</p>
+                }
             </div>
 
-            <div class="form-actions-footer"
-                style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 2rem;">
-                <button type="button" routerLink="/portal/tickets" [disabled]="isSubmitting()"
-                    style="padding: 0.65rem 1.25rem; font-size: 0.925rem; font-weight: 600; border-radius: 6px; cursor: pointer; background: #ffffff; color: #475569; border: 1px solid #cbd5e1;">Discard</button>
-                <button type="submit" [disabled]="ticketForm.invalid || isSubmitting()"
-                    style="padding: 0.65rem 1.25rem; font-size: 0.925rem; font-weight: 600; border-radius: 6px; cursor: pointer; background: #0284c7; color: #ffffff; border: none;">
-                    {{ isSubmitting() ? 'Transmitting Request...' : 'Submit Request' }}
+            <div class="flex justify-end gap-2 border-t border-line pt-5">
+                <a routerLink="/portal/tickets" class="sc-btn sc-btn-secondary" [attr.aria-disabled]="isSubmitting()">
+                    Cancel
+                </a>
+                <button type="submit" class="sc-btn sc-btn-primary" [disabled]="ticketForm.invalid || isSubmitting()">
+                    @if (isSubmitting()) {
+                    <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                    Submitting
+                    } @else {
+                    <sc-icon name="send" size="sm" />
+                    Submit request
+                    }
                 </button>
             </div>
-
         </form>
         }
-    </div>
+    </section>
 </div>

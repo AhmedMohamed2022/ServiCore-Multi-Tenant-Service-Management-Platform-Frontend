@@ -1,63 +1,106 @@
-<div class="comments-thread-container">
-    <div class="thread-divider">
-        <span>Activity Log & Communication Thread</span>
+<section class="sc-card" aria-labelledby="conversationHeading">
+    <div class="sc-card-header">
+        <div class="flex items-center gap-2">
+            <sc-icon name="forum" size="sm" class="text-ink-subtle" />
+            <h2 id="conversationHeading" class="sc-card-title">Conversation</h2>
+            @if (messageCount() > 0) {
+            <span class="sc-badge sc-badge-neutral">{{ messageCount() }}</span>
+            }
+        </div>
+        <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="loadCommentsTimeline()"
+            [disabled]="isLoading()">
+            <sc-icon name="refresh" size="sm" />
+            <span class="hidden sm:inline">Refresh</span>
+        </button>
     </div>
 
     @if (errorMessage()) {
-    <div class="comment-alert-error" role="alert">
-        {{ errorMessage() }}
+    <div class="px-5 pt-4">
+        <sc-alert tone="error" title="Conversation problem">{{ errorMessage() }}</sc-alert>
     </div>
     }
 
-    <!-- Chronological Timeline Message List Loop -->
-    <div class="timeline-stream-box">
+    <!-- ==================================================================
+         Thread
+         ================================================================== -->
+    <div class="sc-thread" role="log" aria-live="polite" aria-relevant="additions">
         @if (isLoading()) {
-        <div class="timeline-loading">Querying collaborative interaction history loops...</div>
-        } @else if (comments().length === 0) {
-        <div class="timeline-empty">No conversation records appended to this ticket case architecture file yet.</div>
-        } @else {
-        @for (comment of comments(); track comment.id) {
-        <div class="timeline-bubble-wrapper" [class.bubble-mine]="comment.userEmail === activeUserEmail()">
-            <div class="bubble-avatar" aria-hidden="true">{{ (comment.userEmail?.charAt(0) || '?') | uppercase }}</div>
-            <div class="bubble-content">
-                <div class="bubble-meta-header">
-                    <span class="bubble-author">{{ comment.userEmail === activeUserEmail() ? 'You' : comment.userEmail
-                        }}</span>
-                    <span class="bubble-time">{{ comment.createdAt | date:'short' }}</span>
-                </div>
-                <div class="bubble-message-card">
-                    <p class="comment-text-paragraph">{{ comment.content }}</p>
-                </div>
-            </div>
+        <div class="p-5">
+            <sc-loading-state label="Loading conversation" [count]="3" />
         </div>
-        }
+        } @else if (resolvedComments().length === 0) {
+        <sc-empty-state icon="chat_bubble" title="No messages yet"
+            [description]="locked() ? 'This ticket was closed without any conversation.' : 'Post the first update and the customer will be notified.'" />
+        } @else {
+        <ol class="flex flex-col gap-4 p-5">
+            @for (message of resolvedComments(); track message.id) {
+            <li class="flex gap-3" [class.sc-msg-mine]="message.isMine">
+                <sc-avatar [name]="message.avatarKey" size="sm" class="mt-5" />
+
+                <div class="sc-msg-body">
+                    <div class="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span class="text-[13px] font-semibold text-ink">{{ message.authorName }}</span>
+                        @if (message.roleLabel) {
+                        <span class="sc-badge" [class]="message.isStaff ? 'sc-badge-info' : 'sc-badge-neutral'">
+                            {{ message.roleLabel }}
+                        </span>
+                        }
+                        <time class="text-xs text-ink-subtle" [attr.datetime]="message.createdAt">
+                            {{ message.createdAt | date:'MMM d, y · HH:mm' }}
+                        </time>
+                    </div>
+
+                    <div class="sc-bubble" [class.sc-bubble-mine]="message.isMine">
+                        <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed">{{ message.content }}</p>
+                    </div>
+                </div>
+            </li>
+            }
+        </ol>
+        <div #scrollAnchor aria-hidden="true"></div>
         }
     </div>
 
-    <!-- New Commentary Submission Deck -->
-    <div class="new-comment-submission-deck">
-        <form [formGroup]="commentForm" (ngSubmit)="onSubmitComment()">
-            <div class="form-group">
-                <label for="txtComment">Post Response Entry</label>
-                <textarea id="txtComment" formControlName="content" rows="4"
-                    placeholder="Append diagnostic updates, cross-reference data clusters, or reply back to the account submitter..."
-                    [class.input-error]="commentForm.controls.content.touched && commentForm.controls.content.invalid">
-        </textarea>
+    <!-- ==================================================================
+         Composer
+         ================================================================== -->
+    @if (locked()) {
+    <div class="flex items-center gap-2.5 border-t border-line bg-surface-muted px-5 py-4 text-[13px] text-ink-subtle">
+        <sc-icon name="lock" size="sm" />
+        <span>This ticket is closed. The conversation is read-only.</span>
+    </div>
+    } @else {
+    <form class="border-t border-line p-5" [formGroup]="commentForm" (ngSubmit)="onSubmitComment()">
+        <label for="commentContent" class="sc-label">Add a message</label>
+        <textarea id="commentContent" class="sc-textarea" formControlName="content" rows="3"
+            placeholder="Share an update, ask a question, or record what you did. Ctrl + Enter to post."
+            (keydown)="onComposerKeydown($event)"
+            [class.sc-input-invalid]="commentForm.controls.content.touched && commentForm.controls.content.invalid"
+            [attr.aria-invalid]="commentForm.controls.content.touched && commentForm.controls.content.invalid"
+            aria-describedby="commentHint"></textarea>
 
-                @if (commentForm.controls.content.touched && commentForm.controls.content.errors?.['required']) {
-                <span class="field-validation-error">Comment message payload parameter cannot be empty.</span>
+        @if (commentForm.controls.content.touched && commentForm.controls.content.errors?.['required']) {
+        <p class="sc-field-error"><sc-icon name="error" size="xs" /> A message can't be empty.</p>
+        } @else if (commentForm.controls.content.touched && commentForm.controls.content.errors?.['minlength']) {
+        <p class="sc-field-error"><sc-icon name="error" size="xs" /> Write at least two characters.</p>
+        } @else {
+        <p id="commentHint" class="sc-hint">
+            Everyone on this ticket is notified. {{ remainingChars() }} characters left.
+        </p>
+        }
+
+        <div class="mt-3 flex justify-end">
+            <button type="submit" class="sc-btn sc-btn-primary"
+                [disabled]="commentForm.invalid || isSubmitting()">
+                @if (isSubmitting()) {
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Posting
+                } @else {
+                <sc-icon name="send" size="sm" />
+                Post message
                 }
-            </div>
-
-            <div class="submission-actions-row">
-                <button type="submit" [disabled]="commentForm.invalid || isSubmitting()">
-                    @if (isSubmitting()) {
-                    <span class="spinning-loader"></span> Publishing Update...
-                    } @else {
-                    Submit Response
-                    }
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+            </button>
+        </div>
+    </form>
+    }
+</section>

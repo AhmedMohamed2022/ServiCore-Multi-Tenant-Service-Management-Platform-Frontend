@@ -1,193 +1,216 @@
-<div class="analytics-dashboard-workspace">
-    <header class="dashboard-header">
-        <div class="header-title">
-            <h2>Executive Analytics Console</h2>
-            <p>Welcome back, <span class="operator-highlight">{{ userEmail() }}</span>. Monitoring live tenant
-                performance metrics.</p>
+<sc-page-header title="Dashboard" [description]="'Service overview for your organization.'">
+    <form slot="actions" [formGroup]="filterForm" (ngSubmit)="onApplyFilters()"
+        class="flex flex-wrap items-end gap-2">
+        <div>
+            <label class="sc-label" for="dateFrom">From</label>
+            <input id="dateFrom" type="date" formControlName="from" class="sc-input w-[150px]" />
         </div>
+        <div>
+            <label class="sc-label" for="dateTo">To</label>
+            <input id="dateTo" type="date" formControlName="to" class="sc-input w-[150px]" />
+        </div>
+        <button type="submit" class="sc-btn sc-btn-primary" [disabled]="isLoading()">
+            <sc-icon name="filter_alt" size="sm" />
+            Apply
+        </button>
+        @if (hasActiveFilter()) {
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="onResetFilters()" [disabled]="isLoading()">
+            Reset
+        </button>
+        }
+    </form>
+</sc-page-header>
 
-        <!-- Date Range Query Toolbar Controls -->
-        <div class="filter-toolbar-panel">
-            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="filter-flex-row">
-                <div class="input-date-group">
-                    <label for="dateFrom">From</label>
-                    <input id="dateFrom" type="date" formControlName="from" />
-                </div>
-                <div class="input-date-group">
-                    <label for="dateTo">To</label>
-                    <input id="dateTo" type="date" formControlName="to" />
-                </div>
-                <div class="toolbar-actions">
-                    <button type="submit" class="btn-filter-apply" [disabled]="isLoading()">Filter</button>
-                    <button type="button" class="btn-filter-reset" (click)="onResetFilters()"
-                        [disabled]="isLoading()">Reset</button>
-                </div>
-            </form>
-        </div>
-    </header>
+@if (errorMessage()) {
+<sc-alert tone="error" title="Couldn't load the dashboard" class="mb-5 block">
+    {{ errorMessage() }}
+</sc-alert>
+}
 
-    @if (errorMessage()) {
-    <div class="analytics-error-banner" role="alert">
-        {{ errorMessage() }}
-    </div>
-    }
+@if (isLoading()) {
+<sc-loading-state label="Loading dashboard metrics" [count]="4" />
+} @else {
+@if (metrics(); as data) {
 
-    @if (isLoading()) {
-    <div class="analytics-loading-block">Compiling statistics across database clusters...</div>
-    } @else
-    {
-    @if (metrics(); as data) {
-    <!-- Row 1: Ticket Overview Counter Cards -->
-    <div class="summary-cards-matrix">
-        <div class="stat-metric-card">
-            <span class="card-icon-tag">📋</span>
-            <div class="card-values">
-                <span class="m-val-text">{{ data.ticketOverview.totalTickets }}</span>
-                <span class="m-lbl-text">Total Backlog</span>
-            </div>
-        </div>
-        <div class="stat-metric-card border-open">
-            <span class="card-icon-tag color-open">🔓</span>
-            <div class="card-values">
-                <span class="m-val-text">{{ data.ticketOverview.openTickets }}</span>
-                <span class="m-lbl-text">Open Queue</span>
-            </div>
-        </div>
-        <div class="stat-metric-card border-progress">
-            <span class="card-icon-tag color-progress">⚙️</span>
-            <div class="card-values">
-                <span class="m-val-text">{{ data.ticketOverview.inProgressTickets }}</span>
-                <span class="m-lbl-text">In Progress</span>
-            </div>
-        </div>
-        <div class="stat-metric-card border-resolved">
-            <span class="card-icon-tag color-resolved">✅</span>
-            <div class="card-values">
-                <span class="m-val-text">{{ data.ticketOverview.resolvedTickets }}</span>
-                <span class="m-lbl-text">Resolved Settled</span>
-            </div>
-        </div>
-    </div>
+<!-- ==================================================================
+     KPI row
+     ================================================================== -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <sc-stat-card label="Total tickets" [value]="data.ticketOverview.totalTickets" icon="confirmation_number"
+        tone="info" [hint]="hasActiveFilter() ? 'In selected range' : 'All time'" />
 
-    <!-- Row 2: Secondary Status Details & Priority Distribution Cards -->
-    <div class="charts-distribution-grid">
-        <!-- Status Progress Breakdown Panel -->
-        <div class="chart-content-card">
-            <h3>Queue Status Distribution Breakdown</h3>
-            <div class="progress-bars-timeline">
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name">New (Unassigned)</span><span class="b-count">{{
-                            data.ticketOverview.newTickets }} cases</span></div>
-                    <progress class="semantic-progress" [value]="data.ticketOverview.newTickets"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name">Awaiting Client Response</span><span
-                            class="b-count">{{ data.ticketOverview.waitingForCustomerTickets }} cases</span></div>
-                    <progress class="semantic-progress" [value]="data.ticketOverview.waitingForCustomerTickets"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name">Closed Archive</span><span class="b-count">{{
-                            data.ticketOverview.closedTickets }} cases</span></div>
-                    <progress class="semantic-progress" [value]="data.ticketOverview.closedTickets"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-            </div>
-        </div>
+    <sc-stat-card label="Active workload" [value]="activeTickets()" icon="bolt" tone="primary"
+        [hint]="unassignedHint()" />
 
-        <!-- Priority Distribution Progress Bars Panel -->
-        <div class="chart-content-card">
-            <h3>Urgency Priority Share Weight</h3>
-            <div class="progress-bars-timeline">
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name font-bold">Critical / Urgent</span><span
-                            class="b-count">{{ data.priorityStatistics.critical }} cases</span></div>
-                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.critical"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name">High Priority</span><span class="b-count">{{
-                            data.priorityStatistics.high }} cases</span></div>
-                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.high"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name">Medium Weight</span><span class="b-count">{{
-                            data.priorityStatistics.medium }} cases</span></div>
-                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.medium"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-                <div class="bar-node-item">
-                    <div class="bar-labels-row"><span class="b-name">Low Priority</span><span class="b-count">{{
-                            data.priorityStatistics.low }} cases</span></div>
-                    <progress class="semantic-progress priority-progress" [value]="data.priorityStatistics.low"
-                        [max]="data.ticketOverview.totalTickets || 1"></progress>
-                </div>
-            </div>
-        </div>
-    </div>
+    <sc-stat-card label="Waiting on customer" [value]="data.ticketOverview.waitingForCustomerTickets"
+        icon="schedule" tone="warn" hint="Blocked pending a reply" />
 
-    <!-- Row 3: SLA Turnaround Performances & Scope Registries Matrix Split -->
-    <div class="leaderboards-split-grid">
-        <!-- Resolution Speeds Performance Block -->
-        <div class="leaderboard-data-card">
-            <h3>SLA Turnaround Performance Diagnostics</h3>
-            <div class="performance-metrics-list"
-                style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Gross Resolved Count</span>
-                    <span style="font-weight: 700; color: #16a34a;">{{ data.performance.resolvedCount }}</span>
-                </div>
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Gross Closed Count</span>
-                    <span style="font-weight: 700; color: #1e293b;">{{ data.performance.closedCount }}</span>
-                </div>
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Average Duration to Resolution</span>
-                    <span style="font-weight: 600; font-family: monospace; color: #2563eb;">{{
-                        data.performance.averageResolutionTime }}</span>
-                </div>
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Average Duration to Archive Closure</span>
-                    <span style="font-weight: 600; font-family: monospace; color: #475569;">{{
-                        data.performance.averageClosureTime }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Workspace Scope Directory Registries Count Card -->
-        <div class="leaderboard-data-card">
-            <h3>Tenant Registry Scope Magnitudes</h3>
-            <div class="performance-metrics-list"
-                style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f0fdfa; border-radius: 6px; border-left: 4px solid #0d9488;">
-                    <span style="font-weight: 500; color: #0f766e;">Total Registered Customer Accounts</span>
-                    <span style="font-weight: 700; color: #0f766e;">{{ data.organizationCounts.totalCustomers }}</span>
-                </div>
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Active Operational Squads</span>
-                    <span style="font-weight: 700; color: #1e293b;">{{ data.organizationCounts.totalTeams }}</span>
-                </div>
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Assigned Corporate Service Agents</span>
-                    <span style="font-weight: 700; color: #1e293b;">{{ data.organizationCounts.totalAgents }}</span>
-                </div>
-                <div class="perf-item"
-                    style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                    <span style="font-weight: 500; color: #475569;">Taxonomy Classification Categories</span>
-                    <span style="font-weight: 700; color: #1e293b;">{{ data.organizationCounts.totalCategories }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    }
-    }
+    <sc-stat-card label="Avg. resolution time" [value]="data.performance.averageResolutionTime | scDuration"
+        icon="timer" tone="success" [hint]="data.performance.resolvedCount + ' tickets resolved'" />
 </div>
+
+@if (!hasAnyTickets()) {
+<div class="sc-card mt-4">
+    <sc-empty-state icon="inbox" title="No tickets in this period"
+        description="Once tickets are created they'll be summarised here. Try widening the date range." />
+</div>
+} @else {
+
+<!-- ==================================================================
+     Distributions
+     ================================================================== -->
+<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+
+    <!-- Status distribution: chart plus an explicit numeric breakdown, so the
+         information is never carried by colour alone. -->
+    <sc-chart-card class="lg:col-span-2" title="Status distribution"
+        description="Where every ticket currently sits in the workflow">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="h-[240px]">
+                <ngx-charts-advanced-pie-chart [results]="statusChartData()" [scheme]="statusColors"
+                    [gradient]="false" />
+            </div>
+
+            <ul class="flex flex-col justify-center gap-2.5 px-1">
+                @for (row of statusBreakdown(); track row.status) {
+                <li>
+                    <div class="flex items-center justify-between gap-3 text-[13px]">
+                        <span class="flex min-w-0 items-center gap-2">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm"
+                                [style.background-color]="row.color" aria-hidden="true"></span>
+                            <sc-ticket-status-badge [status]="row.status" />
+                        </span>
+                        <span class="shrink-0 tabular-nums text-ink-muted">
+                            <strong class="font-semibold text-ink">{{ row.count }}</strong>
+                            <span class="ml-1 text-xs text-ink-subtle">{{ row.percent }}%</span>
+                        </span>
+                    </div>
+                    <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
+                        <div class="h-full rounded-full transition-[width] duration-500"
+                            [style.width.%]="row.percent" [style.background-color]="row.color"></div>
+                    </div>
+                </li>
+                }
+            </ul>
+        </div>
+    </sc-chart-card>
+
+    <!-- Priority distribution -->
+    <sc-chart-card title="Priority mix" description="Severity spread across the same period">
+        <div class="h-[240px]">
+            <ngx-charts-pie-chart [results]="priorityChartData()" [scheme]="priorityColors" [doughnut]="true"
+                [arcWidth]="0.35" [labels]="false" [legend]="true" [legendPosition]="legendBelow" />
+        </div>
+    </sc-chart-card>
+</div>
+
+<!-- ==================================================================
+     Performance + organization counts + recent activity
+     ================================================================== -->
+<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+
+    <section class="sc-card">
+        <div class="sc-card-header">
+            <h2 class="sc-card-title">Resolution performance</h2>
+        </div>
+        <dl class="divide-y divide-line">
+            <div class="flex items-center justify-between px-5 py-3">
+                <dt class="text-[13px] text-ink-muted">Resolved</dt>
+                <dd class="text-[15px] font-semibold tabular-nums text-ink">
+                    {{ data.performance.resolvedCount }}
+                </dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-3">
+                <dt class="text-[13px] text-ink-muted">Closed</dt>
+                <dd class="text-[15px] font-semibold tabular-nums text-ink">
+                    {{ data.performance.closedCount }}
+                </dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-3">
+                <dt class="text-[13px] text-ink-muted">Avg. time to resolve</dt>
+                <dd class="text-[15px] font-semibold tabular-nums text-ink">
+                    {{ data.performance.averageResolutionTime | scDuration }}
+                </dd>
+            </div>
+            <div class="flex items-center justify-between px-5 py-3">
+                <dt class="text-[13px] text-ink-muted">Avg. time to close</dt>
+                <dd class="text-[15px] font-semibold tabular-nums text-ink">
+                    {{ data.performance.averageClosureTime | scDuration }}
+                </dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="sc-card">
+        <div class="sc-card-header">
+            <h2 class="sc-card-title">Organization</h2>
+        </div>
+        <div class="grid grid-cols-2 divide-x divide-y divide-line">
+            <div class="p-4">
+                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Customers</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
+                    {{ data.organizationCounts.totalCustomers }}
+                </p>
+            </div>
+            <div class="p-4">
+                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Agents</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
+                    {{ data.organizationCounts.totalAgents }}
+                </p>
+            </div>
+            <div class="p-4">
+                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Teams</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
+                    {{ data.organizationCounts.totalTeams }}
+                </p>
+            </div>
+            <div class="p-4">
+                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Categories</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
+                    {{ data.organizationCounts.totalCategories }}
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="sc-card flex flex-col">
+        <div class="sc-card-header">
+            <h2 class="sc-card-title">Recent tickets</h2>
+            <a routerLink="/app/tickets" class="sc-btn sc-btn-ghost sc-btn-sm">
+                View all
+                <sc-icon name="arrow_forward" size="xs" />
+            </a>
+        </div>
+
+        @if (isLoadingRecent()) {
+        <div class="p-3">
+            <sc-loading-state label="Loading recent tickets" [count]="4" />
+        </div>
+        } @else if (recentTickets().length === 0) {
+        <sc-empty-state icon="inbox" title="Nothing yet" description="New tickets will appear here." />
+        } @else {
+        <ul class="flex-1 divide-y divide-line">
+            @for (ticket of recentTickets(); track ticket.id) {
+            <li>
+                <a [routerLink]="['/app/tickets', ticket.id]"
+                    class="block px-5 py-3 transition-colors hover:bg-surface-muted">
+                    <p class="truncate text-[13px] font-medium text-ink">{{ ticket.title }}</p>
+                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <sc-ticket-status-badge [status]="ticket.status" />
+                        @if (ticket.priority >= TicketPriority.High) {
+                        <sc-ticket-priority-badge [priority]="ticket.priority" />
+                        }
+                        <span class="text-2xs text-ink-subtle">
+                            {{ ticket.createdAt | date:'MMM d' }}
+                        </span>
+                    </div>
+                </a>
+            </li>
+            }
+        </ul>
+        }
+    </section>
+</div>
+}
+}
+}

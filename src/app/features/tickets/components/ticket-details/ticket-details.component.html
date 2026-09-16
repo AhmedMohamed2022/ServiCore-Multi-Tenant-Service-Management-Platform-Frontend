@@ -1,188 +1,275 @@
-<div class="ticket-details-workspace">
-    <header class="workspace-header">
-        <div class="breadcrumb-nav">
-            <!-- Dynamic routing configuration paths prevent customer breakages -->
-            @if (isCustomerPortal()) {
-            <a routerLink="/portal/tickets" class="back-link">← Return to Support Requests</a>
-            } @else {
-            <a routerLink="/app/tickets" class="back-link">← Return to Ticket Queue</a>
-            }
-        </div>
-        <h2>Ticket Audit & Configuration Console</h2>
-    </header>
+@if (isLoading() && !ticket()) {
 
-    @if (errorMessage()) {
-    <div class="alert-error-banner" role="alert">
-        {{ errorMessage() }}
+<sc-page-header title="Loading ticket" />
+<div class="sc-card p-5">
+    <sc-loading-state label="Loading ticket" [count]="6" />
+</div>
+
+} @else {
+@if (ticket(); as t) {
+
+<!-- ======================================================================
+     Header: identity, state, and the actions permitted to this viewer
+     ====================================================================== -->
+<sc-page-header [title]="t.title" [breadcrumbs]="breadcrumbs()">
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+        @if (isManagementAllowed()) {
+        @if (t.status === TicketStatus.New) {
+        <button type="button" class="sc-btn sc-btn-primary" (click)="executeWorkflowTransition('open')"
+            [disabled]="isActionLoading()">
+            <sc-icon name="play_arrow" size="sm" />
+            Open ticket
+        </button>
+        }
+        @if (t.status === TicketStatus.Resolved) {
+        <button type="button" class="sc-btn sc-btn-primary" (click)="executeWorkflowTransition('close')"
+            [disabled]="isActionLoading()">
+            <sc-icon name="lock" size="sm" />
+            Close ticket
+        </button>
+        }
+        } @else if (isAssignedAgent()) {
+        @if (t.status === TicketStatus.Open || t.status === TicketStatus.WaitingForCustomer) {
+        <button type="button" class="sc-btn sc-btn-primary" (click)="executeWorkflowTransition('start')"
+            [disabled]="isActionLoading()">
+            <sc-icon name="play_arrow" size="sm" />
+            Start work
+        </button>
+        }
+        @if (t.status === TicketStatus.InProgress) {
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="executeWorkflowTransition('wait')"
+            [disabled]="isActionLoading()">
+            <sc-icon name="schedule" size="sm" />
+            Wait for customer
+        </button>
+        <button type="button" class="sc-btn sc-btn-primary" (click)="executeWorkflowTransition('resolve')"
+            [disabled]="isActionLoading()">
+            <sc-icon name="task_alt" size="sm" />
+            Mark resolved
+        </button>
+        }
+        }
     </div>
+
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+        <sc-ticket-status-badge [status]="t.status" />
+        <sc-ticket-priority-badge [priority]="t.priority" />
+        <span class="font-mono text-xs text-ink-subtle">{{ shortId() }}</span>
+        <span class="text-xs text-ink-subtle">·</span>
+        <span class="text-xs text-ink-subtle">Opened {{ t.createdAt | date:'MMM d, y' }}</span>
+    </div>
+
+    <!-- Always says what happens next when there's no button above for this
+         viewer's role at this status, so "nothing to click" never reads as
+         "the page is broken." -->
+    @if (workflowHint(); as hint) {
+    <p class="mt-2 flex items-center gap-1.5 text-[13px] text-ink-subtle">
+        <sc-icon name="info" size="xs" />
+        {{ hint }}
+    </p>
     }
+</sc-page-header>
 
-    @if (isLoading()) {
-    <div class="loading-state-block">Retrieving case record parameters from secure vaults...</div>
-    } @else {
-    @if (ticket(); as currentTicket) {
-    <div class="details-split-grid">
+@if (errorMessage()) {
+<sc-alert tone="error" title="That action didn't go through" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+}
 
-        <!-- Left Major Card Block: Primary Ticket Context Meta Info -->
-        <main class="primary-content-card">
-            <div class="ticket-title-header">
-                <span class="ref-id-tag">Case Token: {{ currentTicket.id }}</span>
-                <h3>{{ currentTicket.title }}</h3>
-                <p class="timestamp-meta">Created on {{ currentTicket.createdAt | date:'medium' }} | Updated: {{
-                    currentTicket.updatedAt | date:'short' }}</p>
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+
+    <!-- ==================================================================
+         Primary column: the request, then the conversation
+         ================================================================== -->
+    <div class="flex min-w-0 flex-col gap-5">
+        <section class="sc-card" aria-labelledby="requestHeading">
+            <div class="sc-card-header">
+                <div class="flex items-center gap-2">
+                    <sc-icon name="description" size="sm" class="text-ink-subtle" />
+                    <h2 id="requestHeading" class="sc-card-title">Request</h2>
+                </div>
+                <span class="text-xs text-ink-subtle">Updated {{ t.updatedAt | date:'MMM d, y · HH:mm' }}</span>
             </div>
-
-            <div class="description-body-box">
-                <h4>Case Description Log Entry</h4>
-                <p class="body-text-content">{{ currentTicket.description }}</p>
+            <div class="sc-card-body">
+                <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-muted">
+                    {{ t.description }}
+                </p>
             </div>
+        </section>
 
-            <div class="system-link-directory">
-                <div class="link-item">
-                    <span class="l-lbl">CRM Client Account Link</span>
-                    <span class="l-val">{{ currentTicket.customerName || 'Direct Submit Client' }}</span>
-                    <span class="l-id">UUID: {{ currentTicket.customerId }}</span>
-                </div>
-                <div class="link-item">
-                    <span class="l-lbl">Taxonomy Class Mapping</span>
-                    <span class="l-val">{{ currentTicket.categoryName || 'General Queue' }}</span>
-                    <span class="l-id">UUID: {{ currentTicket.categoryId }}</span>
-                </div>
+        <app-ticket-comments [ticketId]="t.id" [teamId]="t.teamId" [customerName]="customer()?.name ?? null"
+            [locked]="isClosed()" />
+    </div>
+
+    <!-- ==================================================================
+         Right rail: who and what this ticket belongs to
+         ================================================================== -->
+    <aside class="flex min-w-0 flex-col gap-5">
+
+        <!-- Assignment -->
+        <section class="sc-card" aria-labelledby="assignmentHeading">
+            <div class="sc-card-header">
+                <h2 id="assignmentHeading" class="sc-card-title">Assignment</h2>
             </div>
-
-            <app-ticket-comments [ticketId]="currentTicket.id"></app-ticket-comments>
-        </main>
-
-        <!-- Right Minor Side Panel Card Block: Live Control Gating Matrix -->
-        <aside class="sidebar-action-controls">
-            <div class="control-card">
-                <h3>Workflow Lifecycle Operations</h3>
-
-                <div class="current-status-display">
-                    <span class="m-lbl">Active Lifecycle State</span>
-                    <span class="status-pill state-{{ currentTicket.status }}">{{ statusLabels[currentTicket.status]
-                        }}</span>
-                </div>
-
-                <!-- Gated on the viewer's actual permissions (isManagementAllowed /
-                     isAssignedAgent), never on which route they landed on. A staff
-                     account with no rights on this ticket (e.g. an Agent it isn't
-                     assigned to) falls through to the same read-only block a
-                     customer sees. -->
-                @if (isManagementAllowed()) {
-                <!-- Owner/Manager: CanManageTickets — open, assign/unassign, close.
-                     Start/wait/resolve are never offered here: those require the
-                     Agent role, which Owner/Manager accounts don't hold. -->
-                <div class="workflow-actions-panel">
-                    <span class="m-lbl">Permitted Extensions Actions</span>
-                    <div class="action-buttons-stack"
-                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
-
-                        @if (currentTicket.status === ticketStatusEnum.New) {
-                        <button type="button" class="btn-wf-action btn-open" (click)="executeWorkflowTransition('open')"
-                            [disabled]="isActionLoading()">Accept & Open Ticket</button>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.Open ||
-                        currentTicket.status === ticketStatusEnum.InProgress ||
-                        currentTicket.status === ticketStatusEnum.WaitingForCustomer) {
-                        <span class="completion-notice-txt"
-                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">This ticket is with its
-                            assigned agent. No management action is needed at this stage.</span>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.Resolved) {
-                        <button type="button" class="btn-wf-action btn-close"
-                            (click)="executeWorkflowTransition('close')" [disabled]="isActionLoading()">Archive Close
-                            Case</button>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.Closed) {
-                        <span class="completion-notice-txt"
-                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">This ticket track has reached
-                            terminal completion archive status.</span>
-                        }
-                    </div>
-                </div>
-
-                <div class="control-group" style="margin-top: 1rem;">
-                    <label for="agentSelect">Roster Assignment</label>
-                    <select id="agentSelect" [value]="currentTicket.assignedAgentId || ''"
-                        (change)="onAssignAgent($event)"
-                        [disabled]="isActionLoading() || currentTicket.status === ticketStatusEnum.Closed">
-                        <option value="">-- Unassigned (Return to Queue) --</option>
-                        @for (agent of availableAgents(); track agent.userId) {
-                        <option [value]="agent.userId">{{ agent.name || 'System Agent' }}</option>
-                        }
-                    </select>
-                </div>
-                } @else if (isAssignedAgent()) {
-                <!-- The assigned Agent: CanWorkAssignedTickets — start, wait-for-
-                     customer, resolve. No assignment dropdown and no open/close:
-                     those require Owner/Manager. -->
-                <div class="workflow-actions-panel">
-                    <span class="m-lbl">Permitted Extensions Actions</span>
-                    <div class="action-buttons-stack"
-                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
-
-                        @if (currentTicket.status === ticketStatusEnum.New) {
-                        <span class="completion-notice-txt"
-                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">Waiting on a manager to
-                            open this ticket.</span>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.Open ||
-                        currentTicket.status === ticketStatusEnum.WaitingForCustomer) {
-                        <button type="button" class="btn-wf-action btn-start"
-                            (click)="executeWorkflowTransition('start')" [disabled]="isActionLoading()">Mark
-                            In-Progress</button>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.InProgress) {
-                        <button type="button" class="btn-wf-action btn-wait" (click)="executeWorkflowTransition('wait')"
-                            [disabled]="isActionLoading()">Awaiting Client
-                            Input</button>
-                        <button type="button" class="btn-wf-action btn-resolve"
-                            (click)="executeWorkflowTransition('resolve')" [disabled]="isActionLoading()">Mark Case
-                            Resolved</button>
-                        }
-
-                        @if (currentTicket.status === ticketStatusEnum.Resolved ||
-                        currentTicket.status === ticketStatusEnum.Closed) {
-                        <span class="completion-notice-txt"
-                            style="font-size: 0.8rem; color: #64748b; font-style: italic;">No further action needed
-                            from you on this ticket.</span>
-                        }
+            <div class="sc-card-body">
+                @if (assigneeName(); as assignee) {
+                <div class="flex items-center gap-2.5">
+                    <sc-avatar [name]="assignee" size="md" />
+                    <div class="min-w-0">
+                        <p class="truncate text-[13px] font-semibold text-ink">{{ assignee }}</p>
+                        <p class="text-xs text-ink-subtle">Assigned agent</p>
                     </div>
                 </div>
                 } @else {
-                <!-- Read-only: customers, and any staff account with no rights on
-                     this particular ticket. -->
-                <div class="static-read-only-metrics"
-                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div class="metric-row" style="display: flex; flex-direction: column; gap: 0.25rem;">
-                        <span
-                            style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Assigned
-                            Expert:</span>
-                        <span style="font-size: 0.9rem; font-weight: 600; color: #1e293b;">{{
-                            currentTicket.assignedAgentName || 'Awaiting Allocation' }}</span>
+                <div class="flex items-center gap-2.5">
+                    <span
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-ink-subtle">
+                        <sc-icon name="person_off" size="sm" />
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-[13px] font-semibold text-ink">Unassigned</p>
+                        <p class="text-xs text-ink-subtle">Waiting in the team queue</p>
                     </div>
                 </div>
                 }
 
-                <div class="static-badge-row"
-                    style="border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">
-                    <div class="badge-item">
-                        <span class="b-lbl">Priority Level</span>
-                        <span class="b-val status-text-priority-{{ currentTicket.priority }}">
-                            {{ priorityLabels[currentTicket.priority] }}
-                        </span>
-                    </div>
+                @if (isManagementAllowed() && !isClosed()) {
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm" [matMenuTriggerFor]="agentMenu"
+                        [disabled]="isActionLoading() || assignableAgents().length === 0">
+                        <sc-icon name="person_add" size="sm" />
+                        {{ t.assignedAgentId ? 'Reassign' : 'Assign agent' }}
+                    </button>
+                    @if (t.assignedAgentId) {
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700" (click)="onUnassign()"
+                        [disabled]="isActionLoading()">
+                        Unassign
+                    </button>
+                    }
                 </div>
-            </div>
-        </aside>
 
-    </div>
-    }
-    }
+                @if (assignableAgents().length === 0) {
+                <p class="sc-hint">No members on this ticket's team yet. Add them under Teams.</p>
+                }
+                }
+            </div>
+        </section>
+
+        <!-- Lifecycle -->
+        <section class="sc-card" aria-labelledby="lifecycleHeading">
+            <div class="sc-card-header">
+                <h2 id="lifecycleHeading" class="sc-card-title">Lifecycle</h2>
+            </div>
+            <div class="sc-card-body">
+                <ol class="flex flex-col">
+                    @for (step of workflowSteps(); track step.status; let last = $last) {
+                    <li class="sc-step" [class.sc-step-done]="step.state === 'done'"
+                        [class.sc-step-current]="step.state === 'current'" [class.sc-step-last]="last">
+                        <span class="sc-step-marker">
+                            <sc-icon [name]="step.state === 'done' ? 'check' : step.icon" size="xs" />
+                        </span>
+                        <span class="sc-step-label">{{ step.label }}</span>
+                        @if (step.state === 'current') {
+                        <span class="sc-badge sc-badge-primary ml-auto">Now</span>
+                        }
+                    </li>
+                    }
+                </ol>
+            </div>
+        </section>
+
+        <!-- Context -->
+        <section class="sc-card" aria-labelledby="contextHeading">
+            <div class="sc-card-header">
+                <h2 id="contextHeading" class="sc-card-title">Details</h2>
+            </div>
+            <div class="sc-card-body">
+                <dl class="flex flex-col gap-3.5">
+                    <div>
+                        <dt class="sc-meta-label">Customer</dt>
+                        <dd class="mt-1">
+                            @if (customer(); as c) {
+                            <div class="flex items-center gap-2">
+                                <sc-avatar [name]="c.name" size="xs" />
+                                <div class="min-w-0">
+                                    <p class="truncate text-[13px] font-medium text-ink">{{ c.name }}</p>
+                                    <p class="truncate text-xs text-ink-subtle">{{ c.email }}</p>
+                                </div>
+                            </div>
+                            } @else {
+                            <span class="text-[13px] text-ink-subtle">Not available</span>
+                            }
+                        </dd>
+                    </div>
+
+                    <div class="sc-divider"></div>
+
+                    <div>
+                        <dt class="sc-meta-label">Team</dt>
+                        <dd class="mt-1 text-[13px] text-ink-muted">
+                            {{ teamName() ?? 'Not available' }}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="sc-meta-label">Category</dt>
+                        <dd class="mt-1 text-[13px] text-ink-muted">
+                            {{ categoryName() ?? 'Not available' }}
+                        </dd>
+                    </div>
+
+                    <div class="sc-divider"></div>
+
+                    <div>
+                        <dt class="sc-meta-label">Created</dt>
+                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.createdAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+
+                    <div>
+                        <dt class="sc-meta-label">Last updated</dt>
+                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.updatedAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+
+                    @if (t.resolvedAt) {
+                    <div>
+                        <dt class="sc-meta-label">Resolved</dt>
+                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.resolvedAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+                    }
+
+                    @if (t.closedAt) {
+                    <div>
+                        <dt class="sc-meta-label">Closed</dt>
+                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.closedAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+                    }
+                </dl>
+            </div>
+        </section>
+
+    </aside>
 </div>
+
+<mat-menu #agentMenu="matMenu">
+    @for (agent of assignableAgents(); track agent.userId) {
+    <button type="button" mat-menu-item (click)="onAssignAgent(agent.userId)" [disabled]="agent.isCurrent">
+        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
+            {{ agent.name }}
+            @if (agent.isCurrent) {
+            <sc-icon name="check" size="xs" />
+            }
+        </span>
+    </button>
+    }
+</mat-menu>
+
+} @else if (!errorMessage()) {
+<sc-page-header title="Ticket" />
+<sc-alert tone="error" title="Ticket unavailable">This ticket could not be loaded.</sc-alert>
+} @else {
+<sc-page-header title="Ticket" />
+<sc-alert tone="error" title="Ticket unavailable">{{ errorMessage() }}</sc-alert>
+<a [routerLink]="isCustomerPortal() ? '/portal/tickets' : '/app/tickets'" class="sc-btn sc-btn-secondary mt-4">
+    <sc-icon name="arrow_back" size="sm" />
+    Back to tickets
+</a>
+}
+}

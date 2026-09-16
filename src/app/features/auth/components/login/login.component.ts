@@ -1,15 +1,24 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/services/auth.service';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
+import { PasswordFieldComponent } from '../shared/password-field.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthLayoutComponent,
+    PasswordFieldComponent,
+    IconComponent,
+    AlertComponent,
+  ],
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);

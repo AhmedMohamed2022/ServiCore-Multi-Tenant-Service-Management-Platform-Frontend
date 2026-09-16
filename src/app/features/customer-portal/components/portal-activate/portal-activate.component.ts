@@ -1,19 +1,31 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TenantContextService } from '../../../../core/services/tenant-context.service';
 import { CustomerAccessService } from '../../../../core/services/customer-access.service';
 import { CustomerMembership } from '../../../../core/auth/models/auth.models';
+import { AuthLayoutComponent } from '../../../auth/components/shared/auth-layout.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
+import {
+  AlertComponent,
+  LoadingStateComponent,
+} from '../../../../shared/ui/states/states.component';
 
 type ActivationState = 'loading' | 'choose' | 'manual' | 'error';
 
 @Component({
   selector: 'app-portal-activate',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    AuthLayoutComponent,
+    IconComponent,
+    AvatarComponent,
+    AlertComponent,
+    LoadingStateComponent,
+  ],
   templateUrl: './portal-activate.component.html',
-  styleUrl: './portal-activate.component.css',
 })
 export class PortalActivateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

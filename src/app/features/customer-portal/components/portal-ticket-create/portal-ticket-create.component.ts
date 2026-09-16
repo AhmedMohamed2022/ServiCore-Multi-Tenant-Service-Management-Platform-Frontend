@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+
 import { TicketService } from '../../../../core/services/ticket.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { TeamService } from '../../../../core/services/team.service';
@@ -14,12 +14,25 @@ import {
   TicketPriorityLabels,
 } from '../../../tickets/models/ticket-enums.model';
 
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import {
+  AlertComponent,
+  LoadingStateComponent,
+} from '../../../../shared/ui/states/states.component';
+
 @Component({
   selector: 'app-portal-ticket-create',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    RouterLink,
+    ReactiveFormsModule,
+    PageHeaderComponent,
+    IconComponent,
+    AlertComponent,
+    LoadingStateComponent,
+  ],
   templateUrl: './portal-ticket-create.component.html',
-  styleUrls: ['./portal-ticket-create.component.css'],
 })
 export class PortalTicketCreateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -35,12 +48,10 @@ export class PortalTicketCreateComponent implements OnInit {
   readonly isSubmitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
-  protected readonly priorityOptions = Object.keys(TicketPriorityLabels).map(
-    (key) => ({
-      value: Number(key),
-      label: TicketPriorityLabels[Number(key)],
-    }),
-  );
+  protected readonly priorityOptions = Object.keys(TicketPriorityLabels)
+    .map(Number)
+    .filter((key) => !Number.isNaN(key))
+    .map((value) => ({ value, label: TicketPriorityLabels[value] }));
 
   readonly ticketForm = this.fb.nonNullable.group({
     title: [
@@ -63,8 +74,7 @@ export class PortalTicketCreateComponent implements OnInit {
 
     // Categories and teams are org-wide lookups, not staff-only endpoints —
     // GET /categories and GET /teams both work for an authenticated
-    // customer once the X-Organization-Id header is set, same as they do
-    // for staff.
+    // customer once the X-Organization-Id header is set, same as for staff.
     forkJoin({
       cats: this.categoryService.getCategories(),
       teams: this.teamService.getTeams(),
@@ -75,9 +85,7 @@ export class PortalTicketCreateComponent implements OnInit {
         this.isLoadingOptions.set(false);
       },
       error: (err: Error) => {
-        this.errorMessage.set(
-          `Failed to retrieve taxonomy categories: ${err.message}`,
-        );
+        this.errorMessage.set(err.message);
         this.isLoadingOptions.set(false);
       },
     });
@@ -92,7 +100,7 @@ export class PortalTicketCreateComponent implements OnInit {
     const customerId = this.tenantContext.currentCustomerId();
     if (!customerId) {
       // Shouldn't happen behind portalTenantGuard, but fail loudly rather
-      // than silently sending Guid.Empty to the backend if it ever does.
+      // than silently sending an empty id to the backend if it ever does.
       this.errorMessage.set(
         'Your account context is missing. Please sign out and back in.',
       );
@@ -114,10 +122,7 @@ export class PortalTicketCreateComponent implements OnInit {
     };
 
     this.ticketService.createTicket(payload).subscribe({
-      next: () => {
-        this.isSubmitting.set(false);
-        this.router.navigate(['/portal/tickets']);
-      },
+      next: () => this.router.navigate(['/portal/tickets']),
       error: (err: Error) => {
         this.errorMessage.set(err.message);
         this.isSubmitting.set(false);

@@ -61,6 +61,29 @@ export class NotificationService {
     );
   }
 
+  /**
+   * POST /notifications/read-all. The endpoint has existed since the
+   * notifications feature shipped; the client simply never called it, so the
+   * only way to clear a full tray was to tap each item in turn.
+   *
+   * The local list is updated from the response rather than optimistically,
+   * so a failed request leaves the badge count honest.
+   */
+  markAllAlertsAsRead(): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/read-all`, {}).pipe(
+      tap(() => {
+        const readAt = new Date().toISOString();
+        this.registryList.update((current) =>
+          current.map((notification) =>
+            notification.isRead
+              ? notification
+              : { ...notification, isRead: true, readAt },
+          ),
+        );
+      }),
+    );
+  }
+
   markAlertAsRead(id: string): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/${id}/read`, {}).pipe(
       tap(() => {
@@ -70,6 +93,7 @@ export class NotificationService {
               ? {
                   ...notification,
                   isRead: true,
+                  readAt: new Date().toISOString(),
                 }
               : notification,
           ),

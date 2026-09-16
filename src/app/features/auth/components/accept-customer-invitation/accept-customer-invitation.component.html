@@ -1,41 +1,43 @@
-<div class="invite-container">
-    <div class="invite-card">
-        <h2>Activate Client Portal Account</h2>
-        <p class="subtitle">Set your security passphrase credential parameters to open your self-service ticket
-            dashboard</p>
+<sc-auth-layout heading="Activate your portal account"
+    subheading="Set a password to track your support tickets and reply to your service team.">
 
-        @if (errorMessage()) {
-        <div class="banner-err" role="alert">
-            {{ errorMessage() }}
-        </div>
-        }
+    <div class="sc-card p-6">
 
         @if (successMessage()) {
-        <div class="banner-ok" role="alert">
-            {{ successMessage() }}
-        </div>
+        <sc-alert tone="success" title="You're all set" class="mb-5 block">{{ successMessage() }}</sc-alert>
         }
 
-        <form [formGroup]="setupForm" (ngSubmit)="onCompleteCustomerOnboarding()" *ngIf="token && !successMessage()">
-            <div class="input-block">
-                <label for="cPass">Portal Access Password</label>
-                <input id="cPass" type="password" formControlName="password" placeholder="••••••••"
-                    [class.invalid]="setupForm.controls.password.touched && setupForm.controls.password.invalid" />
-                @if (setupForm.controls.password.touched && setupForm.controls.password.errors?.['required']) {
-                <span class="err-txt">Setting a password credential is required.</span>
-                }
-                @if (setupForm.controls.password.touched && setupForm.controls.password.errors?.['minlength']) {
-                <span class="err-txt">Password security rules demand at least 6 alpha characters.</span>
-                }
-            </div>
+        @if (errorMessage()) {
+        <sc-alert tone="error" title="Invitation problem" class="mb-5 block">{{ errorMessage() }}</sc-alert>
+        }
 
-            <button type="submit" [disabled]="setupForm.invalid || isProcessing()">
+        @if (!token) {
+        <p class="text-[13px] leading-relaxed text-ink-muted">
+            Open the link exactly as it appears in your invitation email — the token it carries is what identifies
+            your invitation.
+        </p>
+        } @else if (!successMessage()) {
+        <form [formGroup]="setupForm" (ngSubmit)="onCompleteCustomerOnboarding()" class="flex flex-col gap-4">
+            <sc-password-field [control]="setupForm.controls.password" inputId="customerPassword"
+                label="Choose a password" placeholder="At least six characters" autocomplete="new-password"
+                [showStrength]="true" />
+
+            <button type="submit" class="sc-btn sc-btn-primary w-full"
+                [disabled]="setupForm.invalid || isProcessing()">
                 @if (isProcessing()) {
-                <span class="spinner"></span> Deploying Parameters...
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Activating your account
                 } @else {
-                Activate Portal Hub
+                Activate my account
+                <sc-icon name="arrow_forward" size="sm" />
                 }
             </button>
         </form>
+        }
     </div>
-</div>
+
+    <p class="mt-6 text-center text-[13px] text-ink-muted">
+        Already activated?
+        <a routerLink="/login" class="font-semibold text-brand-700 hover:underline">Sign in</a>
+    </p>
+</sc-auth-layout>

@@ -1,85 +1,137 @@
-<div class="taxonomy-workspace-container">
-    <header class="workspace-header">
-        <h2>Ticket Taxonomy Configuration</h2>
-        <p>Configure classification fields, ticket dispatch categories, and issue groupings</p>
-    </header>
+<sc-page-header title="Categories"
+    description="How incoming tickets are classified. Categories drive routing and every category-based report."
+    [breadcrumbs]="[{ label: 'Management' }, { label: 'Categories' }]">
+    <button slot="actions" type="button" class="sc-btn sc-btn-secondary" (click)="loadCategories()"
+        [disabled]="isLoading()">
+        <sc-icon name="refresh" size="sm" />
+        <span class="hidden sm:inline">Refresh</span>
+    </button>
+</sc-page-header>
 
-    @if (errorMessage()) {
-    <div class="alert-banner-error" role="alert">
-        {{ errorMessage() }}
-        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
-    </div>
-    }
+@if (errorMessage()) {
+<sc-alert tone="error" title="Something went wrong" class="mb-4 block" [dismissible]="true"
+    (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
+}
 
-    <div class="taxonomy-split-layout">
-        <!-- Left Pane: Taxonomy Form Settings -->
-        <section class="form-pane">
-            <div class="action-card">
-                <h3>{{ isEditing() ? 'Modify Taxonomy Label' : 'Add New Category' }}</h3>
-                <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
-                    <div class="form-group">
-                        <label return="catName">Category Designation Name</label>
-                        <input id="catName" type="text" formControlName="name"
-                            placeholder="e.g., Database Outage, Hardware RMAs"
-                            [class.input-error]="categoryForm.controls.name.touched && categoryForm.controls.name.invalid" />
-                        @if (categoryForm.controls.name.touched && categoryForm.controls.name.errors?.['required']) {
-                        <span class="field-error-msg">A unique classification name label is required.</span>
-                        }
-                        @if (categoryForm.controls.name.touched && categoryForm.controls.name.errors?.['minlength']) {
-                        <span class="field-error-msg">Label names must contain at least 2 alpha characters.</span>
-                        }
-                    </div>
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
 
-                    <div class="action-row-buttons">
-                        <button type="submit" [disabled]="categoryForm.invalid">
-                            {{ isEditing() ? 'Commit Entry' : 'Deploy Label' }}
-                        </button>
-                        @if (isEditing()) {
-                        <button type="button" class="btn-secondary" (click)="resetFormLifecycle()">Cancel</button>
-                        }
-                    </div>
-                </form>
+    <section class="sc-card min-w-0">
+        <div class="flex flex-wrap items-center gap-2 border-b border-line p-3">
+            <div class="relative min-w-[180px] flex-1">
+                <sc-icon name="search" size="sm"
+                    class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
+                <label for="categorySearch" class="sc-sr-only">Search categories</label>
+                <input id="categorySearch" type="search" class="sc-input pl-9" placeholder="Search categories"
+                    [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
             </div>
-        </section>
 
-        <!-- Right Pane: Taxonomy Roster Grid Matrix -->
-        <section class="index-pane">
-            <div class="data-grid-list">
-                <h4>Registered Ticket Classifications Matrix</h4>
-                @if (isLoading()) {
-                <div class="loading-state-block">Compiling classification records index...</div>
-                } @else if (categories().length === 0) {
-                <div class="empty-state-block">No validation category configurations map to this current tenant
-                    workspace.</div>
-                } @else {
-                <table class="taxonomy-table">
-                    <thead>
-                        <tr>
-                            <th>Classification Matrix Meta</th>
-                            <th>Global Actions Matrix</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (category of categories(); track category.id) {
-                        <tr>
-                            <td>
-                                <div class="taxonomy-profile-cell">
-                                    <span class="cat-title">{{ category.name }}</span>
-                                    <span class="cat-id">System Token ID: {{ category.id }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="table-actions">
-                                    <button class="btn-warn-sm" (click)="onEditInit(category)">Modify</button>
-                                    <button class="btn-danger-sm" (click)="onDelete(category.id)">Delete</button>
-                                </div>
-                            </td>
-                        </tr>
+            <button type="button" class="sc-btn sc-btn-secondary" (click)="showInactive.set(!showInactive())"
+                [attr.aria-pressed]="showInactive()">
+                <sc-icon [name]="showInactive() ? 'visibility' : 'visibility_off'" size="sm" />
+                <span class="hidden sm:inline">Inactive</span>
+            </button>
+
+            @if (hasFilters()) {
+            <button type="button" class="sc-btn sc-btn-ghost" (click)="clearFilters()">
+                <sc-icon name="close" size="sm" />
+                Clear
+            </button>
+            }
+        </div>
+
+        @if (isLoading()) {
+        <div class="p-3">
+            <sc-loading-state label="Loading categories" [count]="5" />
+        </div>
+        } @else if (visibleCategories().length === 0) {
+        @if (hasFilters()) {
+        <sc-empty-state icon="search_off" title="No categories match"
+            description="Try a different search term, or include inactive categories."
+            actionLabel="Clear filters" (action)="clearFilters()" />
+        } @else {
+        <sc-empty-state icon="sell" title="No categories yet"
+            description="Add a few so incoming tickets can be classified and reported on." />
+        }
+        } @else {
+        <ul class="divide-y divide-line">
+            @for (category of visibleCategories(); track category.id) {
+            <li class="flex items-start gap-3 p-4" [class.sc-row-inactive]="!category.isActive">
+                <span
+                    class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-sc bg-brand-50 text-brand-700">
+                    <sc-icon name="sell" size="sm" />
+                </span>
+
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-[13px] font-semibold text-ink">{{ category.name }}</p>
+                        @if (!category.isActive) {
+                        <span class="sc-badge sc-badge-neutral">
+                            <sc-icon name="do_not_disturb_on" size="xs" />
+                            Inactive
+                        </span>
                         }
-                    </tbody>
-                </table>
+                    </div>
+                    @if (category.description) {
+                    <p class="mt-0.5 text-[13px] text-ink-subtle">{{ category.description }}</p>
+                    }
+                    <p class="mt-1 text-xs text-ink-subtle">Added {{ category.createdAt | date:'MMM d, y' }}</p>
+                </div>
+
+                <div class="flex shrink-0 items-center gap-1">
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm"
+                        (click)="onEditInit(category)" [attr.aria-label]="'Edit ' + category.name">
+                        <sc-icon name="edit" size="sm" />
+                    </button>
+                    @if (category.isActive) {
+                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm text-danger-700"
+                        (click)="onDeactivate(category)" [attr.aria-label]="'Deactivate ' + category.name">
+                        <sc-icon name="do_not_disturb_on" size="sm" />
+                    </button>
+                    }
+                </div>
+            </li>
+            }
+        </ul>
+        }
+    </section>
+
+    <aside class="min-w-0">
+        <section class="sc-card sc-sticky-panel" aria-labelledby="categoryFormHeading">
+            <div class="sc-card-header">
+                <h2 id="categoryFormHeading" class="sc-card-title">
+                    {{ isEditing() ? 'Edit category' : 'Add category' }}
+                </h2>
+                @if (isEditing()) {
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelEdit()">Cancel</button>
                 }
             </div>
+
+            <form class="sc-card-body flex flex-col gap-4" [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
+                <div>
+                    <label for="categoryName" class="sc-label">Name</label>
+                    <input id="categoryName" type="text" class="sc-input" formControlName="name"
+                        placeholder="Billing, Hardware, Network outage"
+                        [class.sc-input-invalid]="categoryForm.controls.name.touched && categoryForm.controls.name.invalid" />
+                    @if (categoryForm.controls.name.touched && categoryForm.controls.name.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use between 2 and 50 characters.</p>
+                    }
+                </div>
+
+                <div>
+                    <label for="categoryDescription" class="sc-label">
+                        Description <span class="font-normal text-ink-subtle">(optional)</span>
+                    </label>
+                    <textarea id="categoryDescription" class="sc-textarea" formControlName="description" rows="3"
+                        placeholder="What belongs in this category, so agents classify consistently."></textarea>
+                    <p class="sc-hint">Shown to staff when they classify a ticket.</p>
+                </div>
+
+                <button type="submit" class="sc-btn sc-btn-primary"
+                    [disabled]="categoryForm.invalid || isSaving()">
+                    <sc-icon [name]="isEditing() ? 'save' : 'add'" size="sm" />
+                    {{ isEditing() ? 'Save changes' : 'Add category' }}
+                </button>
+            </form>
         </section>
-    </div>
+    </aside>
 </div>

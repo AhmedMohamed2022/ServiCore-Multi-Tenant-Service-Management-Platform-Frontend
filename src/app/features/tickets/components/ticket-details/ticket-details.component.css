@@ -1,336 +1,81 @@
-.ticket-details-workspace {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.workspace-header h2 {
-  margin: 0.5rem 0 0 0;
-  font-size: 1.5rem;
-  color: #0f172a;
-}
-
-.back-link {
-  font-size: 0.875rem;
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.back-link:hover {
-  text-decoration: underline;
-}
-
-.details-split-grid {
-  display: flex;
-  gap: 2rem;
-  align-items: flex-start;
-}
-
-.primary-content-card {
-  flex: 2;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-}
-
-.sidebar-action-controls {
-  flex: 1;
-  max-width: 360px;
-  width: 100%;
-}
-
-.control-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.control-card h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #0f172a;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 0.75rem;
-}
-
-.ticket-title-header {
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.ref-id-tag {
-  font-size: 0.75rem;
-  font-family: monospace;
-  background: #f1f5f9;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  color: #475569;
-}
-
-.ticket-title-header h3 {
-  margin: 0.75rem 0 0.25rem 0;
-  font-size: 1.5rem;
-  color: #0f172a;
-}
-
-.timestamp-meta {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.description-body-box {
-  margin-bottom: 2rem;
-}
-
-.description-body-box h4 {
-  margin: 0 0 0.75rem 0;
-  font-size: 1rem;
-  color: #334155;
-}
-
-.body-text-content {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: #334155;
-  background: #f8fafc;
-  padding: 1.25rem;
-  border-radius: 6px;
-  border: 1px solid #f1f5f9;
-  white-space: pre-wrap;
-}
-
-.system-link-directory {
-  display: flex;
-  gap: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 1.5rem;
-}
-
-.link-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.l-lbl,
-.b-lbl {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.l-val {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 0.95rem;
-}
-
-.l-id {
-  font-size: 0.725rem;
-  color: #94a3b8;
-  font-family: monospace;
-}
-
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.control-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #475569;
-}
-
-select {
-  padding: 0.6rem 0.75rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  outline: none;
-  background-color: #ffffff;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-select:focus {
-  border-color: #2563eb;
-}
-
-.static-badge-row {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 1rem;
-  margin-top: 0.5rem;
-}
-
-.badge-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.b-val {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.status-text-priority-2 {
-  color: #dc2626;
-}
-.status-text-priority-3 {
-  color: #b91c1c;
-  text-transform: uppercase;
-}
-
-.loading-state-block {
-  padding: 6rem;
-  text-align: center;
-  color: #64748b;
-}
-
-.alert-error-banner {
-  padding: 0.75rem 1rem;
-  background-color: #fef2f2;
-  border: 1px solid #fee2e2;
-  border-radius: 6px;
-  color: #b91c1c;
-  font-size: 0.875rem;
-}
-/* ... [Keep all previous styles intact and append the following at the bottom] ... */
-
-.static-read-only-metrics {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 1rem;
-}
-
-.metric-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.m-lbl {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.m-badge-val {
-  font-size: 0.85rem;
-  font-weight: 600;
-  background-color: #e0f2fe;
-  color: #0369a1;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  width: max-content;
-  margin-top: 0.15rem;
-}
-
-.m-text-val {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-/* ... [Keep all previous sidebar styles and append at the bottom] ... */
-
-.btn-wf-action {
-  width: 100%;
-  padding: 0.65rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #ffffff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.15s ease-in-out;
-  text-align: center;
-}
-
-.btn-open {
-  background-color: #f59e0b;
-}
-.btn-open:hover:not(:disabled) {
-  background-color: #d97706;
-}
-
-.btn-start {
-  background-color: #2563eb;
-}
-.btn-start:hover:not(:disabled) {
-  background-color: #1d4ed8;
-}
-
-.btn-wait {
-  background-color: #64748b;
-}
-.btn-wait:hover:not(:disabled) {
-  background-color: #475569;
-}
-
-.btn-resolve {
-  background-color: #10b981;
-}
-.btn-resolve:hover:not(:disabled) {
-  background-color: #059669;
-}
-
-.btn-close {
-  background-color: #0f172a;
-}
-.btn-close:hover:not(:disabled) {
-  background-color: #000000;
-}
-
-.status-pill {
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  width: max-content;
+:host {
   display: block;
-  margin-top: 0.25rem;
 }
 
-.state-0 {
-  background-color: #fef3c7;
-  color: #d97706;
+.sc-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sc-text-subtle);
 }
-.state-1 {
-  background-color: #e0f2fe;
-  color: #0369a1;
+
+/* --- Lifecycle rail ------------------------------------------------------
+   Read-only on purpose. It reports where the ticket is in the real workflow
+   (New -> Open -> InProgress -> WaitingForCustomer -> Resolved -> Closed)
+   without offering a way to jump between states, which would bypass the
+   transition rules the backend enforces. */
+
+.sc-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding-bottom: 1rem;
+  font-size: 13px;
+  color: var(--sc-text-subtle);
 }
-.state-2 {
-  background-color: #dbeafe;
-  color: #2563eb;
+
+.sc-step-last {
+  padding-bottom: 0;
 }
-.state-3 {
-  background-color: #f1f5f9;
-  color: #475569;
+
+/* The connecting line between markers. */
+.sc-step:not(.sc-step-last)::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 22px;
+  bottom: 2px;
+  width: 2px;
+  background-color: var(--sc-border);
 }
-.state-4 {
-  background-color: #d1fae5;
-  color: #059669;
+
+.sc-step-done:not(.sc-step-last)::before {
+  background-color: var(--sc-success-600);
 }
-.state-5 {
-  background-color: #fee2e2;
-  color: #cbd5e1;
-  text-decoration: line-through;
+
+.sc-step-marker {
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--sc-border);
+  background-color: var(--sc-surface);
+  color: var(--sc-text-subtle);
+}
+
+.sc-step-done .sc-step-marker {
+  border-color: var(--sc-success-600);
+  background-color: var(--sc-success-50);
+  color: var(--sc-success-700);
+}
+
+.sc-step-current .sc-step-marker {
+  border-color: var(--sc-brand-600);
+  background-color: var(--sc-brand-600);
+  color: #ffffff;
+}
+
+.sc-step-done .sc-step-label {
+  color: var(--sc-text-muted);
+}
+
+.sc-step-current .sc-step-label {
+  font-weight: 600;
+  color: var(--sc-text);
 }

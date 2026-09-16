@@ -1,67 +1,82 @@
-<div class="portal-tickets-workspace">
-    <header class="view-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h2>My Support Requests</h2>
-            <p>Track your reported issue updates, view response timelines, and communicate with assigned engineering
-                teams</p>
-        </div>
-        <!-- Added: Explicit path linkage to invoke the sandboxed create workspace layout form -->
-        <button type="button" routerLink="/portal/tickets/create"
-            style="padding: 0.5rem 1.25rem; background-color: #0284c7; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
-            Open New Request
-        </button>
-    </header>
+<sc-page-header title="My tickets" description="Everything you've raised with support, newest first.">
+    <a slot="actions" routerLink="/portal/tickets/create" class="sc-btn sc-btn-primary">
+        <sc-icon name="add" size="sm" />
+        New request
+    </a>
+</sc-page-header>
 
-    @if (errorMessage()) {
-    <div class="portal-error-banner" role="alert">
-        {{ errorMessage() }}
+@if (errorMessage()) {
+<sc-alert tone="error" title="Couldn't load your tickets" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+}
+
+<section class="sc-card">
+    @if (isLoading()) {
+    <div class="p-5">
+        <sc-loading-state label="Loading your tickets" [count]="4" />
     </div>
-    }
+    } @else if (sortedTickets().length === 0) {
+    <sc-empty-state icon="confirmation_number" title="No tickets yet"
+        description="When you run into an issue, raise a request and your service team will pick it up." />
+    <div class="-mt-4 flex justify-center pb-6">
+        <a routerLink="/portal/tickets/create" class="sc-btn sc-btn-primary">
+            <sc-icon name="add" size="sm" />
+            New request
+        </a>
+    </div>
+    } @else {
 
-    <div class="portal-grid-card">
-        @if (isLoading()) {
-        <div class="state-block-info">Retrieving your personal service log arrays...</div>
-        } @else if (customerTickets().length === 0) {
-        <div class="state-block-info">No outstanding service tickets found linked to this client profile workspace.
-        </div>
-        } @else {
-        <table class="portal-data-table">
+    <!-- Desktop table -->
+    <div class="hidden overflow-x-auto md:block">
+        <table class="sc-table">
+            <caption class="sc-sr-only">Your support tickets</caption>
             <thead>
                 <tr>
-                    <th>Support Case Reference Details</th>
-                    <th>Workflow Status</th>
-                    <th>Urgency Priority</th>
-                    <th>Assigned Expert</th>
+                    <th scope="col">Request</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Raised</th>
                 </tr>
             </thead>
             <tbody>
-                @for (ticket of customerTickets(); track ticket.id) {
-                <tr class="portal-row">
-                    <td>
-                        <div class="title-cell">
-                            <!-- Routes safely straight to the shared timeline details template component -->
-                            <span class="t-subject" [routerLink]="['/portal/tickets', ticket.id]">
-                                {{ ticket.title }}
-                            </span>
-                            <span class="t-token">Reference Token ID: {{ ticket.id }}</span>
-                        </div>
+                @for (ticket of sortedTickets(); track ticket.id) {
+                <tr>
+                    <td class="max-w-[320px]">
+                        <a [routerLink]="['/portal/tickets', ticket.id]"
+                            class="block truncate font-medium text-ink hover:text-brand-700 hover:underline">
+                            {{ ticket.title }}
+                        </a>
+                        <span class="font-mono text-2xs text-ink-subtle">#{{ ticket.id.substring(0, 8) }}</span>
                     </td>
-                    <td>
-                        <span class="p-status-badge" [class.p-badge-new]="ticket.status === 1"
-                            [class.p-badge-active]="ticket.status === 2" [class.p-badge-resolved]="ticket.status === 4">
-                            {{ statusLabels[ticket.status] }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="p-priority-lbl">{{ priorityLabels[ticket.priority] }}</span>
-                    </td>
-                    <td>
-                        <span class="p-agent-name">{{ ticket.assignedAgentName || 'Awaiting Allocation' }}</span>
-                    </td>
+                    <td class="max-w-[160px] truncate text-ink-muted">{{ categoryNameFor(ticket) || '—' }}</td>
+                    <td><sc-ticket-status-badge [status]="ticket.status" /></td>
+                    <td><sc-ticket-priority-badge [priority]="ticket.priority" /></td>
+                    <td class="whitespace-nowrap text-ink-subtle">{{ ticket.createdAt | date:'MMM d, y' }}</td>
                 </tr>
                 }
             </tbody>
         </table>
-        }
     </div>
-</div>
+
+    <!-- Mobile cards -->
+    <ul class="divide-y divide-line md:hidden">
+        @for (ticket of sortedTickets(); track ticket.id) {
+        <li class="p-4">
+            <a [routerLink]="['/portal/tickets', ticket.id]" class="flex flex-col gap-2">
+                <span class="flex items-start justify-between gap-2">
+                    <span class="min-w-0 truncate text-[13px] font-semibold text-ink">{{ ticket.title }}</span>
+                    <sc-icon name="chevron_right" size="sm" class="shrink-0 text-ink-subtle" />
+                </span>
+                <span class="flex flex-wrap items-center gap-1.5">
+                    <sc-ticket-status-badge [status]="ticket.status" />
+                    <sc-ticket-priority-badge [priority]="ticket.priority" />
+                </span>
+                <span class="text-xs text-ink-subtle">
+                    {{ categoryNameFor(ticket) || 'Uncategorized' }} · Raised {{ ticket.createdAt | date:'MMM d, y' }}
+                </span>
+            </a>
+        </li>
+        }
+    </ul>
+    }
+</section>

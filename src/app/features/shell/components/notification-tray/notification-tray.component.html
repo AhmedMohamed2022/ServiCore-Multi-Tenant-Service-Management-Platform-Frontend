@@ -1,38 +1,108 @@
-<div class="tray-anchor-box">
-    <!-- Interactive Trigger Bell Toggle Icon Button -->
-    <button class="trigger-bell-btn" (click)="toggleTrayMenuView()" [class.has-unread]="alertService.unreadCount() > 0">
-        <span class="bell-icon">🔔</span>
-        @if (alertService.unreadCount() > 0) {
-        <span class="count-badge-counter">{{ alertService.unreadCount() }}</span>
-        }
-    </button>
+<button type="button" class="sc-tray-trigger" [matMenuTriggerFor]="trayMenu"
+    [matTooltip]="unreadCount() > 0 ? unreadCount() + ' unread notifications' : 'Notifications'"
+    [attr.aria-label]="unreadCount() > 0 ? unreadCount() + ' unread notifications' : 'Notifications'">
+    <sc-icon [name]="unreadCount() > 0 ? 'notifications_active' : 'notifications'" size="sm" />
+    @if (unreadCount() > 0) {
+    <span class="sc-tray-count" aria-hidden="true">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+    }
+</button>
 
-    <!-- Overlay Dropdown Context Drawer Pane -->
-    @if (isTrayOpen()) {
-    <div class="tray-dropdown-menu">
-        <div class="tray-menu-header">
-            <h4>Notifications Center</h4>
-            <span class="counter-summary-txt">{{ alertService.unreadCount() }} outstanding alerts</span>
+<mat-menu #trayMenu="matMenu" class="sc-tray-menu" [hasBackdrop]="true">
+    <div class="sc-tray-panel" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+            <h2 class="text-[13px] font-semibold text-ink">Notifications</h2>
+            <div class="flex items-center gap-1">
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm" (click)="onRefresh($event)"
+                    aria-label="Refresh notifications">
+                    <sc-icon name="refresh" size="sm" />
+                </button>
+                @if (unreadCount() > 0) {
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onMarkAllRead()"
+                    [disabled]="isMarkingAll()">
+                    Mark all read
+                </button>
+                }
+            </div>
         </div>
 
-        <div class="tray-scroll-timeline">
-            @if (alertService.registryList().length === 0) {
-            <div class="tray-empty-block">No system alerts captured in this active operational space.</div>
+        <!-- Filter -->
+        @if (hasAny()) {
+        <div class="flex items-center gap-1 border-b border-line px-3 py-2" role="tablist"
+            aria-label="Filter notifications">
+            <button type="button" role="tab" class="sc-tray-tab" [class.sc-tray-tab-active]="filter() === 'all'"
+                [attr.aria-selected]="filter() === 'all'" (click)="setFilter('all', $event)">
+                All
+            </button>
+            <button type="button" role="tab" class="sc-tray-tab" [class.sc-tray-tab-active]="filter() === 'unread'"
+                [attr.aria-selected]="filter() === 'unread'" (click)="setFilter('unread', $event)">
+                Unread
+                @if (unreadCount() > 0) {
+                <span class="sc-badge sc-badge-primary ml-1.5">{{ unreadCount() }}</span>
+                }
+            </button>
+        </div>
+        }
+
+        <!-- List -->
+        <div class="sc-tray-list">
+            @if (visibleCount() === 0) {
+            <sc-empty-state icon="notifications_off"
+                [title]="filter() === 'unread' ? 'Nothing unread' : 'No notifications yet'"
+                [description]="filter() === 'unread' ? 'You are all caught up.' : 'Assignments, replies and status changes will appear here.'" />
             } @else {
-            @for (alert of alertService.registryList(); track alert.id) {
-            <div class="alert-item-node" [class.item-unread]="!alert.isRead" (click)="onMarkRead($event, alert)">
-                <div class="alert-node-header">
-                    <span class="node-title-txt">{{ alert.title }}</span>
-                    @if (!alert.isRead) {
-                    <span class="unread-dot-indicator"></span>
+            @for (group of groups(); track group.key) {
+            <div>
+                <p class="sc-tray-group-label">{{ group.label }}</p>
+                <ul>
+                    @for (item of group.items; track item.id) {
+                    <li>
+                        <div class="sc-tray-item" [class.sc-tray-item-unread]="!item.isRead"
+                            [class.sc-tray-item-linked]="item.ticketId" role="button" tabindex="0"
+                            (click)="onOpen(item)" (keydown.enter)="onOpen(item)" (keydown.space)="onOpen(item)">
+
+                            <span class="sc-tray-icon" [class]="item.toneClass" aria-hidden="true">
+                                <sc-icon [name]="item.icon" size="sm" />
+                            </span>
+
+                            <span class="min-w-0 flex-1">
+                                <span class="flex items-baseline gap-2">
+                                    <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+                                        {{ item.title }}
+                                    </span>
+                                    <span class="shrink-0 text-2xs text-ink-subtle" [matTooltip]="item.exactTime">
+                                        {{ item.relativeTime }}
+                                    </span>
+                                </span>
+
+                                <span class="mt-0.5 block text-xs leading-relaxed text-ink-muted">
+                                    {{ item.message }}
+                                </span>
+
+                                <span class="mt-1.5 flex items-center gap-2">
+                                    <span class="sc-badge sc-badge-neutral">{{ item.typeLabel }}</span>
+                                    @if (item.ticketId) {
+                                    <span class="flex items-center gap-1 text-2xs text-ink-subtle">
+                                        <sc-icon name="open_in_new" size="xs" />
+                                        Open ticket
+                                    </span>
+                                    }
+                                </span>
+                            </span>
+
+                            @if (!item.isRead) {
+                            <button type="button" class="sc-tray-dot" (click)="onMarkRead(item, $event)"
+                                [attr.aria-label]="'Mark ' + item.title + ' as read'"
+                                matTooltip="Mark as read"></button>
+                            }
+                        </div>
+                    </li>
                     }
-                </div>
-                <p class="node-message-paragraph">{{ alert.message }}</p>
-                <span class="node-time-stamp">{{ alert.createdAt | date:'shortTime' }}</span>
+                </ul>
             </div>
             }
             }
         </div>
     </div>
-    }
-</div>
+</mat-menu>

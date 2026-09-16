@@ -1,107 +1,133 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ReportingService } from '../../../../core/services/reporting.service';
-import { TicketTimeSeriesPointData } from '../../models/reporting.model';
+import { LegendPosition, NgxChartsModule } from '@swimlane/ngx-charts';
 
-interface ChartSeriesPoint {
-  x: number;
-  y: number;
+import { ReportingService } from '../../../../core/services/reporting.service';
+import {
+  ReportDateRangeRequest,
+  TicketTimeSeriesPointData,
+} from '../../models/reporting.model';
+import { ReportRangeComponent } from '../shared/report-range.component';
+
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { StatCardComponent } from '../../../../shared/ui/stat-card/stat-card.component';
+import {
+  AlertComponent,
+  EmptyStateComponent,
+  LoadingStateComponent,
+} from '../../../../shared/ui/states/states.component';
+import { ChartCardComponent } from '../../../../shared/charts/chart-theme';
+
+/** ngx-charts multi-series shape. */
+interface ChartSeries {
+  name: string;
+  series: { name: string; value: number }[];
 }
 
-// Fixed chart canvas dimensions (SVG viewBox units).
-const CHART_WIDTH = 760;
-const CHART_HEIGHT = 260;
-const CHART_PADDING_LEFT = 40;
-const CHART_PADDING_BOTTOM = 30;
-const CHART_PADDING_TOP = 20;
-const CHART_PADDING_RIGHT = 20;
+/**
+ * Colours for the three plotted series. Raised is neutral-blue, resolved is
+ * the same green as the Resolved badge, closed the same slate as Closed — so
+ * the trend lines and the status badges agree.
+ */
+const TREND_SCHEME = {
+  name: 'servicore-trend',
+  selectable: true,
+  group: 'Ordinal',
+  domain: ['#60a5fa', '#059669', '#64748b'],
+} as any;
 
 @Component({
   selector: 'app-ticket-time-series',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    NgxChartsModule,
+    ReportRangeComponent,
+    PageHeaderComponent,
+    StatCardComponent,
+    AlertComponent,
+    EmptyStateComponent,
+    LoadingStateComponent,
+    ChartCardComponent,
+  ],
   templateUrl: './ticket-time-series.component.html',
-  styleUrls: ['./ticket-time-series.component.css'],
 })
 export class TicketTimeSeriesComponent implements OnInit {
   private readonly reportingService = inject(ReportingService);
-  private readonly fb = inject(FormBuilder);
 
   readonly points = signal<TicketTimeSeriesPointData[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly range = signal<ReportDateRangeRequest>({});
 
-  readonly chartWidth = CHART_WIDTH;
-  readonly chartHeight = CHART_HEIGHT;
+  readonly trendColors = TREND_SCHEME;
+  readonly legendBelow = LegendPosition.Below;
 
-  readonly filterForm = this.fb.group({
-    from: [''],
-    to: [''],
-  });
+  readonly hasData = computed(() => this.points().length > 0);
 
-  // Plot three series: new tickets raised, tickets resolved, tickets closed —
-  // this is the "ticket volume over time" chart the reporting domain never
-  // got a frontend view for.
-  private readonly maxValue = computed(() => {
-    const data = this.points();
-    if (data.length === 0) return 1;
-    return Math.max(
-      1,
-      ...data.map((p) => p.newTickets),
-      ...data.map((p) => p.resolvedTickets),
-      ...data.map((p) => p.closedTickets),
-    );
-  });
-
-  readonly newTicketsLine = computed(() =>
-    this.buildLine(this.points().map((p) => p.newTickets)),
-  );
-  readonly resolvedTicketsLine = computed(() =>
-    this.buildLine(this.points().map((p) => p.resolvedTickets)),
-  );
-  readonly closedTicketsLine = computed(() =>
-    this.buildLine(this.points().map((p) => p.closedTickets)),
-  );
-
-  readonly yAxisTicks = computed(() => {
-    const max = this.maxValue();
-    const steps = 4;
-    return Array.from({ length: steps + 1 }, (_, i) => {
-      const value = Math.round((max / steps) * (steps - i));
-      const y =
-        CHART_PADDING_TOP +
-        ((CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM) / steps) * i;
-      return { value, y };
-    });
-  });
-
-  // A handful of x-axis date labels, spread evenly, so the chart doesn't
-  // get crowded with one label per data point on wide date ranges.
-  readonly xAxisLabels = computed(() => {
+  /**
+   * Replaces roughly 170 lines of hand-computed SVG path maths — viewBox
+   * constants, manual axis ticks, label thinning — with the charting library
+   * the rest of the reporting surface already uses. Same three series, same
+   * source fields.
+   */
+  readonly chartSeries = computed<ChartSeries[]>(() => {
     const data = this.points();
     if (data.length === 0) return [];
-    const maxLabels = 6;
-    const step = Math.max(1, Math.ceil(data.length / maxLabels));
-    const plotWidth = CHART_WIDTH - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
 
-    return data
-      .map((p, i) => ({ point: p, index: i }))
-      .filter(({ index }) => index % step === 0 || index === data.length - 1)
-      .map(({ point, index }) => ({
-        label: new Date(point.date).toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-        }),
-        x:
-          CHART_PADDING_LEFT +
-          (data.length === 1
-            ? plotWidth / 2
-            : (plotWidth / (data.length - 1)) * index),
-      }));
+    const label = (point: TicketTimeSeriesPointData) =>
+      new Date(point.date).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      });
+
+    return [
+      {
+        name: 'Raised',
+        series: data.map((p) => ({ name: label(p), value: p.newTickets })),
+      },
+      {
+        name: 'Resolved',
+        series: data.map((p) => ({ name: label(p), value: p.resolvedTickets })),
+      },
+      {
+        name: 'Closed',
+        series: data.map((p) => ({ name: label(p), value: p.closedTickets })),
+      },
+    ];
+  });
+
+  readonly totals = computed(() =>
+    this.points().reduce(
+      (acc, p) => ({
+        raised: acc.raised + p.newTickets,
+        resolved: acc.resolved + p.resolvedTickets,
+        closed: acc.closed + p.closedTickets,
+      }),
+      { raised: 0, resolved: 0, closed: 0 },
+    ),
+  );
+
+  /**
+   * Whether the team is keeping up: tickets finished minus tickets raised
+   * over the period. Positive means the backlog shrank.
+   */
+  readonly netChange = computed(() => {
+    const t = this.totals();
+    return t.resolved + t.closed - t.raised;
+  });
+
+  readonly busiestDay = computed(() => {
+    const ranked = [...this.points()].sort(
+      (a, b) => b.newTickets - a.newTickets,
+    );
+    return ranked[0] ?? null;
   });
 
   ngOnInit(): void {
+    this.fetchData();
+  }
+
+  onRangeChange(range: ReportDateRangeRequest): void {
+    this.range.set(range);
     this.fetchData();
   }
 
@@ -109,17 +135,10 @@ export class TicketTimeSeriesComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    const formValues = this.filterForm.value;
-    const filters = {
-      from: formValues.from
-        ? new Date(formValues.from).toISOString()
-        : undefined,
-      to: formValues.to ? new Date(formValues.to).toISOString() : undefined,
-    };
-
-    this.reportingService.getTicketTimeSeries(filters).subscribe({
+    this.reportingService.getTicketTimeSeries(this.range()).subscribe({
       next: (result) => {
-        // Backend order isn't guaranteed to be chronological — sort defensively.
+        // Chronological order isn't guaranteed by the endpoint — sort
+        // defensively, otherwise the line doubles back on itself.
         this.points.set(
           [...result].sort(
             (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -134,32 +153,11 @@ export class TicketTimeSeriesComponent implements OnInit {
     });
   }
 
-  onApplyFilters(): void {
-    this.fetchData();
-  }
-
-  onResetFilters(): void {
-    this.filterForm.reset();
-    this.fetchData();
-  }
-
-  private buildLine(values: number[]): string {
-    if (values.length === 0) return '';
-
-    const plotWidth = CHART_WIDTH - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
-    const plotHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
-    const max = this.maxValue();
-
-    const coords: ChartSeriesPoint[] = values.map((value, index) => {
-      const x =
-        CHART_PADDING_LEFT +
-        (values.length === 1
-          ? plotWidth / 2
-          : (plotWidth / (values.length - 1)) * index);
-      const y = CHART_PADDING_TOP + plotHeight - (value / max) * plotHeight;
-      return { x, y };
+  formatDay(date: string): string {
+    return new Date(date).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
-
-    return coords.map((c) => `${c.x},${c.y}`).join(' ');
   }
 }

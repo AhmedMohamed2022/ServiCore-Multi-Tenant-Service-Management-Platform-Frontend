@@ -1,77 +1,75 @@
-<div class="auth-container">
-    <div class="auth-card">
-        <h2>Create Owner Account</h2>
-        <p class="subtitle">Deploy a secure multi-tenant cloud organization unit</p>
+<sc-auth-layout heading="Create your organization"
+    subheading="You'll be the owner, with full access to teams, customers and reporting.">
 
-        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
-            @if (errorMessage()) {
-            <div class="error-banner" role="alert">
-                {{ errorMessage() }}
-            </div>
-            }
+    <form class="sc-card p-6" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
 
-            @if (successMessage()) {
-            <div class="success-banner" role="alert">
-                {{ successMessage() }}
-            </div>
-            }
+        @if (successMessage()) {
+        <sc-alert tone="success" title="Organization created" class="mb-5 block">
+            {{ successMessage() }} Taking you to sign in.
+        </sc-alert>
+        }
 
-            <div class="form-group">
-                <label for="name">Full Name</label>
-                <input id="name" type="text" formControlName="name" placeholder="John Doe"
-                    [class.invalid]="registerForm.controls.name.touched && registerForm.controls.name.invalid" />
-                @if (registerForm.controls.name.touched && registerForm.controls.name.errors?.['required']) {
-                <span class="error-text">Identity name field is required.</span>
-                }
-            </div>
+        @if (errorMessage()) {
+        <sc-alert tone="error" title="Couldn't create the organization" class="mb-5 block">
+            {{ errorMessage() }}
+        </sc-alert>
+        }
 
-            <div class="form-group">
-                <label for="organizationName">Organization Workspace Name</label>
-                <input id="organizationName" type="text" formControlName="organizationName"
-                    placeholder="Acme Enterprise Solutions"
-                    [class.invalid]="registerForm.controls.organizationName.touched && registerForm.controls.organizationName.invalid" />
-                @if (registerForm.controls.organizationName.touched &&
-                registerForm.controls.organizationName.errors?.['required']) {
-                <span class="error-text">Unique corporate workspace identity is required.</span>
-                }
-            </div>
-
-            <div class="form-group">
-                <label for="email">Corporate Email Address</label>
-                <input id="email" type="email" formControlName="email" placeholder="owner@company.com"
-                    [class.invalid]="registerForm.controls.email.touched && registerForm.controls.email.invalid" />
-                @if (registerForm.controls.email.touched && registerForm.controls.email.errors?.['required']) {
-                <span class="error-text">Email account routing is required.</span>
-                }
-                @if (registerForm.controls.email.touched && registerForm.controls.email.errors?.['email']) {
-                <span class="error-text">Provide a valid structural email mapping format.</span>
-                }
-            </div>
-
-            <div class="form-group">
-                <label for="password">Account Security Password</label>
-                <input id="password" type="password" formControlName="password" placeholder="••••••••"
-                    [class.invalid]="registerForm.controls.password.touched && registerForm.controls.password.invalid" />
-                @if (registerForm.controls.password.touched && registerForm.controls.password.errors?.['required']) {
-                <span class="error-text">Security credential pass phrase is required.</span>
-                }
-                @if (registerForm.controls.password.touched && registerForm.controls.password.errors?.['minlength']) {
-                <span class="error-text">Password must be at least 6 characters.</span>
-                }
-            </div>
-
-            <button type="submit" [disabled]="isLoading() || registerForm.invalid">
-                @if (isLoading()) {
-                <span class="spinner"></span> Provisioning Platform Space...
+        <div class="flex flex-col gap-4">
+            <div>
+                <label for="orgName" class="sc-label">Organization name</label>
+                <input id="orgName" type="text" class="sc-input" formControlName="organizationName"
+                    placeholder="Contoso Support" autocomplete="organization"
+                    [class.sc-input-invalid]="registerForm.controls.organizationName.touched && registerForm.controls.organizationName.invalid" />
+                @if (registerForm.controls.organizationName.touched && registerForm.controls.organizationName.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter your organization's name.</p>
                 } @else {
-                Register Organization
+                <p class="sc-hint">Your customers and staff will see this name.</p>
+                }
+            </div>
+
+            <div class="sc-divider"></div>
+
+            <div>
+                <label for="ownerName" class="sc-label">Your name</label>
+                <input id="ownerName" type="text" class="sc-input" formControlName="name" placeholder="Jane Smith"
+                    autocomplete="name"
+                    [class.sc-input-invalid]="registerForm.controls.name.touched && registerForm.controls.name.invalid" />
+                @if (registerForm.controls.name.touched && registerForm.controls.name.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter your name.</p>
+                }
+            </div>
+
+            <div>
+                <label for="ownerEmail" class="sc-label">Work email</label>
+                <input id="ownerEmail" type="email" class="sc-input" formControlName="email"
+                    placeholder="you@company.com" autocomplete="username"
+                    [class.sc-input-invalid]="registerForm.controls.email.touched && registerForm.controls.email.invalid" />
+                @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a valid email address.</p>
+                } @else {
+                <p class="sc-hint">This becomes your sign-in address.</p>
+                }
+            </div>
+
+            <sc-password-field [control]="registerForm.controls.password" inputId="ownerPassword"
+                placeholder="At least six characters" autocomplete="new-password" [showStrength]="true" />
+
+            <button type="submit" class="sc-btn sc-btn-primary w-full"
+                [disabled]="isLoading() || !!successMessage()">
+                @if (isLoading()) {
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Creating organization
+                } @else {
+                Create organization
+                <sc-icon name="arrow_forward" size="sm" />
                 }
             </button>
-        </form>
-
-        <div class="auth-footer">
-            <span>Already hold a member profile?</span>
-            <a routerLink="/login">Return to Security Sign-In</a>
         </div>
-    </div>
-</div>
+    </form>
+
+    <p class="mt-6 text-center text-[13px] text-ink-muted">
+        Already have an account?
+        <a routerLink="/login" class="font-semibold text-brand-700 hover:underline">Sign in</a>
+    </p>
+</sc-auth-layout>

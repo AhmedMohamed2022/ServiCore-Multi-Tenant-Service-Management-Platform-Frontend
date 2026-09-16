@@ -1,45 +1,70 @@
-<div class="activation-pane">
-    <div class="activation-card">
+<sc-auth-layout heading="Opening your portal" subheading="Connecting you to your service provider."
+    [wide]="state() === 'choose'">
 
-        @if (state() === 'loading') {
-        <h3>Setting up your account</h3>
-        <p class="subtitle">One moment while we find your organization&hellip;</p>
-        }
+    @switch (state()) {
 
-        @if (state() === 'choose') {
-        <h3>Choose your organization</h3>
-        <p class="subtitle">Your account is linked to more than one organization. Pick the one you'd like to open.
-        </p>
-        <div class="org-choice-list">
-            @for (membership of memberships(); track membership.organizationId) {
-            <button type="button" class="org-choice-btn" (click)="selectMembership(membership)">
-                {{ membership.organizationName }}
-            </button>
-            }
-        </div>
-        }
-
-        @if (state() === 'error') {
-        <h3>We couldn't find your organization</h3>
-        <p class="subtitle">Your account isn't linked to any organization yet. If you were invited as a customer,
-            make sure you've fully accepted that invitation, or ask whoever invited you to resend it.</p>
-        }
-
-        @if (state() === 'manual') {
-        <h3>Authorize Support Workspace Context</h3>
-        <p class="subtitle">We couldn't automatically look up your organization right now. As a fallback, you can
-            enter your Organization GUID directly if you have it.</p>
-
-        <form [formGroup]="activationForm" (ngSubmit)="onActivateSubmit()">
-            <div class="form-group">
-                <label for="orgId">Organization Token Ref UUID</label>
-                <input id="orgId" type="text" formControlName="organizationId"
-                    placeholder="e.g., 3fa85f64-5717-4562-b3fc-2c963f66afa6"
-                    [class.input-error]="activationForm.controls.organizationId.touched && activationForm.controls.organizationId.invalid" />
-            </div>
-            <button type="submit" [disabled]="activationForm.invalid">Authorize Session</button>
-        </form>
-        }
-
+    @case ('loading') {
+    <div class="sc-card p-6">
+        <sc-loading-state label="Finding your organizations" [count]="3" />
     </div>
-</div>
+    }
+
+    @case ('choose') {
+    <p class="mb-4 text-[13px] text-ink-muted">
+        You're linked to more than one service provider. Pick the one you want to open.
+    </p>
+    <ul class="flex flex-col gap-2.5">
+        @for (membership of memberships(); track membership.organizationId) {
+        <li>
+            <button type="button" class="sc-org-card" (click)="selectMembership(membership)">
+                <sc-avatar [name]="membership.organizationName || membership.organizationId" size="md" />
+                <span class="min-w-0 flex-1 text-left">
+                    <span class="block truncate text-[14px] font-semibold text-ink">
+                        {{ membership.organizationName || 'Organization' }}
+                    </span>
+                    <span class="mt-0.5 block text-xs text-ink-subtle">Customer portal</span>
+                </span>
+                <sc-icon name="arrow_forward" size="sm" class="text-ink-subtle" />
+            </button>
+        </li>
+        }
+    </ul>
+    }
+
+    @case ('error') {
+    <div class="sc-card p-6">
+        <sc-alert tone="warn" title="No linked organization">
+            Your account isn't linked to a service provider yet. If you were sent an invitation, open that link to
+            finish activating your account.
+        </sc-alert>
+    </div>
+    }
+
+    @case ('manual') {
+    <div class="sc-card p-6">
+        <sc-alert tone="warn" title="We couldn't look up your organizations" class="mb-5 block">
+            Enter your organization ID to continue. It's in the invitation email your service provider sent you.
+        </sc-alert>
+
+        <form [formGroup]="activationForm" (ngSubmit)="onActivateSubmit()" class="flex flex-col gap-4">
+            <div>
+                <label for="organizationId" class="sc-label">Organization ID</label>
+                <input id="organizationId" type="text" class="sc-input" formControlName="organizationId"
+                    placeholder="00000000-0000-0000-0000-000000000000"
+                    [class.sc-input-invalid]="activationForm.controls.organizationId.touched && activationForm.controls.organizationId.invalid" />
+                @if (activationForm.controls.organizationId.touched && activationForm.controls.organizationId.invalid) {
+                <p class="sc-field-error">
+                    <sc-icon name="error" size="xs" /> Enter the full ID, including the dashes.
+                </p>
+                }
+            </div>
+
+            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="activationForm.invalid">
+                Open my portal
+                <sc-icon name="arrow_forward" size="sm" />
+            </button>
+        </form>
+    </div>
+    }
+    }
+</sc-auth-layout>

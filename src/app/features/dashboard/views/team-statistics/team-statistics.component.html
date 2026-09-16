@@ -1,66 +1,94 @@
-<p>team-statistics works!</p>
-<div class="report-view-container">
-    <header class="report-view-header">
-        <div>
-            <h2>Team Performance</h2>
-            <p>Ticket load and outcomes broken down by team, ranked by total ticket volume.</p>
-        </div>
+<sc-page-header title="Team performance" description="Ticket volume and completion per service team."
+    [breadcrumbs]="[{ label: 'Reports' }, { label: 'Teams' }]">
+    <sc-report-range slot="actions" (rangeChange)="onRangeChange($event)" />
+</sc-page-header>
 
-        <div class="report-filter-toolbar">
-            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="report-filter-row">
-                <div class="report-filter-group">
-                    <label for="teamFrom">From</label>
-                    <input id="teamFrom" type="date" formControlName="from" />
-                </div>
-                <div class="report-filter-group">
-                    <label for="teamTo">To</label>
-                    <input id="teamTo" type="date" formControlName="to" />
-                </div>
-                <div class="report-filter-actions">
-                    <button type="submit" class="btn-report-apply" [disabled]="isLoading()">Filter</button>
-                    <button type="button" class="btn-report-reset" (click)="onResetFilters()"
-                        [disabled]="isLoading()">Reset</button>
-                </div>
-            </form>
-        </div>
-    </header>
+@if (errorMessage()) {
+<sc-alert tone="error" title="Report unavailable" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+}
 
-    @if (errorMessage()) {
-    <div class="report-error-banner" role="alert">{{ errorMessage() }}</div>
-    }
-
-    @if (isLoading()) {
-    <div class="report-loading-block">Loading team statistics...</div>
-    } @else if (teams().length === 0) {
-    <div class="report-empty-block">No teams found for this range.</div>
-    } @else {
-    <div class="report-table-card">
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Team</th>
-                    <th>Members</th>
-                    <th>Total Tickets</th>
-                    <th>Active</th>
-                    <th>Resolved</th>
-                    <th>Closed</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (team of teams(); track team.teamId; let i = $index) {
-                <tr>
-                    <td class="rank-cell">{{ i + 1 }}</td>
-                    <td>{{ team.teamName }}</td>
-                    <td>{{ team.memberCount }}</td>
-                    <td>{{ team.totalTickets }}</td>
-                    <td>{{ team.activeTickets }}</td>
-                    <td class="metric-good">{{ team.resolvedTickets }}</td>
-                    <td>{{ team.closedTickets }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    }
+@if (isLoading()) {
+<div class="sc-card p-5">
+    <sc-loading-state label="Loading team statistics" [count]="6" />
 </div>
+} @else if (!hasRows()) {
+<div class="sc-card">
+    <sc-empty-state icon="groups" title="No team activity in this period"
+        description="Widen the date range, or check that tickets have been raised in this period." />
+</div>
+} @else {
+
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <sc-stat-card label="Teams" [value]="rows().length" icon="groups" tone="info" />
+    <sc-stat-card label="Total tickets" [value]="totals().total" icon="confirmation_number" tone="neutral" />
+    <sc-stat-card label="Active now" [value]="totals().active" icon="pending_actions" tone="warn"
+        hint="Open, in progress, or waiting" />
+    <sc-stat-card label="Completion rate" [value]="completionRate() + '%'" icon="task_alt" tone="success"
+        hint="Resolved or closed, of total" />
+</div>
+
+<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+
+    <sc-chart-card title="Ticket volume" description="Top ten teams by total tickets.">
+        <div class="h-[320px]">
+            <ngx-charts-bar-horizontal [results]="chartData()" [scheme]="chartColors" [xAxis]="true" [yAxis]="true"
+                [roundEdges]="false" />
+        </div>
+    </sc-chart-card>
+
+    <section class="sc-card min-w-0">
+        <div class="sc-card-header">
+            <h2 class="sc-card-title">Breakdown</h2>
+            <p class="text-xs text-ink-subtle">{{ rows().length }} {{ rows().length === 1 ? 'team' : 'teams' }}</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="sc-table">
+                <caption class="sc-sr-only">Per-team ticket totals</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Team</th>
+                        <th scope="col" class="text-right">Members</th>
+                        <th scope="col" class="text-right">Total</th>
+                        <th scope="col" class="text-right">Active</th>
+                        <th scope="col" class="text-right">Resolved</th>
+                        <th scope="col" class="text-right">Closed</th>
+                        <th scope="col" class="w-28">Mix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of rows(); track row.teamId) {
+                    <tr>
+                        <td class="max-w-[220px] truncate font-medium text-ink">{{ row.teamName }}</td>
+                        <td class="text-right tabular-nums text-ink-subtle">{{ row.memberCount }}</td>
+                        <td class="text-right tabular-nums">{{ row.totalTickets }}</td>
+                        <td class="text-right tabular-nums">
+                            @if (row.activeTickets > 0) {
+                            <span class="sc-badge sc-badge-warn">{{ row.activeTickets }}</span>
+                            } @else {
+                            <span class="text-ink-subtle">0</span>
+                            }
+                        </td>
+                        <td class="text-right font-semibold tabular-nums text-success-700">{{ row.resolvedTickets }}</td>
+                        <td class="text-right tabular-nums text-ink-subtle">{{ row.closedTickets }}</td>
+                        <td>
+                            <!-- Proportion of this row that is finished. The number is
+                                 printed alongside, so the bar is never the only signal. -->
+                            <span class="flex items-center gap-2">
+                                <span class="sc-meter" [attr.aria-hidden]="true">
+                                    <span class="sc-meter-fill"
+                                        [style.width.%]="shareOf(row.resolvedTickets + row.closedTickets, row.totalTickets)"></span>
+                                </span>
+                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-ink-subtle">
+                                    {{ shareOf(row.resolvedTickets + row.closedTickets, row.totalTickets) }}%
+                                </span>
+                            </span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+}

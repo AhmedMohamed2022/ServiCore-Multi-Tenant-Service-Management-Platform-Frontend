@@ -1,48 +1,44 @@
-<div class="auth-container">
-    <div class="auth-card">
-        <h2>Welcome to ServiCore</h2>
-        <p class="subtitle">Multi-Tenant Service Management Platform</p>
+<sc-auth-layout heading="Sign in" subheading="Access your organization's service desk.">
+    <form class="sc-card p-6" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
 
-        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-            @if (errorMessage()) {
-            <div class="error-banner" role="alert">
-                {{ errorMessage() }}
-            </div>
-            }
+        @if (errorMessage()) {
+        <sc-alert tone="error" title="Sign-in failed" class="mb-5 block">{{ errorMessage() }}</sc-alert>
+        }
 
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input id="email" type="email" formControlName="email" placeholder="name@company.com"
-                    [class.invalid]="loginForm.controls.email.touched && loginForm.controls.email.invalid" />
+        <div class="flex flex-col gap-4">
+            <div>
+                <label for="loginEmail" class="sc-label">Email</label>
+                <input id="loginEmail" type="email" class="sc-input" formControlName="email"
+                    placeholder="you@company.com" autocomplete="username" autofocus
+                    [class.sc-input-invalid]="loginForm.controls.email.touched && loginForm.controls.email.invalid" />
                 @if (loginForm.controls.email.touched && loginForm.controls.email.errors?.['required']) {
-                <span class="error-text">Email address is required.</span>
-                }
-                @if (loginForm.controls.email.touched && loginForm.controls.email.errors?.['email']) {
-                <span class="error-text">Please provide a valid email format.</span>
-                }
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input id="password" type="password" formControlName="password" placeholder="••••••••"
-                    [class.invalid]="loginForm.controls.password.touched && loginForm.controls.password.invalid" />
-                @if (loginForm.controls.password.touched && loginForm.controls.password.errors?.['required']) {
-                <span class="error-text">Password security code is required.</span>
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter your email address.</p>
+                } @else if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> That doesn't look like a valid email.</p>
                 }
             </div>
 
-            <button type="submit" [disabled]="isLoading() || loginForm.invalid">
+            <sc-password-field [control]="loginForm.controls.password" inputId="loginPassword"
+                placeholder="Your password" autocomplete="current-password" />
+
+            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="isLoading()">
                 @if (isLoading()) {
-                <span class="spinner"></span> Authenticating...
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Signing in
                 } @else {
-                Sign In
+                Sign in
+                <sc-icon name="arrow_forward" size="sm" />
                 }
             </button>
-        </form>
-
-        <div class="auth-footer">
-            <span>New to the platform?</span>
-            <a routerLink="/register">Register Tenant Account</a>
         </div>
-    </div>
-</div>
+    </form>
+
+    <p class="mt-6 text-center text-[13px] text-ink-muted">
+        Setting up a new organization?
+        <a routerLink="/register" class="font-semibold text-brand-700 hover:underline">Create an account</a>
+    </p>
+
+    <p class="mt-2 text-center text-xs leading-relaxed text-ink-subtle">
+        Invited by email? Use the link in your invitation rather than signing in here.
+    </p>
+</sc-auth-layout>

@@ -1,0 +1,423 @@
+@use '@angular/material' as mat;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   ServiCore design tokens
+   One source of truth. Tailwind's theme (tailwind.config.js) and the Angular
+   Material theme below both read from these, so a Tailwind-built badge and a
+   mat-chip cannot drift apart.
+   ========================================================================== */
+
+:root {
+  /* Surfaces --------------------------------------------------------------- */
+  --sc-surface: #ffffff;
+  --sc-surface-muted: #f8fafc;
+  --sc-surface-sunken: #f1f5f9;
+  --sc-surface-inverse: #0f172a;
+
+  /* Borders ---------------------------------------------------------------- */
+  --sc-border: #e2e8f0;
+  --sc-border-strong: #cbd5e1;
+
+  /* Text ------------------------------------------------------------------- */
+  --sc-text: #0f172a;
+  --sc-text-muted: #475569;
+  --sc-text-subtle: #64748b;
+  --sc-text-inverse: #f8fafc;
+
+  /* Brand — professional indigo/blue -------------------------------------- */
+  --sc-brand-50: #eef2ff;
+  --sc-brand-100: #e0e7ff;
+  --sc-brand-200: #c7d2fe;
+  --sc-brand-500: #6366f1;
+  --sc-brand-600: #4f46e5;
+  --sc-brand-700: #4338ca;
+  --sc-brand-900: #312e81;
+
+  /* Semantic --------------------------------------------------------------- */
+  --sc-success-50: #ecfdf5;
+  --sc-success-200: #a7f3d0;
+  --sc-success-600: #059669;
+  --sc-success-700: #047857;
+
+  --sc-warn-50: #fffbeb;
+  --sc-warn-200: #fde68a;
+  --sc-warn-600: #d97706;
+  --sc-warn-700: #b45309;
+
+  --sc-danger-50: #fef2f2;
+  --sc-danger-200: #fecaca;
+  --sc-danger-600: #dc2626;
+  --sc-danger-700: #b91c1c;
+
+  /* Shape and elevation — restrained, per the brief ------------------------ */
+  /* Focus rings need a pre-composed alpha: Tailwind can't apply an opacity
+     modifier to a colour that arrives as a CSS custom property. */
+  --sc-focus-ring: rgb(79 70 229 / 0.18);
+  --sc-focus-ring-danger: rgb(220 38 38 / 0.18);
+
+  --sc-radius: 8px;
+  --sc-radius-lg: 12px;
+  --sc-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --sc-shadow-md: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
+  --sc-shadow-pop: 0 10px 24px -6px rgb(15 23 42 / 0.14), 0 2px 6px -2px rgb(15 23 42 / 0.08);
+
+  /* Layout ----------------------------------------------------------------- */
+  --sc-sidebar-w: 264px;
+  --sc-sidebar-w-collapsed: 72px;
+  --sc-topbar-h: 60px;
+}
+
+/* ==========================================================================
+   Minimal base reset
+   Tailwind preflight is disabled (it collides with Material's own resets), so
+   only the parts we actually need are restated here.
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--sc-surface-muted);
+  color: var(--sc-text);
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure {
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  color: var(--sc-text);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Visible focus for keyboard users on every interactive element. Required by
+   §19 of the brief and absent from the previous build entirely. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--sc-brand-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Icons — Material Symbols is the single icon system for the whole app. */
+.material-symbols-rounded {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.material-symbols-rounded.icon-sm { font-size: 18px; }
+.material-symbols-rounded.icon-xs { font-size: 16px; }
+.material-symbols-rounded.icon-filled { font-variation-settings: 'FILL' 1; }
+
+/* Scrollbars — subtle, so dense tables don't look industrial. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sc-border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background-color: var(--sc-border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* ==========================================================================
+   Component classes
+   Shared primitives that are pure presentation live here as Tailwind
+   component classes rather than as Angular components — a button does not
+   need a component instance. Anything with behaviour or state is a real
+   component under src/app/shared/ui.
+   ========================================================================== */
+
+@layer components {
+  /* --- Surfaces --------------------------------------------------------- */
+  .sc-card {
+    @apply bg-surface border border-line rounded-sc-lg shadow-sc;
+  }
+
+  .sc-card-header {
+    @apply flex items-center justify-between gap-3 px-5 py-4 border-b border-line;
+  }
+
+  .sc-card-title {
+    @apply text-[15px] font-semibold text-ink;
+  }
+
+  .sc-card-body {
+    @apply p-5;
+  }
+
+  /* --- Buttons ---------------------------------------------------------- */
+  .sc-btn {
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-sc
+           text-[13px] font-semibold whitespace-nowrap cursor-pointer
+           border transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .sc-btn-primary {
+    @apply bg-brand-600 border-brand-600 text-white
+           hover:bg-brand-700 hover:border-brand-700;
+  }
+
+  .sc-btn-secondary {
+    @apply bg-surface border-line-strong text-ink-muted
+           hover:bg-surface-muted hover:text-ink;
+  }
+
+  .sc-btn-ghost {
+    @apply bg-transparent border-transparent text-ink-muted
+           hover:bg-surface-sunken hover:text-ink;
+  }
+
+  .sc-btn-danger {
+    @apply bg-danger-600 border-danger-600 text-white
+           hover:bg-danger-700 hover:border-danger-700;
+  }
+
+  .sc-btn-sm {
+    @apply h-8 px-3 text-xs;
+  }
+
+  .sc-btn-icon {
+    @apply h-9 w-9 px-0;
+  }
+
+  /* --- Form controls ---------------------------------------------------- */
+  .sc-label {
+    @apply block text-xs font-semibold text-ink-muted mb-1.5;
+  }
+
+  .sc-input,
+  .sc-select,
+  .sc-textarea {
+    @apply w-full bg-surface border border-line-strong rounded-sc
+           px-3 text-[13px] text-ink
+           placeholder:text-ink-subtle
+           focus:border-brand-600 focus:outline-none
+           focus:ring-2 focus:ring-[var(--sc-focus-ring)]
+           disabled:bg-surface-sunken disabled:text-ink-subtle;
+  }
+
+  .sc-input,
+  .sc-select { @apply h-9; }
+
+  .sc-textarea { @apply py-2 leading-relaxed; }
+
+  .sc-input-invalid {
+    @apply border-danger-600 focus:border-danger-600 focus:ring-[var(--sc-focus-ring-danger)];
+  }
+
+  .sc-field-error {
+    @apply flex items-center gap-1 mt-1.5 text-xs font-medium text-danger-700;
+  }
+
+  .sc-hint {
+    @apply mt-1.5 text-xs text-ink-subtle;
+  }
+
+  /* --- Badges ----------------------------------------------------------- */
+  .sc-badge {
+    @apply inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full
+           text-2xs font-semibold tracking-wide whitespace-nowrap border;
+  }
+
+  .sc-badge-neutral { @apply bg-surface-sunken border-line-strong text-ink-muted; }
+  .sc-badge-info    { @apply bg-brand-50 border-brand-200 text-brand-700; }
+  .sc-badge-primary { @apply bg-brand-600 border-brand-600 text-white; }
+  .sc-badge-success { @apply bg-success-50 border-success-200 text-success-700; }
+  .sc-badge-warn    { @apply bg-warn-50 border-warn-200 text-warn-700; }
+  .sc-badge-danger  { @apply bg-danger-50 border-danger-200 text-danger-700; }
+
+  /* --- Tables ----------------------------------------------------------- */
+  .sc-table {
+    @apply w-full border-collapse text-[13px];
+  }
+
+  .sc-table thead th {
+    @apply text-left font-semibold text-2xs uppercase tracking-wider
+           text-ink-subtle bg-surface-muted
+           px-4 py-2.5 border-b border-line whitespace-nowrap;
+  }
+
+  .sc-table tbody td {
+    @apply px-4 py-3 border-b border-line align-middle text-ink-muted;
+  }
+
+  .sc-table tbody tr:last-child td { @apply border-b-0; }
+
+  .sc-table tbody tr.sc-row-interactive {
+    @apply cursor-pointer transition-colors hover:bg-surface-muted;
+  }
+
+  /* --- Misc ------------------------------------------------------------- */
+  .sc-divider { @apply h-px w-full bg-line; }
+
+  /* Visually hidden until focused, then pinned to the top-left corner. The
+     one keyboard-only affordance every layout needs: a way to jump past the
+     sidebar/topbar straight to the page's own content. */
+  .sc-skip-link {
+    @apply sc-sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100]
+           focus:rounded-sc focus:bg-brand-600 focus:px-3.5 focus:py-2 focus:text-sm
+           focus:font-semibold focus:text-white focus:shadow-sc-pop;
+  }
+
+  /* A proportion bar. Always rendered next to the number it represents, so
+     the bar is a second reading of the value rather than the only one. */
+  .sc-meter {
+    @apply block h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken;
+  }
+
+  .sc-meter-fill {
+    @apply block h-full rounded-full bg-brand-600;
+  }
+
+  /* Selectable organization / workspace card, used on the public
+     organization-picker and portal-activation screens. */
+  .sc-org-card {
+    @apply flex w-full items-center gap-3 rounded-sc-lg border border-line bg-surface p-3.5 text-left
+           transition-colors hover:border-brand-600 hover:bg-brand-50
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+           focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .sc-kbd-link {
+    @apply font-semibold text-brand-600 hover:text-brand-700 hover:underline
+           underline-offset-2;
+  }
+
+  /* Screen-reader-only text, for icon-only controls and live regions. */
+  .sc-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* ==========================================================================
+   Angular Material theme
+   A light M3 theme aligned to the tokens above, plus the handful of component
+   overrides needed so Material surfaces match our cards.
+   ========================================================================== */
+
+$sc-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$violet-palette,
+    tertiary: mat.$blue-palette,
+  ),
+  density: (scale: -1),
+));
+
+@include mat.core();
+
+html {
+  font-family: Inter, system-ui, sans-serif;
+  --mat-sys-primary: var(--sc-brand-600);
+  --mdc-typography-font-family: Inter, system-ui, sans-serif;
+}
+
+html {
+  @include mat.all-component-themes($sc-theme);
+}
+
+/* Material overrides — keep these few and intentional. */
+.mat-mdc-menu-panel {
+  border: 1px solid var(--sc-border) !important;
+  border-radius: var(--sc-radius-lg) !important;
+  box-shadow: var(--sc-shadow-pop) !important;
+}
+
+.mat-mdc-dialog-surface {
+  border-radius: var(--sc-radius-lg) !important;
+  box-shadow: var(--sc-shadow-pop) !important;
+}
+
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  background-color: var(--sc-surface-inverse) !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+}
+
+.mat-drawer-container {
+  background-color: var(--sc-surface-muted) !important;
+}
+
+.mat-drawer-side {
+  border-right: none !important;
+}
+
+/* Snackbar tones used by ToastService. */
+.sc-toast-success .mdc-snackbar__surface { background-color: var(--sc-success-700) !important; }
+.sc-toast-error   .mdc-snackbar__surface { background-color: var(--sc-danger-700) !important; }
+.sc-toast-info    .mdc-snackbar__surface { background-color: var(--sc-surface-inverse) !important; }
+
+/* ---------------------------------------------------------------------------
+   Notification tray panel
+   ---------------------------------------------------------------------------
+   The tray is a full custom panel rather than a list of mat-menu-items, so
+   Material's default content padding has to come off or the header, tabs and
+   sticky group labels all sit inset from the panel edge.
+   -------------------------------------------------------------------------*/
+.sc-tray-menu.mat-mdc-menu-panel {
+  max-width: none;
+  border-radius: var(--sc-radius-lg);
+}
+
+.sc-tray-menu .mat-mdc-menu-content {
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Busy spinner
+   ---------------------------------------------------------------------------
+   Applied to a Material Symbols glyph inside a button while a request is in
+   flight. Defined globally because it is used from templates on components
+   that otherwise need no stylesheet of their own.
+   -------------------------------------------------------------------------*/
+.sc-spin {
+  animation: sc-rotate 1s linear infinite;
+}
+
+@keyframes sc-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-spin {
+    animation: none;
+  }
+}

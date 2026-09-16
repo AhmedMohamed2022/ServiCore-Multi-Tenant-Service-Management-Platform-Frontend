@@ -1,149 +1,175 @@
-<div class="invitations-workspace-container">
-    <header class="workspace-header">
-        <h2>Onboarding & Invitations Control Center</h2>
-        <p>Generate secure access links, add internal team operators, and onboard external client portal accounts</p>
-    </header>
+<sc-page-header title="Invitations" description="Invite staff members and customers to ServiCore."
+    [breadcrumbs]="[{ label: 'Management' }, { label: 'Invitations' }]">
+    <button slot="actions" type="button" class="sc-btn sc-btn-secondary" (click)="refreshAll()"
+        [disabled]="isInvitationsLoading() || isCustomersLoading()">
+        <sc-icon name="refresh" size="sm" />
+        <span class="hidden sm:inline">Refresh</span>
+    </button>
+</sc-page-header>
 
-    @if (errorMessage()) {
-    <div class="alert-banner-error" role="alert">
-        <span class="alert-txt">⚠️ {{ errorMessage() }}</span>
-        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
-    </div>
-    }
+@if (errorMessage()) {
+<sc-alert tone="error" title="Something went wrong" class="mb-4 block" [dismissible]="true"
+    (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
+}
 
-    @if (successMessage()) {
-    <div class="alert-banner-success" role="alert">
-        <span class="alert-txt">✅ {{ successMessage() }}</span>
-        <button class="close-alert-btn" (click)="successMessage.set(null)">×</button>
-    </div>
-    }
+<div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
 
-    <div class="split-forms-grid">
-        <!-- Left Pane Card: Staff Invitation Form -->
-        <section class="console-card">
-            <div class="card-headline">
-                <h3>Invite Internal Staff Personnel</h3>
-                <p>Dispatches an email activation token link routing to the team acceptance workspace page</p>
+    <!-- ==================================================================
+         Invite staff
+         ================================================================== -->
+    <section class="sc-card" aria-labelledby="staffInviteHeading">
+        <div class="sc-card-header">
+            <div class="flex items-center gap-2">
+                <sc-icon name="badge" size="sm" class="text-ink-subtle" />
+                <h2 id="staffInviteHeading" class="sc-card-title">Invite staff</h2>
             </div>
-
-            <form [formGroup]="staffForm" (ngSubmit)="onStaffInviteSubmit()">
-                <div class="form-group">
-                    <label for="staffEmail">Operator Email Address</label>
-                    <input id="staffEmail" type="email" formControlName="email" placeholder="agent@company.com"
-                        [class.field-invalid]="staffForm.controls.email.touched && staffForm.controls.email.invalid" />
-                    @if (staffForm.controls.email.touched && staffForm.controls.email.invalid) {
-                    <span class="error-validation-subtext">Corporate target email account path is required.</span>
-                    }
-                </div>
-
-                <div class="form-group">
-                    <label for="staffRole">Assigned Operational Security Role</label>
-                    <!-- Using explicit value selectors ensures exact backend enum mapping -->
-                    <select id="staffRole" formControlName="role">
-                        <option value="2">Manager (Operational Team Lead)</option>
-                        <option value="3">Agent (Queue Service Operator)</option>
-                    </select>
-                </div>
-
-                <div class="card-action-footer">
-                    <button type="submit" class="btn-primary-dispatch"
-                        [disabled]="staffForm.invalid || isStaffSubmitting()">
-                        @if (isStaffSubmitting()) {
-                        <span class="inline-spinner"></span> Issuing Token...
-                        } @else {
-                        Send Staff Invite
-                        }
-                    </button>
-                </div>
-            </form>
-        </section>
-
-        <!-- Right Pane Card: Customer Invitation Form -->
-        <section class="console-card color-shift-panel">
-            <div class="card-headline">
-                <h3>Onboard External Customer Client</h3>
-                <p>Generates an invitation for an existing CRM customer profile using their unique system identifier
-                    GUID</p>
-            </div>
-
-            <form [formGroup]="customerForm" (ngSubmit)="onCustomerInviteSubmit()">
-                <div class="form-group">
-                    <label for="customerSelect">Target Customer Profile</label>
-                    <select id="customerSelect" formControlName="customerId" [disabled]="isCustomersLoading()">
-                        <option value="" disabled selected>
-                            {{ isCustomersLoading() ? 'Syncing profiles list database...' : '-- Choose Existing
-                            Client--' }}
-                        </option>
-                        @for (cust of customersList(); track cust.id) {
-                        <option [value]="cust.id">{{ cust.name }} ({{ cust.email }})</option>
-                        }
-                    </select>
-                    @if (customerForm.controls.customerId.touched && customerForm.controls.customerId.invalid) {
-                    <span class="error-validation-subtext">Selecting a target customer record configuration is
-                        required.</span>
-                    }
-                </div>
-
-                <div class="card-action-footer">
-                    <button type="submit" class="btn-success-dispatch"
-                        [disabled]="customerForm.invalid || isCustomerSubmitting()">
-                        @if (isCustomerSubmitting()) {
-                        <span class="inline-spinner"></span> Deploying Channel...
-                        } @else {
-                        Send Customer Invite
-                        }
-                    </button>
-                </div>
-            </form>
-        </section>
-    </div>
-
-    <!-- Pending / historical staff invitations -->
-    <section class="console-card invitations-list-card">
-        <div class="card-headline">
-            <h3>Staff Invitations</h3>
-            <p>Every internal invitation sent for this organization. Pending invitations can be revoked before
-                they're accepted.</p>
         </div>
 
-        @if (isInvitationsLoading()) {
-        <p class="list-status-text">Loading invitations...</p>
-        } @else if (staffInvitations().length === 0) {
-        <p class="list-status-text">No staff invitations have been sent yet.</p>
-        } @else {
-        <table class="invitations-table">
+        <form class="sc-card-body flex flex-col gap-4" [formGroup]="staffForm" (ngSubmit)="onStaffInviteSubmit()">
+            <div>
+                <label for="staffEmail" class="sc-label">Email</label>
+                <input id="staffEmail" type="email" class="sc-input" formControlName="email" autocomplete="off"
+                    placeholder="agent@company.com"
+                    [class.sc-input-invalid]="staffForm.controls.email.touched && staffForm.controls.email.invalid" />
+                @if (staffForm.controls.email.touched && staffForm.controls.email.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a valid email address.</p>
+                } @else {
+                <p class="sc-hint">They'll receive a link to join this organization.</p>
+                }
+            </div>
+
+            <div>
+                <label for="staffRole" class="sc-label">Role</label>
+                <select id="staffRole" class="sc-select" formControlName="role">
+                    <option value="2">Manager</option>
+                    <option value="3">Agent</option>
+                </select>
+                <p class="sc-hint">Managers can manage staff and view reports; agents work tickets.</p>
+            </div>
+
+            <button type="submit" class="sc-btn sc-btn-primary mt-1" [disabled]="staffForm.invalid || isStaffSubmitting()">
+                @if (isStaffSubmitting()) {
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Sending
+                } @else {
+                <sc-icon name="send" size="sm" />
+                Send invitation
+                }
+            </button>
+        </form>
+    </section>
+
+    <!-- ==================================================================
+         Invite customer
+         ================================================================== -->
+    <section class="sc-card" aria-labelledby="customerInviteHeading">
+        <div class="sc-card-header">
+            <div class="flex items-center gap-2">
+                <sc-icon name="group_add" size="sm" class="text-ink-subtle" />
+                <h2 id="customerInviteHeading" class="sc-card-title">Invite customer</h2>
+            </div>
+        </div>
+
+        <form class="sc-card-body flex flex-col gap-4" [formGroup]="customerForm"
+            (ngSubmit)="onCustomerInviteSubmit()">
+
+            @if (!isCustomersLoading() && customersList().length === 0) {
+            <sc-empty-state icon="group" title="No customers to invite"
+                description="Add a customer record first, then you can invite them to the portal."
+                actionLabel="Go to customers" (action)="goToCustomers()" />
+            } @else {
+            <div>
+                <label for="customerSelect" class="sc-label">Customer</label>
+                <select id="customerSelect" class="sc-select" formControlName="customerId"
+                    [disabled]="isCustomersLoading()"
+                    [class.sc-input-invalid]="customerForm.controls.customerId.touched && customerForm.controls.customerId.invalid">
+                    <option value="" disabled>
+                        {{ isCustomersLoading() ? 'Loading customers…' : 'Choose a customer' }}
+                    </option>
+                    @for (cust of customersList(); track cust.id) {
+                    <option [value]="cust.id">{{ cust.name }} ({{ cust.email }})</option>
+                    }
+                </select>
+                @if (customerForm.controls.customerId.touched && customerForm.controls.customerId.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Select a customer to invite.</p>
+                } @else {
+                <p class="sc-hint">Gives them access to the customer portal to raise and track tickets.</p>
+                }
+            </div>
+
+            <button type="submit" class="sc-btn sc-btn-primary mt-1"
+                [disabled]="customerForm.invalid || isCustomerSubmitting()">
+                @if (isCustomerSubmitting()) {
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Sending
+                } @else {
+                <sc-icon name="send" size="sm" />
+                Send invitation
+                }
+            </button>
+            }
+        </form>
+    </section>
+</div>
+
+<!-- ======================================================================
+     Staff invitations
+     ====================================================================== -->
+<section class="sc-card mt-5">
+    <div class="sc-card-header">
+        <div class="min-w-0">
+            <h2 class="sc-card-title">Staff invitations</h2>
+            <p class="mt-0.5 text-xs text-ink-subtle">Pending invitations can be revoked before they're accepted.</p>
+        </div>
+    </div>
+
+    @if (isInvitationsLoading()) {
+    <div class="p-3">
+        <sc-loading-state label="Loading invitations" [count]="3" />
+    </div>
+    } @else if (staffInvitations().length === 0) {
+    <sc-empty-state icon="mail" title="No staff invitations yet"
+        description="Invitations you send will show up here." />
+    } @else {
+
+    <!-- Desktop table -->
+    <div class="hidden overflow-x-auto md:block">
+        <table class="sc-table">
+            <caption class="sc-sr-only">Staff invitations for this organization</caption>
             <thead>
                 <tr>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Sent</th>
-                    <th>Expires</th>
-                    <th></th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Sent</th>
+                    <th scope="col">Expires</th>
+                    <th scope="col"><span class="sc-sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @for (invitation of staffInvitations(); track invitation.id) {
                 <tr>
-                    <td>{{ invitation.email }}</td>
-                    <td>{{ invitation.role }}</td>
+                    <td class="font-medium text-ink">{{ invitation.email }}</td>
+                    <td class="text-ink-muted">{{ invitation.role }}</td>
                     <td>
-                        <span class="status-pill"
-                            [ngClass]="'status-' + invitationStatusLabel(invitation).toLowerCase()">
+                        <span class="sc-badge" [class]="'sc-badge-' + statusTone(invitation)">
+                            <sc-icon [name]="statusIcon(invitation)" size="xs" />
                             {{ invitationStatusLabel(invitation) }}
                         </span>
                     </td>
-                    <td>{{ invitation.createdAt | date:'mediumDate' }}</td>
-                    <td>{{ invitation.expiresAt | date:'mediumDate' }}</td>
-                    <td class="row-action-cell">
+                    <td class="whitespace-nowrap text-ink-subtle">{{ invitation.createdAt | date:'MMM d, y' }}</td>
+                    <td class="whitespace-nowrap text-ink-subtle">{{ invitation.expiresAt | date:'MMM d, y' }}</td>
+                    <td class="w-28">
                         @if (isPending(invitation)) {
-                        <button type="button" class="btn-revoke" [disabled]="revokingInvitationId() === invitation.id"
-                            (click)="revokeStaffInvitation(invitation)">
+                        <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700"
+                            [disabled]="revokingInvitationId() === invitation.id"
+                            (click)="onRevokeClick(invitation)">
                             @if (revokingInvitationId() === invitation.id) {
-                            <span class="inline-spinner"></span> Revoking...
+                            <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                             } @else {
-                            Revoke
+                            <sc-icon name="block" size="sm" />
                             }
+                            Revoke
                         </button>
                         }
                     </td>
@@ -151,11 +177,37 @@
                 }
             </tbody>
         </table>
-        }
+    </div>
 
-        <p class="list-status-text customer-invites-note">
-            Customer invitations aren't listed here yet — the backend doesn't currently expose an endpoint to fetch
-            them.
-        </p>
-    </section>
-</div>
+    <!-- Mobile cards -->
+    <ul class="divide-y divide-line md:hidden">
+        @for (invitation of staffInvitations(); track invitation.id) {
+        <li class="p-4">
+            <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <p class="truncate text-[13px] font-semibold text-ink">{{ invitation.email }}</p>
+                    <p class="text-xs text-ink-subtle">{{ invitation.role }}</p>
+                </div>
+                <span class="sc-badge shrink-0" [class]="'sc-badge-' + statusTone(invitation)">
+                    {{ invitationStatusLabel(invitation) }}
+                </span>
+            </div>
+            <p class="mt-2 text-xs text-ink-subtle">
+                Sent {{ invitation.createdAt | date:'MMM d' }} · Expires {{ invitation.expiresAt | date:'MMM d' }}
+            </p>
+            @if (isPending(invitation)) {
+            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700 mt-2"
+                [disabled]="revokingInvitationId() === invitation.id" (click)="onRevokeClick(invitation)">
+                Revoke
+            </button>
+            }
+        </li>
+        }
+    </ul>
+    }
+
+    <p class="flex items-center gap-1.5 border-t border-line px-4 py-3 text-xs text-ink-subtle">
+        <sc-icon name="info" size="xs" />
+        Customer invitations aren't listed here — the backend doesn't yet expose an endpoint to fetch them.
+    </p>
+</section>

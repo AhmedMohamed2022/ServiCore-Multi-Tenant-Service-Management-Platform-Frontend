@@ -1,40 +1,43 @@
-<div class="invite-container">
-    <div class="invite-card">
-        <h2>Join Operational Team</h2>
-        <p class="subtitle">Complete your secure profile configuration to connect to your assigned tenant space</p>
+<sc-auth-layout heading="Join your team"
+    subheading="Set a password to finish setting up your ServiCore staff account.">
 
-        @if (errorMessage()) {
-        <div class="banner-err" role="alert">
-            {{ errorMessage() }}
-        </div>
-        }
+    <div class="sc-card p-6">
 
         @if (successMessage()) {
-        <div class="banner-ok" role="alert">
-            {{ successMessage() }}
-        </div>
+        <sc-alert tone="success" title="You're all set" class="mb-5 block">{{ successMessage() }}</sc-alert>
         }
 
-        <form [formGroup]="setupForm" (ngSubmit)="onCompleteStaffOnboarding()" *ngIf="token && !successMessage()">
-            <div class="input-block">
-                <label for="sPass">Account Security Password</label>
-                <input id="sPass" type="password" formControlName="password" placeholder="••••••••"
-                    [class.invalid]="setupForm.controls.password.touched && setupForm.controls.password.invalid" />
-                @if (setupForm.controls.password.touched && setupForm.controls.password.errors?.['required']) {
-                <span class="err-txt">Password creation is required to unlock profiles.</span>
-                }
-                @if (setupForm.controls.password.touched && setupForm.controls.password.errors?.['minlength']) {
-                <span class="err-txt">Passwords must contain at least 6 alpha characters.</span>
-                }
-            </div>
+        @if (errorMessage()) {
+        <sc-alert tone="error" title="Invitation problem" class="mb-5 block">{{ errorMessage() }}</sc-alert>
+        }
 
-            <button type="submit" [disabled]="setupForm.invalid || isProcessing()">
+        @if (!token) {
+        <p class="text-[13px] leading-relaxed text-ink-muted">
+            Open the link exactly as it appears in your invitation email — the token it carries is what identifies
+            your invitation.
+        </p>
+        } @else if (!successMessage()) {
+        <form [formGroup]="setupForm" (ngSubmit)="onCompleteStaffOnboarding()" class="flex flex-col gap-4">
+            <sc-password-field [control]="setupForm.controls.password" inputId="staffPassword"
+                label="Choose a password" placeholder="At least six characters" autocomplete="new-password"
+                [showStrength]="true" />
+
+            <button type="submit" class="sc-btn sc-btn-primary w-full"
+                [disabled]="setupForm.invalid || isProcessing()">
                 @if (isProcessing()) {
-                <span class="spinner"></span> Activating Account...
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Setting up your account
                 } @else {
-                Activate Roster Identity
+                Activate my account
+                <sc-icon name="arrow_forward" size="sm" />
                 }
             </button>
         </form>
+        }
     </div>
-</div>
+
+    <p class="mt-6 text-center text-[13px] text-ink-muted">
+        Already activated?
+        <a routerLink="/login" class="font-semibold text-brand-700 hover:underline">Sign in</a>
+    </p>
+</sc-auth-layout>

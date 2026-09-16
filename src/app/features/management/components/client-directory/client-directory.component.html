@@ -1,95 +1,202 @@
-<div class="crm-workspace-container">
-    <header class="workspace-header">
-        <h2>CRM Client Accounts Directory</h2>
-        <p>Manage external client definitions, service account linkages, and profile databases</p>
-    </header>
-
-    @if (errorMessage()) {
-    <div class="alert-banner-error" role="alert">
-        {{ errorMessage() }}
-        <button class="close-alert-btn" (click)="errorMessage.set(null)">×</button>
+<sc-page-header title="Customers"
+    description="The people and companies that raise tickets in this organization."
+    [breadcrumbs]="[{ label: 'Management' }, { label: 'Customers' }]">
+    <div slot="actions" class="flex items-center gap-2">
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="loadCustomers()" [disabled]="isLoading()">
+            <sc-icon name="refresh" size="sm" />
+            <span class="hidden sm:inline">Refresh</span>
+        </button>
     </div>
-    }
+</sc-page-header>
 
-    <div class="crm-split-layout">
-        <!-- Left Pane: Management/Form Controls -->
-        <section class="form-pane">
-            <div class="action-card">
-                <h3>{{ isEditing() ? 'Modify Customer Profile' : 'Register New Client' }}</h3>
-                <form [formGroup]="customerForm" (ngSubmit)="onSubmit()">
-                    <div class="form-group">
-                        <label for="cName">Client Name / Corporate Title</label>
-                        <input id="cName" type="text" formControlName="name"
-                            placeholder="e.g., Jane Smith or Contoso Ltd"
-                            [class.input-error]="customerForm.controls.name.touched && customerForm.controls.name.invalid" />
-                        @if (customerForm.controls.name.touched && customerForm.controls.name.errors?.['required']) {
-                        <span class="field-error-msg">Client name is explicitly required.</span>
-                        }
-                    </div>
+@if (errorMessage()) {
+<sc-alert tone="error" title="Something went wrong" class="mb-4 block" [dismissible]="true"
+    (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
+}
 
-                    <div class="form-group">
-                        <label for="cEmail">Authorized Communication Email</label>
-                        <input id="cEmail" type="email" formControlName="email" placeholder="name@clientdomain.com"
-                            [class.input-error]="customerForm.controls.email.touched && customerForm.controls.email.invalid" />
-                        @if (customerForm.controls.email.touched && customerForm.controls.email.errors?.['required']) {
-                        <span class="field-error-msg">Email routing path validation is required.</span>
-                        }
-                        @if (customerForm.controls.email.touched && customerForm.controls.email.errors?.['email']) {
-                        <span class="field-error-msg">Provide a structurally intact email format.</span>
-                        }
-                    </div>
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
 
-                    <div class="action-row-buttons">
-                        <button type="submit" [disabled]="customerForm.invalid">
-                            {{ isEditing() ? 'Commit Parameters' : 'Deploy Record' }}
-                        </button>
-                        @if (isEditing()) {
-                        <button type="button" class="btn-secondary" (click)="resetFormLifecycle()">Cancel</button>
-                        }
-                    </div>
-                </form>
+    <!-- ==================================================================
+         Directory
+         ================================================================== -->
+    <section class="sc-card min-w-0">
+        <div class="flex flex-wrap items-center gap-2 border-b border-line p-3">
+            <div class="relative min-w-[180px] flex-1">
+                <sc-icon name="search" size="sm"
+                    class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
+                <label for="customerSearch" class="sc-sr-only">Search customers</label>
+                <input id="customerSearch" type="search" class="sc-input pl-9" placeholder="Search by name, email or phone"
+                    [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
             </div>
-        </section>
 
-        <!-- Right Pane: CRM Data Index Table Matrix -->
-        <section class="index-pane">
-            <div class="data-grid-list">
-                <h4>Registered Clients Matrix Index</h4>
-                @if (isLoading()) {
-                <div class="loading-state-block">Gathering directory storage structures...</div>
-                } @else if (customers().length === 0) {
-                <div class="empty-state-block">No registered client profile models detected under this tenant space.
-                </div>
-                } @else {
-                <table class="crm-table">
-                    <thead>
-                        <tr>
-                            <th>Profile Identification Info</th>
-                            <th>Global Actions Matrix</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (customer of customers(); track customer.id) {
-                        <tr>
-                            <td>
-                                <div class="customer-profile-cell">
-                                    <span class="c-name">{{ customer.name }}</span>
-                                    <span class="c-email">Mail link: {{ customer.email }}</span>
-                                    <span class="c-id">Data token: {{ customer.id }}</span>
+            <button type="button" class="sc-btn sc-btn-secondary" (click)="showInactive.set(!showInactive())"
+                [attr.aria-pressed]="showInactive()">
+                <sc-icon [name]="showInactive() ? 'visibility' : 'visibility_off'" size="sm" />
+                <span class="hidden sm:inline">Inactive</span>
+            </button>
+
+            @if (hasFilters()) {
+            <button type="button" class="sc-btn sc-btn-ghost" (click)="clearFilters()">
+                <sc-icon name="close" size="sm" />
+                Clear
+            </button>
+            }
+        </div>
+
+        @if (isLoading()) {
+        <div class="p-3">
+            <sc-loading-state label="Loading customers" [count]="5" />
+        </div>
+        } @else if (visibleCustomers().length === 0) {
+        @if (hasFilters()) {
+        <sc-empty-state icon="search_off" title="No customers match"
+            description="Try a different search term, or include inactive records."
+            actionLabel="Clear filters" (action)="clearFilters()" />
+        } @else {
+        <sc-empty-state icon="group" title="No customers yet"
+            description="Add the first customer using the form, then they can have tickets raised against them." />
+        }
+        } @else {
+
+        <!-- Desktop table -->
+        <div class="hidden overflow-x-auto md:block">
+            <table class="sc-table">
+                <caption class="sc-sr-only">Customers in this organization</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Customer</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Added</th>
+                        <th scope="col"><span class="sc-sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (customer of visibleCustomers(); track customer.id) {
+                    <tr [class.sc-row-inactive]="!customer.isActive">
+                        <td>
+                            <div class="flex items-center gap-2.5">
+                                <sc-avatar [name]="customer.name" size="sm" />
+                                <div class="min-w-0">
+                                    <p class="truncate font-semibold text-ink">{{ customer.name }}</p>
+                                    <p class="truncate text-xs text-ink-subtle">{{ customer.email }}</p>
                                 </div>
-                            </td>
-                            <td>
-                                <div class="table-actions">
-                                    <button class="btn-warn-sm" (click)="onEditInit(customer)">Modify</button>
-                                    <button class="btn-danger-sm" (click)="onDelete(customer.id)">Purge</button>
-                                </div>
-                            </td>
-                        </tr>
+                            </div>
+                        </td>
+                        <td class="whitespace-nowrap">{{ customer.phoneNumber || '—' }}</td>
+                        <td>
+                            <span class="sc-badge" [class]="customer.isActive ? 'sc-badge-success' : 'sc-badge-neutral'">
+                                <sc-icon [name]="customer.isActive ? 'check_circle' : 'do_not_disturb_on'" size="xs" />
+                                {{ customer.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap text-ink-subtle">{{ customer.createdAt | date:'MMM d, y' }}</td>
+                        <td class="w-24">
+                            <div class="flex items-center justify-end gap-1">
+                                <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm"
+                                    (click)="onEditInit(customer)" [attr.aria-label]="'Edit ' + customer.name">
+                                    <sc-icon name="edit" size="sm" />
+                                </button>
+                                @if (customer.isActive) {
+                                <button type="button"
+                                    class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm text-danger-700"
+                                    (click)="onDeactivate(customer)"
+                                    [attr.aria-label]="'Deactivate ' + customer.name">
+                                    <sc-icon name="person_off" size="sm" />
+                                </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile cards -->
+        <ul class="divide-y divide-line md:hidden">
+            @for (customer of visibleCustomers(); track customer.id) {
+            <li class="p-4" [class.sc-row-inactive]="!customer.isActive">
+                <div class="flex items-start gap-2.5">
+                    <sc-avatar [name]="customer.name" size="sm" />
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-[13px] font-semibold text-ink">{{ customer.name }}</p>
+                        <p class="truncate text-xs text-ink-subtle">{{ customer.email }}</p>
+                        @if (customer.phoneNumber) {
+                        <p class="text-xs text-ink-subtle">{{ customer.phoneNumber }}</p>
                         }
-                    </tbody>
-                </table>
+                        <div class="mt-2 flex items-center gap-2">
+                            <span class="sc-badge"
+                                [class]="customer.isActive ? 'sc-badge-success' : 'sc-badge-neutral'">
+                                {{ customer.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onEditInit(customer)">
+                                Edit
+                            </button>
+                            @if (customer.isActive) {
+                            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700"
+                                (click)="onDeactivate(customer)">Deactivate</button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </li>
+            }
+        </ul>
+        }
+    </section>
+
+    <!-- ==================================================================
+         Add / edit
+         ================================================================== -->
+    <aside class="min-w-0">
+        <section class="sc-card sc-sticky-panel" aria-labelledby="customerFormHeading">
+            <div class="sc-card-header">
+                <h2 id="customerFormHeading" class="sc-card-title">
+                    {{ isEditing() ? 'Edit customer' : 'Add customer' }}
+                </h2>
+                @if (isEditing()) {
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelEdit()">Cancel</button>
                 }
             </div>
+
+            <form class="sc-card-body flex flex-col gap-4" [formGroup]="customerForm" (ngSubmit)="onSubmit()">
+                <div>
+                    <label for="customerName" class="sc-label">Name</label>
+                    <input id="customerName" type="text" class="sc-input" formControlName="name"
+                        placeholder="Jane Smith or Contoso Ltd"
+                        [class.sc-input-invalid]="customerForm.controls.name.touched && customerForm.controls.name.invalid" />
+                    @if (customerForm.controls.name.touched && customerForm.controls.name.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a name of at least two characters.</p>
+                    }
+                </div>
+
+                <div>
+                    <label for="customerEmail" class="sc-label">Email</label>
+                    <input id="customerEmail" type="email" class="sc-input" formControlName="email"
+                        placeholder="name@company.com" autocomplete="off"
+                        [class.sc-input-invalid]="customerForm.controls.email.touched && customerForm.controls.email.invalid" />
+                    @if (customerForm.controls.email.touched && customerForm.controls.email.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a valid email address.</p>
+                    } @else {
+                    <p class="sc-hint">Used to invite them to the customer portal.</p>
+                    }
+                </div>
+
+                <div>
+                    <label for="customerPhone" class="sc-label">Phone <span class="font-normal text-ink-subtle">(optional)</span></label>
+                    <input id="customerPhone" type="tel" class="sc-input" formControlName="phoneNumber"
+                        placeholder="+20 100 000 0000" autocomplete="off" />
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="sc-btn sc-btn-primary flex-1"
+                        [disabled]="customerForm.invalid || isSaving()">
+                        <sc-icon [name]="isEditing() ? 'save' : 'add'" size="sm" />
+                        {{ isEditing() ? 'Save changes' : 'Add customer' }}
+                    </button>
+                </div>
+            </form>
         </section>
-    </div>
+    </aside>
 </div>

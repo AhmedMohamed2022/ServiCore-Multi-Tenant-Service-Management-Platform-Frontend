@@ -1,95 +1,106 @@
-<div class="report-view-container">
-    <header class="report-view-header">
-        <div>
-            <h2>Ticket Volume Over Time</h2>
-            <p>Daily new, resolved, and closed ticket counts across the selected date range.</p>
-        </div>
+<sc-page-header title="Ticket trends" description="Daily volume raised against volume finished."
+    [breadcrumbs]="[{ label: 'Reports' }, { label: 'Trends' }]">
+    <sc-report-range slot="actions" (rangeChange)="onRangeChange($event)" />
+</sc-page-header>
 
-        <div class="report-filter-toolbar">
-            <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="report-filter-row">
-                <div class="report-filter-group">
-                    <label for="tsFromDate">From</label>
-                    <input id="tsFromDate" type="date" formControlName="from" />
-                </div>
-                <div class="report-filter-group">
-                    <label for="tsToDate">To</label>
-                    <input id="tsToDate" type="date" formControlName="to" />
-                </div>
-                <div class="report-filter-actions">
-                    <button type="submit" class="btn-report-apply" [disabled]="isLoading()">Filter</button>
-                    <button type="button" class="btn-report-reset" (click)="onResetFilters()"
-                        [disabled]="isLoading()">Reset</button>
-                </div>
-            </form>
-        </div>
-    </header>
+@if (errorMessage()) {
+<sc-alert tone="error" title="Report unavailable" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+}
 
-    @if (errorMessage()) {
-    <div class="report-error-banner" role="alert">{{ errorMessage() }}</div>
-    }
-
-    @if (isLoading()) {
-    <div class="report-loading-block">Loading time series...</div>
-    } @else if (points().length === 0) {
-    <div class="report-empty-block">No ticket activity found for this range.</div>
-    } @else {
-
-    <div class="report-table-card chart-card">
-        <div class="chart-legend">
-            <span class="legend-item"><span class="swatch swatch-new"></span> New</span>
-            <span class="legend-item"><span class="swatch swatch-resolved"></span> Resolved</span>
-            <span class="legend-item"><span class="swatch swatch-closed"></span> Closed</span>
-        </div>
-
-        <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" class="volume-chart">
-            <!-- Gridlines + y-axis labels -->
-            @for (tick of yAxisTicks(); track tick.y) {
-            <line x1="40" [attr.x2]="chartWidth - 20" [attr.y1]="tick.y" [attr.y2]="tick.y" class="grid-line" />
-            <text x="4" [attr.y]="tick.y + 4" class="axis-label">{{ tick.value }}</text>
-            }
-
-            <!-- x-axis date labels -->
-            @for (label of xAxisLabels(); track label.x) {
-            <text [attr.x]="label.x" [attr.y]="chartHeight - 8" class="axis-label x-axis-label" text-anchor="middle">{{
-                label.label }}</text>
-            }
-
-            <polyline [attr.points]="newTicketsLine()" class="chart-line line-new" />
-            <polyline [attr.points]="resolvedTicketsLine()" class="chart-line line-resolved" />
-            <polyline [attr.points]="closedTicketsLine()" class="chart-line line-closed" />
-        </svg>
-    </div>
-
-    <div class="report-table-card">
-        <h3>Daily Breakdown</h3>
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Total</th>
-                    <th>New</th>
-                    <th>Open</th>
-                    <th>In Progress</th>
-                    <th>Waiting on Customer</th>
-                    <th>Resolved</th>
-                    <th>Closed</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (point of points(); track point.date) {
-                <tr>
-                    <td>{{ point.date | date:'mediumDate' }}</td>
-                    <td>{{ point.totalTickets }}</td>
-                    <td>{{ point.newTickets }}</td>
-                    <td>{{ point.openTickets }}</td>
-                    <td>{{ point.inProgressTickets }}</td>
-                    <td>{{ point.waitingForCustomerTickets }}</td>
-                    <td class="metric-good">{{ point.resolvedTickets }}</td>
-                    <td>{{ point.closedTickets }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    }
+@if (isLoading()) {
+<div class="sc-card p-5">
+    <sc-loading-state label="Loading ticket trends" [count]="5" />
 </div>
+} @else if (!hasData()) {
+<div class="sc-card">
+    <sc-empty-state icon="show_chart" title="No activity in this period"
+        description="Widen the date range to see how ticket volume moved over time." />
+</div>
+} @else {
+
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <sc-stat-card label="Raised" [value]="totals().raised" icon="add_circle" tone="info"
+        [hint]="points().length + ' days'" />
+    <sc-stat-card label="Resolved" [value]="totals().resolved" icon="task_alt" tone="success" />
+    <sc-stat-card label="Closed" [value]="totals().closed" icon="lock" tone="neutral" />
+    <sc-stat-card label="Net backlog change"
+        [value]="(netChange() > 0 ? '−' : netChange() < 0 ? '+' : '') + (netChange() < 0 ? -netChange() : netChange())"
+        icon="trending_down" [tone]="netChange() >= 0 ? 'success' : 'warn'"
+        [hint]="netChange() >= 0 ? 'Finishing faster than arriving' : 'Arriving faster than finishing'" />
+</div>
+
+<div class="mt-4">
+    <sc-chart-card title="Volume over time" description="Raised, resolved and closed per day.">
+        <div class="h-[380px]">
+            <ngx-charts-line-chart [results]="chartSeries()" [scheme]="trendColors" [xAxis]="true" [yAxis]="true"
+                [legend]="true" [legendPosition]="legendBelow" [roundDomains]="true" [showGridLines]="true" />
+        </div>
+    </sc-chart-card>
+</div>
+
+<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <section class="sc-card min-w-0">
+        <div class="sc-card-header">
+            <h2 class="sc-card-title">Daily detail</h2>
+            <p class="text-xs text-ink-subtle">{{ points().length }} days</p>
+        </div>
+
+        <div class="max-h-[420px] overflow-auto">
+            <table class="sc-table">
+                <caption class="sc-sr-only">Ticket volume per day</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col" class="text-right">Raised</th>
+                        <th scope="col" class="text-right">In progress</th>
+                        <th scope="col" class="text-right">Waiting</th>
+                        <th scope="col" class="text-right">Resolved</th>
+                        <th scope="col" class="text-right">Closed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (point of points(); track point.date) {
+                    <tr>
+                        <td class="whitespace-nowrap font-medium text-ink">{{ formatDay(point.date) }}</td>
+                        <td class="text-right tabular-nums">{{ point.newTickets }}</td>
+                        <td class="text-right tabular-nums text-ink-subtle">{{ point.inProgressTickets }}</td>
+                        <td class="text-right tabular-nums text-ink-subtle">{{ point.waitingForCustomerTickets }}</td>
+                        <td class="text-right font-semibold tabular-nums text-success-700">
+                            {{ point.resolvedTickets }}
+                        </td>
+                        <td class="text-right tabular-nums text-ink-subtle">{{ point.closedTickets }}</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <aside class="min-w-0">
+        <section class="sc-card">
+            <div class="sc-card-header">
+                <h2 class="sc-card-title">Highlights</h2>
+            </div>
+            <div class="sc-card-body flex flex-col gap-3.5 text-[13px]">
+                @if (busiestDay(); as busiest) {
+                <div>
+                    <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Busiest day</p>
+                    <p class="mt-1 font-medium text-ink">{{ formatDay(busiest.date) }}</p>
+                    <p class="text-ink-subtle">{{ busiest.newTickets }} tickets raised</p>
+                </div>
+                }
+
+                <div class="sc-divider"></div>
+
+                <div>
+                    <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Throughput</p>
+                    <p class="mt-1 text-ink-muted">
+                        {{ totals().resolved + totals().closed }} finished against
+                        {{ totals().raised }} raised over {{ points().length }} days.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </aside>
+</div>
+}

@@ -1,115 +1,121 @@
-<div class="create-ticket-workspace">
-    <header class="workspace-header">
-        <div class="breadcrumb-nav">
-            <a routerLink="/app/tickets" class="back-link">← Ticket Console</a>
-        </div>
-        <h2>Provision Support Ticket Case</h2>
-        <p>Initialize a new multi-tenant ticket track and allocate organizational classifications</p>
-    </header>
+<sc-page-header title="New ticket" description="Log a new service request for a customer."
+    [breadcrumbs]="[{ label: 'Tickets', link: '/app/tickets' }, { label: 'New ticket' }]" />
 
-    @if (errorMessage()) {
-    <div class="alert-error-banner" role="alert">
-        {{ errorMessage() }}
-    </div>
-    }
-
-    <div class="form-container-card">
+<div class="mx-auto max-w-2xl">
+    <section class="sc-card">
         @if (isLoadingOptions()) {
-        <div class="loading-overlay">
-            <span class="pulse-loader"></span> Syncing organizational indexes...
+        <div class="p-5">
+            <sc-loading-state label="Loading ticket options" [count]="5" />
         </div>
+        } @else if (loadErrorMessage()) {
+        <sc-alert tone="error" title="Couldn't load ticket options" class="m-5 block">
+            {{ loadErrorMessage() }}
+        </sc-alert>
         } @else {
-        <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
+        @if (prerequisiteNotice(); as notice) {
+        <sc-empty-state [icon]="notice.icon" [title]="notice.title" [description]="notice.description"
+            [actionLabel]="notice.actionLabel" (action)="goToPrerequisite()" />
+        } @else {
+        <form class="sc-card-body flex flex-col gap-5" [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
 
-            <div class="form-group">
-                <label for="title">Ticket Subject Title</label>
-                <input id="title" type="text" formControlName="title"
-                    placeholder="Brief statement summary of the service request"
-                    [class.field-error]="ticketForm.controls.title.touched && ticketForm.controls.title.invalid" />
+            @if (errorMessage()) {
+            <sc-alert tone="error" title="Couldn't create the ticket" class="block">{{ errorMessage() }}</sc-alert>
+            }
+
+            <div>
+                <label for="title" class="sc-label">Subject</label>
+                <input id="title" type="text" class="sc-input" formControlName="title"
+                    placeholder="A short summary of the request"
+                    [class.sc-input-invalid]="ticketForm.controls.title.touched && ticketForm.controls.title.invalid" />
                 @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['required']) {
-                <span class="error-msg-text">A brief summary title subject is required.</span>
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Give this ticket a subject.</p>
+                } @else if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use at least five characters.</p>
                 }
             </div>
 
-            <div class="form-group">
-                <label for="teamId">Responsible Operational Squad (Team Assignment)</label>
-                <select id="teamId" formControlName="teamId"
-                    [class.field-error]="ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid">
-                    <option value="" disabled selected>-- Select Target Operational Team --</option>
-                    @for (t of teams(); track t.id) {
-                    <option [value]="t.id">{{ t.name }}</option>
+            <div>
+                <label for="customerId" class="sc-label">Customer</label>
+                <select id="customerId" class="sc-select" formControlName="customerId"
+                    [class.sc-input-invalid]="ticketForm.controls.customerId.touched && ticketForm.controls.customerId.invalid">
+                    <option value="" disabled>Choose a customer</option>
+                    @for (cust of customers(); track cust.id) {
+                    <option [value]="cust.id">{{ cust.name }} ({{ cust.email }})</option>
                     }
                 </select>
-                @if (ticketForm.controls.teamId.touched && ticketForm.controls.teamId.errors?.['required']) {
-                <span class="error-msg-text">Allocating an initial managing team squad is required.</span>
+                @if (ticketForm.controls.customerId.touched && ticketForm.controls.customerId.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Choose who this ticket is for.</p>
                 }
             </div>
 
-            <div class="split-form-row">
-                <div class="form-group flex-item">
-                    <label for="customerId">Account Holder (Customer Client)</label>
-                    <select id="customerId" formControlName="customerId"
-                        [class.field-error]="ticketForm.controls.customerId.touched && ticketForm.controls.customerId.invalid">
-                        <option value="" disabled selected>-- Select CRM Profile Reference --</option>
-                        @for (cust of customers(); track cust.id) {
-                        <option [value]="cust.id">{{ cust.name }} ({{ cust.email }})</option>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="teamId" class="sc-label">Team</label>
+                    <select id="teamId" class="sc-select" formControlName="teamId"
+                        [class.sc-input-invalid]="ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid">
+                        <option value="" disabled>Choose a team</option>
+                        @for (t of teams(); track t.id) {
+                        <option [value]="t.id">{{ t.name }}</option>
                         }
                     </select>
-                    @if (ticketForm.controls.customerId.touched && ticketForm.controls.customerId.errors?.['required'])
-                    {
-                    <span class="error-msg-text">An explicit matching client customer identity link is required.</span>
+                    @if (ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Pick who should handle this.</p>
                     }
                 </div>
 
-                <div class="form-group flex-item">
-                    <label for="categoryId">Taxonomy Classification Category</label>
-                    <select id="categoryId" formControlName="categoryId"
-                        [class.field-error]="ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid">
-                        <option value="" disabled selected>-- Select Taxonomy Specification --</option>
+                <div>
+                    <label for="categoryId" class="sc-label">Category</label>
+                    <select id="categoryId" class="sc-select" formControlName="categoryId"
+                        [class.sc-input-invalid]="ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid">
+                        <option value="" disabled>Choose a category</option>
                         @for (cat of categories(); track cat.id) {
                         <option [value]="cat.id">{{ cat.name }}</option>
                         }
                     </select>
-                    @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.errors?.['required'])
-                    {
-                    <span class="error-msg-text">Dispatch catalog categorization is required.</span>
+                    @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Pick the closest category.</p>
                     }
                 </div>
             </div>
 
-            <div class="form-group max-width-select">
-                <label for="priority">Urgency Priority Tier</label>
-                <select id="priority" formControlName="priority">
+            <div class="max-w-[220px]">
+                <label for="priority" class="sc-label">Priority</label>
+                <select id="priority" class="sc-select" formControlName="priority">
                     @for (opt of priorityOptions; track opt.value) {
                     <option [value]="opt.value">{{ opt.label }}</option>
                     }
                 </select>
+                <p class="sc-hint">Reserve Critical for something blocking the customer right now.</p>
             </div>
 
-            <div class="form-group">
-                <label for="description">Detailed Description Context</label>
-                <textarea id="description" formControlName="description" rows="6"
-                    placeholder="Provide a comprehensive operational log entry regarding technical symptoms..."
-                    [class.field-error]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid">
-          </textarea>
+            <div>
+                <label for="description" class="sc-label">Details</label>
+                <textarea id="description" class="sc-textarea" formControlName="description" rows="6"
+                    placeholder="What's happening, what the customer expects, and any steps to reproduce it."
+                    [class.sc-input-invalid]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid"></textarea>
                 @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
-                <span class="error-msg-text">Detailed context documentation logs are required.</span>
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Describe the request.</p>
+                } @else if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10 characters.</p>
                 }
             </div>
 
-            <div class="form-actions-footer">
-                <button type="button" class="btn-cancel" routerLink="/app/tickets"
-                    [disabled]="isSubmitting()">Discard</button>
-                <button type="submit" class="btn-submit" [disabled]="ticketForm.invalid || isSubmitting()">
+            <div class="flex justify-end gap-2 border-t border-line pt-5">
+                <a routerLink="/app/tickets" class="sc-btn sc-btn-secondary" [attr.aria-disabled]="isSubmitting()">
+                    Cancel
+                </a>
+                <button type="submit" class="sc-btn sc-btn-primary" [disabled]="ticketForm.invalid || isSubmitting()">
                     @if (isSubmitting()) {
-                    <span class="loader-icon"></span> Committing Database Record...
+                    <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                    Creating
                     } @else {
-                    Provision Ticket
+                    <sc-icon name="add" size="sm" />
+                    Create ticket
                     }
                 </button>
             </div>
-
         </form>
         }
-    </div>
+        }
+    </section>
 </div>

@@ -1,48 +1,44 @@
-<div class="organization-selection-page">
-    <div class="organization-selection-card">
-        <header class="selection-header">
-            <h1>Select Organization</h1>
-            <p>
-                Your account has access to multiple organizations.
-                Select the organization you want to work with.
-            </p>
-        </header>
+<sc-auth-layout heading="Choose an organization"
+    subheading="Your account has access to more than one. Pick the one you want to work in."
+    [wide]="true">
 
-        @if (errorMessage()) {
-        <div class="error-banner" role="alert">
-            {{ errorMessage() }}
-        </div>
-        }
+    @if (errorMessage()) {
+    <sc-alert tone="error" title="Couldn't switch organization" class="mb-5 block">{{ errorMessage() }}</sc-alert>
+    }
 
-        <div class="organization-list">
-            @for (organization of organizations(); track organization.id) {
-            <button type="button" class="organization-card" [disabled]="isSelecting()"
-                (click)="selectOrganization(organization)">
-                <div class="organization-details">
-                    <span class="organization-name">
-                        {{ organization.name }}
-                    </span>
+    @if (organizations().length === 0) {
+    <div class="sc-card">
+        <sc-empty-state icon="domain_disabled" title="No organizations linked"
+            description="This account isn't a member of any organization yet. Ask an owner to invite you, then sign in again." />
+    </div>
+    } @else {
+    <ul class="flex flex-col gap-2.5">
+        @for (organization of organizations(); track organization.id) {
+        <li>
+            <button type="button" class="sc-org-card" (click)="selectOrganization(organization)"
+                [disabled]="isSelecting()">
+                <sc-avatar [name]="organization.name" size="md" />
 
-                    <span class="organization-meta">
-                        Organization ID: {{ organization.id }}
-                    </span>
-                </div>
-
-                <span class="organization-arrow">
-                    →
+                <span class="min-w-0 flex-1 text-left">
+                    <span class="block truncate text-[14px] font-semibold text-ink">{{ organization.name }}</span>
+                    <span class="mt-0.5 block text-xs text-ink-subtle">Workspace</span>
                 </span>
+
+                @if (pendingId() === organization.id) {
+                <sc-icon name="progress_activity" size="sm" class="sc-spin text-brand-600" />
+                } @else {
+                <sc-icon name="arrow_forward" size="sm" class="text-ink-subtle" />
+                }
             </button>
-            }
-        </div>
-
-        @if (organizations().length === 0) {
-        <div class="empty-state">
-            <p>No organizations are available for this account.</p>
-        </div>
+        </li>
         }
+    </ul>
+    }
 
-        <button type="button" class="logout-button" (click)="logout()">
+    <div class="mt-6 flex justify-center">
+        <button type="button" class="sc-btn sc-btn-ghost" (click)="logout()">
+            <sc-icon name="logout" size="sm" />
             Sign out
         </button>
     </div>
-</div>
+</sc-auth-layout>
