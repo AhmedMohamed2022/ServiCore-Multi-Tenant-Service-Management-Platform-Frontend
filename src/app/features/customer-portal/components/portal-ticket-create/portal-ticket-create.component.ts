@@ -20,6 +20,7 @@ import {
   AlertComponent,
   LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
+import { CustomerTicketService } from '../../../../core/services/customer-ticket.service';
 
 @Component({
   selector: 'app-portal-ticket-create',

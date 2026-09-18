@@ -40,6 +40,9 @@
                     @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid) {
                     <p class="sc-field-error"><sc-icon name="error" size="xs" /> Pick the closest category.</p>
                     }
+                    <p class="text-sm text-gray-300">
+                        We'll route your request to the appropriate support team.
+                    </p>
                 </div>
 
                 <div>
@@ -74,8 +77,10 @@
                     [class.sc-input-invalid]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid"></textarea>
                 @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
                 <p class="sc-field-error"><sc-icon name="error" size="xs" /> Describe the issue.</p>
-                } @else if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
-                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10 characters.</p>
+                } @else if (ticketForm.controls.description.touched &&
+                ticketForm.controls.description.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10
+                    characters.</p>
                 }
             </div>
 

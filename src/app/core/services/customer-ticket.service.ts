@@ -25,18 +25,18 @@ export class CustomerTicketService {
 
   // Fixed: Combines the required root request wrapper with omitted empty Guid parameters
   createPortalTicket(
+    customerId: string,
     title: string,
     description: string,
     categoryId: string,
     priority: number,
   ): Observable<CustomerTicketDto> {
     const payload = {
-      request: {
-        title: title.trim(),
-        description: description.trim(),
-        categoryId: categoryId,
-        priority: priority, // Numeric base index integer matching TicketPriority Enum
-      },
+      customerId,
+      title: title.trim(),
+      description: description.trim(),
+      categoryId,
+      priority,
     };
 
     return this.http.post<CustomerTicketDto>(this.apiUrl, payload);
