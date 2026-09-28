@@ -2,43 +2,33 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-export interface CustomerTicketDto {
-  id: string;
-  title: string;
-  description: string;
-  status: number;
-  priority: number;
-  createdAt: string;
-}
+import { TicketDto } from '../../features/tickets/models/ticket.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CustomerTicketService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiBaseUrl}/tickets`;
+  private readonly apiUrl = `${environment.apiBaseUrl}/customer-tickets`;
+  private readonly ticketsApiUrl = `${environment.apiBaseUrl}/tickets`;
 
-  getMyTickets(): Observable<CustomerTicketDto[]> {
-    return this.http.get<CustomerTicketDto[]>(this.apiUrl);
+  getMyTickets(): Observable<TicketDto[]> {
+    return this.http.get<TicketDto[]>(this.ticketsApiUrl);
   }
 
-  // Fixed: Combines the required root request wrapper with omitted empty Guid parameters
   createPortalTicket(
-    customerId: string,
     title: string,
     description: string,
     categoryId: string,
     priority: number,
-  ): Observable<CustomerTicketDto> {
+  ): Observable<TicketDto> {
     const payload = {
-      customerId,
+      categoryId,
       title: title.trim(),
       description: description.trim(),
-      categoryId,
       priority,
     };
 
-    return this.http.post<CustomerTicketDto>(this.apiUrl, payload);
+    return this.http.post<TicketDto>(this.apiUrl, payload);
   }
 }

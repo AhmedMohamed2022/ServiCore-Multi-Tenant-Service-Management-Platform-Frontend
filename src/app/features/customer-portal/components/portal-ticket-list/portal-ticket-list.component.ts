@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
-import { TicketService } from '../../../../core/services/ticket.service';
+import { CustomerTicketService } from '../../../../core/services/customer-ticket.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { TicketDto } from '../../../tickets/models/ticket.model';
 
@@ -36,7 +36,7 @@ import { catchError, of } from 'rxjs';
   templateUrl: './portal-ticket-list.component.html',
 })
 export class PortalTicketListComponent implements OnInit {
-  private readonly ticketService = inject(TicketService);
+  private readonly ticketService = inject(CustomerTicketService);
   private readonly categoryService = inject(CategoryService);
 
   readonly tickets = signal<TicketDto[]>([]);
@@ -67,7 +67,7 @@ export class PortalTicketListComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.ticketService.getTickets().subscribe({
+    this.ticketService.getMyTickets().subscribe({
       next: (data) => {
         this.tickets.set(data);
         this.isLoading.set(false);

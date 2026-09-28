@@ -105,7 +105,9 @@ export class InvitationsConsoleComponent implements OnInit {
         this.isInvitationsLoading.set(false);
       },
       error: (err: Error) => {
-        this.errorMessage.set(`Couldn't load pending invitations: ${err.message}`);
+        this.errorMessage.set(
+          `Couldn't load pending invitations: ${err.message}`,
+        );
         this.isInvitationsLoading.set(false);
       },
     });
@@ -174,7 +176,9 @@ export class InvitationsConsoleComponent implements OnInit {
       next: () => {
         this.isCustomerSubmitting.set(false);
         this.toast.success(
-          customerName ? `Invitation sent to ${customerName}.` : 'Invitation sent.',
+          customerName
+            ? `Invitation sent to ${customerName}.`
+            : 'Invitation sent.',
         );
         this.customerForm.reset({ customerId: '' });
       },
@@ -222,19 +226,26 @@ export class InvitationsConsoleComponent implements OnInit {
     );
   }
 
-  invitationStatusLabel(invitation: OrganizationInvitationDto): InvitationStatus {
+  invitationStatusLabel(
+    invitation: OrganizationInvitationDto,
+  ): InvitationStatus {
     if (invitation.isAccepted) return 'Accepted';
     if (invitation.isRevoked) return 'Revoked';
-    if (new Date(invitation.expiresAt).getTime() <= Date.now()) return 'Expired';
+    if (new Date(invitation.expiresAt).getTime() <= Date.now())
+      return 'Expired';
     return 'Pending';
   }
 
   statusTone(invitation: OrganizationInvitationDto) {
-    return InvitationsConsoleComponent.STATUS_TONE[this.invitationStatusLabel(invitation)];
+    return InvitationsConsoleComponent.STATUS_TONE[
+      this.invitationStatusLabel(invitation)
+    ];
   }
 
   statusIcon(invitation: OrganizationInvitationDto): string {
-    return InvitationsConsoleComponent.STATUS_ICON[this.invitationStatusLabel(invitation)];
+    return InvitationsConsoleComponent.STATUS_ICON[
+      this.invitationStatusLabel(invitation)
+    ];
   }
 
   goToCustomers(): void {

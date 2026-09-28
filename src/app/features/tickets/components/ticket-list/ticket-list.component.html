@@ -25,7 +25,7 @@
         (click)="setAssignmentFilter(assignmentFilter() === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')"
         [attr.aria-pressed]="assignmentFilter() === 'UNASSIGNED'">
         <span class="sc-summary-value">{{ unassignedCount() }}</span>
-        <span class="sc-summary-label">Unassigned</span>
+        <span class="sc-summary-label">Needs triage</span>
     </button>
 
     <button type="button" class="sc-summary-tile" [class.sc-summary-active]="priorityFilter() === 4"

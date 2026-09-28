@@ -118,7 +118,7 @@ export class TicketListComponent implements OnInit {
   );
 
   readonly unassignedCount = computed(
-    () => this.allTickets().filter((t) => !t.assignedAgentId).length,
+    () => this.allTickets().filter((t) => !t.teamId).length,
   );
 
   readonly criticalCount = computed(
@@ -156,7 +156,7 @@ export class TicketListComponent implements OnInit {
     }
 
     if (assignment === 'UNASSIGNED') {
-      rows = rows.filter((t) => !t.assignedAgentId);
+      rows = rows.filter((t) => !t.teamId);
     }
 
     if (term) {
@@ -249,6 +249,7 @@ export class TicketListComponent implements OnInit {
   }
 
   teamNameFor(ticket: TicketDto): string {
+    if (!ticket.teamId) return '';
     return this.teamNames().get(ticket.teamId) ?? '';
   }
 

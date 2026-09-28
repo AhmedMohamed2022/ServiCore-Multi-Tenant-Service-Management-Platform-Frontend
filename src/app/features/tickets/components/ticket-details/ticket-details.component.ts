@@ -15,7 +15,7 @@ import { AgentDirectoryService } from '../../../../core/services/agent-directory
 import { AuthService } from '../../../../core/auth/services/auth.service';
 
 import { TicketDto } from '../../models/ticket.model';
-import { TeamMemberDto } from '../../../management/models/team.model';
+import { TeamDto, TeamMemberDto } from '../../../management/models/team.model';
 import { CustomerDto } from '../../../management/models/customer.model';
 import {
   TicketStatus,
@@ -99,7 +99,17 @@ export class TicketDetailsComponent implements OnInit {
   readonly customer = signal<CustomerDto | null>(null);
   readonly categoryName = signal<string | null>(null);
   readonly teamName = signal<string | null>(null);
+  readonly teams = signal<TeamDto[]>([]);
   readonly teamMembers = signal<TeamMemberDto[]>([]);
+
+  /**
+   * Team ids the current viewer belongs to — see
+   * TeamService.getMyTeamMemberships() for why this is computed client-side
+   * and what its one blind spot is. An empty set is read as "not restricted
+   * to a subset" (the Owner case); a non-empty set narrows `assignableTeams`
+   * below to just those teams (the Manager case).
+   */
+  readonly myTeamIds = signal<ReadonlySet<string>>(new Set());
 
   /**
    * Route-based only, and only ever used to pick which "back" link to render.
@@ -166,6 +176,10 @@ export class TicketDetailsComponent implements OnInit {
 
     if (this.isManagementAllowed()) {
       switch (status) {
+        case TicketStatus.New:
+          return t.teamId
+            ? null
+            : 'Assign a team to this ticket before opening it.';
         case TicketStatus.Open:
           return assignee
             ? `Waiting on ${assignee} to start work. Reassign it below if needed.`
@@ -210,14 +224,73 @@ export class TicketDetailsComponent implements OnInit {
     return this.agentDirectory.labelFor(agentId, 'Agent');
   });
 
-  /** Agent options for the assignment menu, labelled as well as we can. */
+  /**
+   * Agent options for the assignment menu.
+   *
+   * TeamMemberDto only says who belongs to the team, not what role they
+   * hold — and a team's members can include the Managers responsible for it
+   * (a Manager is "responsible" for a team precisely by having a TeamMember
+   * row for it; see the architecture notes). The backend's AssignAsync
+   * rejects a target who isn't an Agent, but the old version of this list
+   * offered every team member, Managers included, as something to click —
+   * which just meant a Manager's own name showed up as an assignable
+   * "agent" on their own team's tickets. agentDirectory.names() is the one
+   * directory in the API scoped to the Agent role (see AgentDirectoryService),
+   * so filtering team members against it keeps the menu to real Agents.
+   */
   readonly assignableAgents = computed(() =>
-    this.teamMembers().map((member) => ({
-      userId: member.userId,
-      name: this.agentDirectory.labelFor(member.userId, 'Agent'),
-      isCurrent: member.userId === this.ticket()?.assignedAgentId,
-    })),
+    this.teamMembers()
+      .filter((member) => this.agentDirectory.nameFor(member.userId) !== null)
+      .map((member) => ({
+        userId: member.userId,
+        name: this.agentDirectory.labelFor(member.userId, 'Agent'),
+        isCurrent: member.userId === this.ticket()?.assignedAgentId,
+      })),
   );
+
+  /**
+   * Teams offered in the "assign/change team" menu. Owners should see every
+   * organization team; Managers should see only the teams they actually
+   * manage. See TeamService.getMyTeamMemberships() for how `myTeamIds` is
+   * derived and its one known blind spot.
+   */
+  readonly assignableTeams = computed(() => {
+    const mine = this.myTeamIds();
+    return mine.size === 0
+      ? this.teams()
+      : this.teams().filter((team) => mine.has(team.id));
+  });
+
+  readonly canAssignTeam = computed(() => {
+    const t = this.ticket();
+    return (
+      this.isManagementAllowed() &&
+      !!t &&
+      !this.isClosed() &&
+      !t.assignedAgentId &&
+      (t.status === TicketStatus.New || t.status === TicketStatus.Open)
+    );
+  });
+
+  /**
+   * Whether the ticket's team can be removed and it returned to triage.
+   * Mirrors the backend rule: a team cannot be unassigned while an agent is
+   * still assigned to the ticket (unassign the agent first).
+   */
+  readonly canUnassignTeam = computed(() => {
+    const t = this.ticket();
+    return (
+      this.isManagementAllowed() &&
+      !!t &&
+      !this.isClosed() &&
+      !!t.teamId &&
+      !t.assignedAgentId
+    );
+  });
+
+  readonly teamAssignmentLabel = computed(() => {
+    return this.ticket()?.teamId ? 'Change team' : 'Assign team';
+  });
 
   /**
    * The lifecycle rail. Statuses are shown in their real workflow order and
@@ -263,6 +336,18 @@ export class TicketDetailsComponent implements OnInit {
     this.agentDirectory.loadIfPermitted();
     this.loadTicketContext();
     this.probeManagementPermission();
+    this.loadMyTeamMemberships();
+  }
+
+  /**
+   * See TeamService.getMyTeamMemberships() and the `myTeamIds` doc comment
+   * above. Loaded once per view — it doesn't depend on the ticket itself,
+   * only on who is looking at it.
+   */
+  private loadMyTeamMemberships(): void {
+    this.teamService
+      .getMyTeamMemberships()
+      .subscribe((ids) => this.myTeamIds.set(ids));
   }
 
   loadTicketContext(): void {
@@ -309,24 +394,36 @@ export class TicketDetailsComponent implements OnInit {
       .pipe(catchError(() => of(null)))
       .subscribe((category) => this.categoryName.set(category?.name ?? null));
 
-    // The brief calls out that Team was never shown on this page at all.
-    this.teamService
-      .getTeamById(ticket.teamId)
-      .pipe(catchError(() => of(null)))
-      .subscribe((team) => this.teamName.set(team?.name ?? null));
+    if (!ticket.teamId) {
+      this.teamName.set(null);
+    } else {
+      this.teamService
+        .getTeamById(ticket.teamId)
+        .pipe(catchError(() => of(null)))
+        .subscribe((team) => this.teamName.set(team?.name ?? null));
+    }
   }
 
   private maybeLoadAvailableStaffPool(): void {
-    if (this.rosterRequested) return;
-
     const currentTicket = this.ticket();
     if (!this.isManagementAllowed() || !currentTicket) return;
 
-    this.rosterRequested = true;
+    if (!this.rosterRequested) {
+      this.rosterRequested = true;
 
-    // Loaded from the ticket's own teamId rather than teams()[0], so the
-    // dropdown can only offer agents the backend's TeamMemberExistsAsync
-    // check in AssignAsync will actually accept.
+      this.teamService
+        .getTeams()
+        .pipe(catchError(() => of([])))
+        .subscribe((teams) => this.teams.set(teams));
+    }
+
+    if (!currentTicket.teamId) {
+      this.teamMembers.set([]);
+      return;
+    }
+
+    // Loaded from the ticket's own teamId so the dropdown only offers
+    // members of the currently assigned team.
     this.teamService
       .getTeamMembers(currentTicket.teamId)
       .pipe(catchError(() => of([])))
@@ -390,6 +487,27 @@ export class TicketDetailsComponent implements OnInit {
     });
   }
 
+  onAssignTeam(teamId: string): void {
+    if (!teamId || teamId === this.ticket()?.teamId) return;
+
+    this.isActionLoading.set(true);
+    this.errorMessage.set(null);
+
+    this.ticketService.assignTeam(this.id, teamId).subscribe({
+      next: () => {
+        this.isActionLoading.set(false);
+        this.toast.success('Ticket assigned to the team.');
+        this.rosterRequested = false;
+        this.loadTicketContext();
+      },
+      error: (err: Error) => {
+        this.errorMessage.set(err.message);
+        this.toast.error(err.message);
+        this.isActionLoading.set(false);
+      },
+    });
+  }
+
   onAssignAgent(agentId: string): void {
     if (agentId === this.ticket()?.assignedAgentId) return;
 
@@ -410,13 +528,18 @@ export class TicketDetailsComponent implements OnInit {
     });
   }
 
-  onUnassign(): void {
+  /**
+   * Removes the assigned agent, keeping the ticket's team. This is the only
+   * unassign action available while an agent is still assigned — see
+   * `canUnassignTeam` for why team removal is blocked until this runs first.
+   */
+  onUnassignAgent(): void {
     this.confirm
       .ask({
-        title: 'Return this ticket to the queue?',
+        title: 'Unassign this agent?',
         message:
-          'The current assignee loses access to the start, wait and resolve actions until someone is assigned again.',
-        confirmLabel: 'Unassign',
+          'The current assignee loses access to the start, wait and resolve actions until someone is assigned again. The ticket stays with its current team.',
+        confirmLabel: 'Unassign agent',
         tone: 'danger',
       })
       .subscribe((confirmed) => {
@@ -425,10 +548,46 @@ export class TicketDetailsComponent implements OnInit {
         this.isActionLoading.set(true);
         this.errorMessage.set(null);
 
-        this.ticketService.unassignTicket(this.id).subscribe({
+        this.ticketService.unassignAgent(this.id).subscribe({
           next: () => {
             this.isActionLoading.set(false);
-            this.toast.success('Ticket returned to the queue.');
+            this.toast.success('Agent unassigned.');
+            this.loadTicketContext();
+          },
+          error: (err: Error) => {
+            this.errorMessage.set(err.message);
+            this.toast.error(err.message);
+            this.isActionLoading.set(false);
+          },
+        });
+      });
+  }
+
+  /**
+   * Returns the ticket to the New/triage state. Only ever offered when no
+   * agent is assigned (`canUnassignTeam`) — the backend rejects removing a
+   * team while an agent remains on the ticket.
+   */
+  onUnassignTeam(): void {
+    this.confirm
+      .ask({
+        title: 'Return this ticket to triage?',
+        message:
+          'The ticket loses its team and goes back to the unassigned queue for any manager to pick up.',
+        confirmLabel: 'Unassign team',
+        tone: 'danger',
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) return;
+
+        this.isActionLoading.set(true);
+        this.errorMessage.set(null);
+
+        this.ticketService.unassignTeam(this.id).subscribe({
+          next: () => {
+            this.isActionLoading.set(false);
+            this.toast.success('Ticket returned to triage.');
+            this.rosterRequested = false;
             this.loadTicketContext();
           },
           error: (err: Error) => {

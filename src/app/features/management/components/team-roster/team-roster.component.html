@@ -63,7 +63,10 @@
             }
         </section>
 
-        <!-- Create / edit team -->
+        <!-- Create / edit team — Owner only. CanManageTeams (create/update/
+             deactivate) is Owner-only on the backend; a Manager only manages
+             membership within teams they already belong to. -->
+        @if (canAdministerTeams()) {
         <section class="sc-card" aria-labelledby="teamFormHeading">
             <div class="sc-card-header">
                 <h2 id="teamFormHeading" class="sc-card-title">
@@ -100,6 +103,14 @@
                 </button>
             </form>
         </section>
+        } @else {
+        <section class="sc-card p-4">
+            <p class="text-xs text-ink-subtle">
+                Creating, renaming and deactivating teams is an organization owner action. You can manage
+                agent membership for the teams you belong to below.
+            </p>
+        </section>
+        }
     </div>
 
     <!-- ==================================================================
@@ -116,6 +127,7 @@
                         · created {{ team.createdAt | date:'MMM d, y' }}
                     </p>
                 </div>
+                @if (canAdministerTeams()) {
                 <div class="flex shrink-0 items-center gap-1">
                     <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onEditTeam(team)">
                         <sc-icon name="edit" size="sm" />
@@ -127,6 +139,7 @@
                         <span class="hidden sm:inline">Deactivate</span>
                     </button>
                 </div>
+                }
             </div>
 
             @if (team.description) {
@@ -135,23 +148,37 @@
 
             <!-- Add member -->
             <div class="border-b border-line p-4">
-                @if (isDirectoryAvailable() && !useManualUserId()) {
+                @if (!useManualUserId() && (isDirectoryAvailable() || (canAdministerTeams() && isManagerDirectoryAvailable()))) {
                 <div class="flex flex-wrap items-center gap-2">
+                    @if (isDirectoryAvailable()) {
                     <button type="button" class="sc-btn sc-btn-primary" [matMenuTriggerFor]="agentMenu"
                         [disabled]="isAddingMember() || addableAgents().length === 0">
                         <sc-icon name="person_add" size="sm" />
-                        Add member
+                        Add agent
                     </button>
+                    }
+                    @if (canAdministerTeams()) {
+                    <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="managerMenu"
+                        [disabled]="isAddingMember() || addableManagers().length === 0">
+                        <sc-icon name="person_add" size="sm" />
+                        Add manager
+                    </button>
+                    }
                     <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="useManualUserId.set(true)">
                         Add by user ID
                     </button>
-                    @if (addableAgents().length === 0) {
-                    <p class="text-xs text-ink-subtle">Every agent in this organization is already on this team.</p>
-                    }
                 </div>
                 <p class="sc-hint">
-                    Lists agents in this organization. Owners and managers aren't included — add those by user ID.
+                    @if (canAdministerTeams()) {
+                    "Add agent" lists this organization's agents; "Add manager" lists managers not already on this
+                    team. Both add through the same team membership the ticket-assignment rules already rely on.
+                    } @else {
+                    Lists agents in this organization. Managers can only add agents to their own teams.
+                    }
                 </p>
+                @if (isDirectoryAvailable() && addableAgents().length === 0 && (!canAdministerTeams() || addableManagers().length === 0)) {
+                <p class="text-xs text-ink-subtle">Everyone eligible for this team is already on it.</p>
+                }
                 } @else {
                 <form class="flex flex-wrap items-start gap-2" [formGroup]="memberForm"
                     (ngSubmit)="onAddMemberSubmit()">
@@ -167,7 +194,7 @@
                         <sc-icon name="person_add" size="sm" />
                         Add
                     </button>
-                    @if (isDirectoryAvailable()) {
+                    @if (isDirectoryAvailable() || (canAdministerTeams() && isManagerDirectoryAvailable())) {
                     <button type="button" class="sc-btn sc-btn-ghost mt-[26px]" (click)="useManualUserId.set(false)">
                         Pick from list
                     </button>
@@ -216,8 +243,16 @@
 
 <mat-menu #agentMenu="matMenu">
     @for (agent of addableAgents(); track agent.userId) {
-    <button type="button" mat-menu-item (click)="onPickAgent(agent.userId)">
+    <button type="button" mat-menu-item (click)="onPickMember(agent.userId)">
         <span class="text-[13px]">{{ agent.name }}</span>
+    </button>
+    }
+</mat-menu>
+
+<mat-menu #managerMenu="matMenu">
+    @for (manager of addableManagers(); track manager.userId) {
+    <button type="button" mat-menu-item (click)="onPickMember(manager.userId)">
+        <span class="text-[13px]">{{ manager.name }}</span>
     </button>
     }
 </mat-menu>

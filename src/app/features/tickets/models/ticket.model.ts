@@ -24,7 +24,7 @@ export interface TicketDto {
   id: string;
   organizationId: string;
   customerId: string;
-  teamId: string;
+  teamId: string | null;
   assignedAgentId: string | null;
   categoryId: string;
   title: string;

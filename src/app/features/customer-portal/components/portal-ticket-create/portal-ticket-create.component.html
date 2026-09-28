@@ -6,7 +6,7 @@
     <section class="sc-card">
         @if (isLoadingOptions()) {
         <div class="p-5">
-            <sc-loading-state label="Loading request options" [count]="4" />
+            <sc-loading-state label="Loading request options" [count]="3" />
         </div>
         } @else {
         <form class="sc-card-body flex flex-col gap-5" [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
@@ -45,19 +45,7 @@
                     </p>
                 </div>
 
-                <div>
-                    <label for="teamId" class="sc-label">Team</label>
-                    <select id="teamId" class="sc-select" formControlName="teamId"
-                        [class.sc-input-invalid]="ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid">
-                        <option value="" disabled>Choose a team</option>
-                        @for (team of teams(); track team.id) {
-                        <option [value]="team.id">{{ team.name }}</option>
-                        }
-                    </select>
-                    @if (ticketForm.controls.teamId.touched && ticketForm.controls.teamId.invalid) {
-                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Choose who should handle this.</p>
-                    }
-                </div>
+
             </div>
 
             <div class="max-w-[220px]">
@@ -77,10 +65,8 @@
                     [class.sc-input-invalid]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid"></textarea>
                 @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
                 <p class="sc-field-error"><sc-icon name="error" size="xs" /> Describe the issue.</p>
-                } @else if (ticketForm.controls.description.touched &&
-                ticketForm.controls.description.errors?.['minlength']) {
-                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10
-                    characters.</p>
+                } @else if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10 characters.</p>
                 }
             </div>
 
