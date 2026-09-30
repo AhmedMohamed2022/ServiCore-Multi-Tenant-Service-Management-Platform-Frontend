@@ -31,7 +31,7 @@
     </ul>
     }
 
-    @case ('error') {
+    @case ('empty') {
     <div class="sc-card p-6">
         <sc-alert tone="warn" title="No linked organization">
             Your account isn't linked to a service provider yet. If you were sent an invitation, open that link to
@@ -40,30 +40,16 @@
     </div>
     }
 
-    @case ('manual') {
+    @case ('failed') {
     <div class="sc-card p-6">
-        <sc-alert tone="warn" title="We couldn't look up your organizations" class="mb-5 block">
-            Enter your organization ID to continue. It's in the invitation email your service provider sent you.
+        <sc-alert tone="error" title="We couldn't load your organizations" class="mb-5 block">
+            {{ failureMessage() || 'Something went wrong while contacting the server.' }}
         </sc-alert>
 
-        <form [formGroup]="activationForm" (ngSubmit)="onActivateSubmit()" class="flex flex-col gap-4">
-            <div>
-                <label for="organizationId" class="sc-label">Organization ID</label>
-                <input id="organizationId" type="text" class="sc-input" formControlName="organizationId"
-                    placeholder="00000000-0000-0000-0000-000000000000"
-                    [class.sc-input-invalid]="activationForm.controls.organizationId.touched && activationForm.controls.organizationId.invalid" />
-                @if (activationForm.controls.organizationId.touched && activationForm.controls.organizationId.invalid) {
-                <p class="sc-field-error">
-                    <sc-icon name="error" size="xs" /> Enter the full ID, including the dashes.
-                </p>
-                }
-            </div>
-
-            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="activationForm.invalid">
-                Open my portal
-                <sc-icon name="arrow_forward" size="sm" />
-            </button>
-        </form>
+        <button type="button" class="sc-btn sc-btn-primary w-full" (click)="retry()">
+            <sc-icon name="refresh" size="sm" />
+            Try again
+        </button>
     </div>
     }
     }

@@ -1,5 +1,4 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TenantContextService } from '../../../../core/services/tenant-context.service';
 import { CustomerAccessService } from '../../../../core/services/customer-access.service';
@@ -12,13 +11,12 @@ import {
   LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 
-type ActivationState = 'loading' | 'choose' | 'manual' | 'error';
+type ActivationState = 'loading' | 'choose' | 'empty' | 'failed';
 
 @Component({
   selector: 'app-portal-activate',
   standalone: true,
   imports: [
-    ReactiveFormsModule,
     AuthLayoutComponent,
     IconComponent,
     AvatarComponent,
@@ -28,33 +26,41 @@ type ActivationState = 'loading' | 'choose' | 'manual' | 'error';
   templateUrl: './portal-activate.component.html',
 })
 export class PortalActivateComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly tenantContext = inject(TenantContextService);
   private readonly customerAccess = inject(CustomerAccessService);
 
-  // 'loading' — checking GET /customers/mine on load.
+  // 'loading' — asking GET /customers/mine which organizations this account
+  //             is linked to.
   // 'choose'  — more than one linked organization; let the person pick.
-  // 'manual'  — the lookup itself failed; last-resort GUID entry so the
-  //             person isn't completely stuck.
-  // 'error'   — lookup succeeded but found no linked organization at all
-  //             (e.g. invitation was never actually accepted).
+  // 'empty'   — the lookup worked but found nothing (e.g. the invitation was
+  //             never accepted).
+  // 'failed'  — the lookup itself failed (server or network). The person can
+  //             retry; we deliberately do NOT fall back to typing an
+  //             organization id by hand. Organization ids are internal, a
+  //             customer has no way to know one, and a hand-entered id skips
+  //             the customerId that the rest of the portal keys off (ticket
+  //             comment attribution, notification deep links).
   readonly state = signal<ActivationState>('loading');
   readonly memberships = signal<CustomerMembership[]>([]);
-
-  readonly activationForm = this.fb.nonNullable.group({
-    organizationId: [
-      '',
-      [
-        Validators.required,
-        Validators.pattern(
-          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-        ),
-      ],
-    ],
-  });
+  readonly failureMessage = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  retry(): void {
+    this.load();
+  }
+
+  selectMembership(membership: CustomerMembership): void {
+    this.activate(membership);
+  }
+
+  private load(): void {
+    this.state.set('loading');
+    this.failureMessage.set(null);
+
     this.customerAccess.getMine().subscribe({
       next: (memberships) => {
         if (memberships.length === 1) {
@@ -68,26 +74,13 @@ export class PortalActivateComponent implements OnInit {
           return;
         }
 
-        this.state.set('error');
+        this.state.set('empty');
       },
-      error: () => {
-        // Couldn't even reach the lookup — fall back to manual entry
-        // rather than leaving the person on a blank/broken screen.
-        this.state.set('manual');
+      error: (err: Error) => {
+        this.failureMessage.set(err.message);
+        this.state.set('failed');
       },
     });
-  }
-
-  selectMembership(membership: CustomerMembership): void {
-    this.activate(membership);
-  }
-
-  onActivateSubmit(): void {
-    if (this.activationForm.invalid) return;
-
-    const targetId = this.activationForm.getRawValue().organizationId;
-    this.tenantContext.setOrganization(targetId);
-    this.router.navigate(['/portal/tickets']);
   }
 
   private activate(membership: CustomerMembership): void {
