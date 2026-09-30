@@ -103,10 +103,7 @@ export class NotificationService {
   }
 
   private buildHubUrl(): string {
-    const base = `${environment.apiBaseUrl.replace(
-      '/api',
-      '',
-    )}/hubs/notifications`;
+    const base = `${environment.apiBaseUrl.replace(/\/api\/?$/, '')}/hubs/notifications`;
 
     const organizationId = this.tenantContext.currentOrganizationId();
 

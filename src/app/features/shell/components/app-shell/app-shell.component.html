@@ -14,10 +14,7 @@
         <div class="flex h-full flex-col">
             <!-- Brand -->
             <div class="flex items-center gap-2.5 px-4 py-4">
-                <span
-                    class="flex h-8 w-8 items-center justify-center rounded-sc bg-brand-600 text-white">
-                    <sc-icon name="support_agent" size="sm" [filled]="true" />
-                </span>
+                <img src="logo/logo-mark.svg" alt="" class="h-8 w-8" width="32" height="32" />
                 <span class="text-[15px] font-bold tracking-tight text-white">ServiCore</span>
             </div>
 
@@ -99,8 +96,8 @@
             <div class="flex items-center gap-1">
                 <app-notification-tray />
 
-                <button type="button" class="sc-btn sc-btn-ghost h-9 gap-2 px-2"
-                    [matMenuTriggerFor]="accountMenu" aria-label="Account menu">
+                <button type="button" class="sc-btn sc-btn-ghost h-9 gap-2 px-2" [matMenuTriggerFor]="accountMenu"
+                    aria-label="Account menu">
                     <sc-avatar [name]="userEmail()" size="xs" />
                     <span class="hidden max-w-[180px] truncate text-[13px] font-medium text-ink-muted sm:inline">
                         {{ userEmail() }}
