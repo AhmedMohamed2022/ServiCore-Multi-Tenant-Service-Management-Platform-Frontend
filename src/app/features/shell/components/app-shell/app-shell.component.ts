@@ -10,7 +10,7 @@ import { map } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/services/auth.service';
 import { PermissionsService } from '../../../../core/services/permissions.service';
-import { TenantSwitcherComponent } from '../tenant-switcher/tenant-switcher/tenant-switcher.component';
+import { TenantSwitcherComponent } from '../tenant-switcher/tenant-switcher.component';
 import { NotificationTrayComponent } from '../notification-tray/notification-tray.component';
 import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
@@ -55,8 +55,12 @@ export class AppShellComponent implements OnInit {
   protected readonly permissions = inject(PermissionsService);
   private readonly breakpointObserver = inject(BreakpointObserver);
 
-  readonly userEmail = computed(() => this.authService.currentUser()?.email ?? '');
-  readonly userId = computed(() => this.authService.currentUser()?.userId ?? '');
+  readonly userEmail = computed(
+    () => this.authService.currentUser()?.email ?? '',
+  );
+  readonly userId = computed(
+    () => this.authService.currentUser()?.userId ?? '',
+  );
 
   /** Below `lg` the sidebar becomes an overlay drawer instead of a column. */
   readonly isHandset = toSignal(
@@ -69,7 +73,9 @@ export class AppShellComponent implements OnInit {
   readonly isDrawerOpen = signal(false);
 
   /** Report links are collapsed by default — six links is too many to sit flat. */
-  private readonly collapsedGroups = signal<ReadonlySet<string>>(new Set(['reports']));
+  private readonly collapsedGroups = signal<ReadonlySet<string>>(
+    new Set(['reports']),
+  );
 
   private readonly navGroups: NavGroup[] = [
     {
@@ -83,17 +89,31 @@ export class AppShellComponent implements OnInit {
       id: 'insights',
       label: 'Insights',
       requires: 'reports',
-      items: [{ label: 'Dashboard', icon: 'dashboard', link: '/app/dashboard' }],
+      items: [
+        { label: 'Dashboard', icon: 'dashboard', link: '/app/dashboard' },
+      ],
     },
     {
       id: 'management',
       label: 'Management',
       requires: 'manage',
       items: [
-        { label: 'Customers', icon: 'groups', link: '/app/management/customers' },
+        {
+          label: 'Customers',
+          icon: 'groups',
+          link: '/app/management/customers',
+        },
         { label: 'Teams', icon: 'diversity_3', link: '/app/management/teams' },
-        { label: 'Categories', icon: 'sell', link: '/app/management/categories' },
-        { label: 'Invitations', icon: 'mail', link: '/app/management/invitations' },
+        {
+          label: 'Categories',
+          icon: 'sell',
+          link: '/app/management/categories',
+        },
+        {
+          label: 'Invitations',
+          icon: 'mail',
+          link: '/app/management/invitations',
+        },
       ],
     },
     {
@@ -102,12 +122,36 @@ export class AppShellComponent implements OnInit {
       requires: 'reports',
       collapsible: true,
       items: [
-        { label: 'Ticket statistics', icon: 'monitoring', link: '/app/reports/tickets' },
-        { label: 'Volume over time', icon: 'timeline', link: '/app/reports/time-series' },
-        { label: 'Team performance', icon: 'workspace_premium', link: '/app/reports/teams' },
-        { label: 'Agent workload', icon: 'support_agent', link: '/app/reports/agents' },
-        { label: 'Customer volume', icon: 'receipt_long', link: '/app/reports/customers' },
-        { label: 'Category breakdown', icon: 'category', link: '/app/reports/categories' },
+        {
+          label: 'Ticket statistics',
+          icon: 'monitoring',
+          link: '/app/reports/tickets',
+        },
+        {
+          label: 'Volume over time',
+          icon: 'timeline',
+          link: '/app/reports/time-series',
+        },
+        {
+          label: 'Team performance',
+          icon: 'workspace_premium',
+          link: '/app/reports/teams',
+        },
+        {
+          label: 'Agent workload',
+          icon: 'support_agent',
+          link: '/app/reports/agents',
+        },
+        {
+          label: 'Customer volume',
+          icon: 'receipt_long',
+          link: '/app/reports/customers',
+        },
+        {
+          label: 'Category breakdown',
+          icon: 'category',
+          link: '/app/reports/categories',
+        },
       ],
     },
   ];
@@ -120,7 +164,8 @@ export class AppShellComponent implements OnInit {
   readonly visibleGroups = computed(() =>
     this.navGroups.filter((group) => {
       if (group.requires === 'manage') return this.permissions.canManage();
-      if (group.requires === 'reports') return this.permissions.canViewReports();
+      if (group.requires === 'reports')
+        return this.permissions.canViewReports();
       return true;
     }),
   );

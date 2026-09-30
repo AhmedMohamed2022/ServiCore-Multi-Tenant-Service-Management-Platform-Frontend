@@ -1,10 +1,10 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
-import { TenantContextService } from '../../../../../core/services/tenant-context.service';
-import { OrganizationService } from '../../../../../core/services/organization.service';
-import { OrganizationDto } from '../../../../management/models/organization.model';
-import { AvatarComponent } from '../../../../../shared/ui/avatar/avatar.component';
-import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
+import { TenantContextService } from '../../../../core/services/tenant-context.service';
+import { OrganizationService } from '../../../../core/services/organization.service';
+import { OrganizationDto } from '../../../management/models/organization.model';
+import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 
 @Component({
   selector: 'app-tenant-switcher',
@@ -17,7 +17,8 @@ import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
              transition-colors hover:bg-white/5"
       [matMenuTriggerFor]="orgMenu"
       [disabled]="organizations().length === 0"
-      aria-label="Switch organization">
+      aria-label="Switch organization"
+    >
       <sc-avatar [name]="activeOrganizationName()" size="sm" />
 
       <span class="min-w-0 flex-1">
@@ -39,7 +40,9 @@ import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
     </button>
 
     <mat-menu #orgMenu="matMenu" class="sc-menu">
-      <div class="px-3 pb-1.5 pt-2 text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
+      <div
+        class="px-3 pb-1.5 pt-2 text-2xs font-semibold uppercase tracking-wider text-ink-subtle"
+      >
         Switch organization
       </div>
       @for (org of organizations(); track org.id) {
@@ -48,7 +51,10 @@ import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
           mat-menu-item
           class="!h-11"
           (click)="onSelectTenant(org.id)"
-          [attr.aria-current]="org.id === tenantContext.currentOrganizationId() ? 'true' : null">
+          [attr.aria-current]="
+            org.id === tenantContext.currentOrganizationId() ? 'true' : null
+          "
+        >
           <span class="flex items-center gap-2.5">
             <sc-avatar [name]="org.name" size="xs" />
             <span class="flex-1 truncate text-[13px]">{{ org.name }}</span>
