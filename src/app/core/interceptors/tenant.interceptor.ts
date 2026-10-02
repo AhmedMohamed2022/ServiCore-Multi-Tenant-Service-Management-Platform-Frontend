@@ -21,6 +21,13 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
     'customer-invitations/accept',
   );
 
+  const isPreviewStaffRoute = cleanUrl.endsWith(
+    'organization/invitations/preview',
+  );
+  const isPreviewCustomerRoute = cleanUrl.endsWith(
+    'customer-invitations/preview',
+  );
+
   // Explicitly check if the clean string path context points to a SignalR hub
   const isSignalRHubRoute = cleanUrl.includes('/hubs/');
 
@@ -31,6 +38,8 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
     isCustomersMineRoute ||
     isAcceptStaffRoute ||
     isAcceptCustomerRoute ||
+    isPreviewStaffRoute ||
+    isPreviewCustomerRoute ||
     isSignalRHubRoute; // <-- Safely true now
 
   if (organizationId && !shouldBypass) {

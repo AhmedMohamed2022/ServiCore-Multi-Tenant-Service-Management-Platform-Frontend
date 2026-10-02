@@ -3,9 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AcceptInvitationResponse,
+  CustomerInvitationPreview,
   InviteOrganizationMemberRequest,
   InviteCustomerRequest,
   OrganizationInvitationDto,
+  StaffInvitationPreview,
 } from '../../features/management/models/invitation.model';
 
 @Injectable({
@@ -24,6 +27,49 @@ export class InvitationService {
 
   sendCustomerInvitation(request: InviteCustomerRequest): Observable<void> {
     return this.http.post<void>(this.customerApiUrl, request);
+  }
+
+  // ---- Anonymous endpoints used by the accept-invitation pages ----------
+
+  // GET /api/organization/invitations/preview?token=...
+  previewStaffInvitation(token: string): Observable<StaffInvitationPreview> {
+    return this.http.get<StaffInvitationPreview>(
+      `${this.staffApiUrl}/preview`,
+      { params: { token } },
+    );
+  }
+
+  // GET /api/customer-invitations/preview?token=...
+  previewCustomerInvitation(
+    token: string,
+  ): Observable<CustomerInvitationPreview> {
+    return this.http.get<CustomerInvitationPreview>(
+      `${this.customerApiUrl}/preview`,
+      { params: { token } },
+    );
+  }
+
+  // POST /api/organization/invitations/accept. `password` is omitted when the
+  // invited email already has an account.
+  acceptStaffInvitation(
+    token: string,
+    password?: string,
+  ): Observable<AcceptInvitationResponse> {
+    return this.http.post<AcceptInvitationResponse>(
+      `${this.staffApiUrl}/accept`,
+      password ? { token, password } : { token },
+    );
+  }
+
+  // POST /api/customer-invitations/accept
+  acceptCustomerInvitation(
+    token: string,
+    password?: string,
+  ): Observable<AcceptInvitationResponse> {
+    return this.http.post<AcceptInvitationResponse>(
+      `${this.customerApiUrl}/accept`,
+      password ? { token, password } : { token },
+    );
   }
 
   // Gated by [Authorize(Policy = "CanManageStaff")] server-side (Owner/Manager

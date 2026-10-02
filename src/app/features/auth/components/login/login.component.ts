@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, Input, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/services/auth.service';
@@ -31,6 +31,17 @@ export class LoginComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
   });
+
+  /**
+   * Optional `?email=` query param (bound via withComponentInputBinding()).
+   * The accept-invitation pages use it to pre-fill the email of someone who
+   * already had an account, so they only need to type their existing password.
+   */
+  @Input() set email(value: string | undefined) {
+    if (value) {
+      this.loginForm.controls.email.setValue(value);
+    }
+  }
 
   onSubmit(): void {
     if (this.loginForm.invalid) {

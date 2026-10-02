@@ -14,7 +14,17 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const isAcceptCustomerRoute = cleanUrl.endsWith(
     'customer-invitations/accept',
   );
-  const isBypassRoute = isAcceptStaffRoute || isAcceptCustomerRoute;
+  const isPreviewStaffRoute = cleanUrl.endsWith(
+    'organization/invitations/preview',
+  );
+  const isPreviewCustomerRoute = cleanUrl.endsWith(
+    'customer-invitations/preview',
+  );
+  const isBypassRoute =
+    isAcceptStaffRoute ||
+    isAcceptCustomerRoute ||
+    isPreviewStaffRoute ||
+    isPreviewCustomerRoute;
 
   if (token && !isBypassRoute) {
     req = req.clone({
