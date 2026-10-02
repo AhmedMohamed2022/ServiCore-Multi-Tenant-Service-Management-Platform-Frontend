@@ -19,11 +19,10 @@
         } @else if (!successMessage()) {
         <form [formGroup]="setupForm" (ngSubmit)="onCompleteCustomerOnboarding()" class="flex flex-col gap-4">
             <sc-password-field [control]="setupForm.controls.password" inputId="customerPassword"
-                label="Choose a password" placeholder="At least six characters" autocomplete="new-password"
-                [showStrength]="true" />
+                label="Choose a password" placeholder="8+ chars, mixed case, number, non-alphanumeric"
+                autocomplete="new-password" [showStrength]="true" />
 
-            <button type="submit" class="sc-btn sc-btn-primary w-full"
-                [disabled]="setupForm.invalid || isProcessing()">
+            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="setupForm.invalid || isProcessing()">
                 @if (isProcessing()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 Activating your account

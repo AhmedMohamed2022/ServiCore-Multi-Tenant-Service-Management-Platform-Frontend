@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import { AuthLayoutComponent } from '../shared/auth-layout.component';
 import { PasswordFieldComponent } from '../shared/password-field.component';
+import { passwordPolicyValidator } from '../shared/password.validators';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
@@ -33,7 +34,7 @@ export class AcceptCustomerInvitationComponent implements OnInit {
   readonly successMessage = signal<string | null>(null);
 
   readonly setupForm = this.fb.nonNullable.group({
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, passwordPolicyValidator]],
   });
 
   ngOnInit(): void {

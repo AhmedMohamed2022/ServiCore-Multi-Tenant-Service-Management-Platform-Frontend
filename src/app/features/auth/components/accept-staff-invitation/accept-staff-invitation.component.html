@@ -1,5 +1,4 @@
-<sc-auth-layout heading="Join your team"
-    subheading="Set a password to finish setting up your ServiCore staff account.">
+<sc-auth-layout heading="Join your team" subheading="Set a password to finish setting up your ServiCore staff account.">
 
     <div class="sc-card p-6">
 
@@ -18,12 +17,11 @@
         </p>
         } @else if (!successMessage()) {
         <form [formGroup]="setupForm" (ngSubmit)="onCompleteStaffOnboarding()" class="flex flex-col gap-4">
-            <sc-password-field [control]="setupForm.controls.password" inputId="staffPassword"
-                label="Choose a password" placeholder="At least six characters" autocomplete="new-password"
+            <sc-password-field [control]="setupForm.controls.password" inputId="staffPassword" label="Choose a password"
+                placeholder="8+ chars, mixed case, number, non-alphanumeric" autocomplete="new-password"
                 [showStrength]="true" />
 
-            <button type="submit" class="sc-btn sc-btn-primary w-full"
-                [disabled]="setupForm.invalid || isProcessing()">
+            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="setupForm.invalid || isProcessing()">
                 @if (isProcessing()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 Setting up your account

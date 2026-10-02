@@ -53,10 +53,10 @@
             </div>
 
             <sc-password-field [control]="registerForm.controls.password" inputId="ownerPassword"
-                placeholder="At least six characters" autocomplete="new-password" [showStrength]="true" />
+                placeholder="8+ chars, mixed case, number, non-alphanumeric" autocomplete="new-password"
+                [showStrength]="true" />
 
-            <button type="submit" class="sc-btn sc-btn-primary w-full"
-                [disabled]="isLoading() || !!successMessage()">
+            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="isLoading() || !!successMessage()">
                 @if (isLoading()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 Creating organization

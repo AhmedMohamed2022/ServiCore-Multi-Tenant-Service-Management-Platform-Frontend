@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/services/auth.service';
 import { AuthLayoutComponent } from '../shared/auth-layout.component';
 import { PasswordFieldComponent } from '../shared/password-field.component';
+import { passwordPolicyValidator } from '../shared/password.validators';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
@@ -32,7 +33,7 @@ export class RegisterComponent {
   readonly registerForm = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, passwordPolicyValidator]],
     organizationName: ['', [Validators.required]],
   });
 

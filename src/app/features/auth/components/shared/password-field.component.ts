@@ -12,9 +12,8 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
  * Password input with a show/hide toggle, plus an optional strength meter for
  * the pages where the person is choosing a password rather than recalling one.
  *
- * The strength reading is advisory and never blocks submission — the only
- * enforced rule is the six-character minimum the backend applies, which stays
- * on the form control.
+ * The strength reading is advisory; password policy enforcement stays on the
+ * form control so all password-creation flows use the same backend rules.
  */
 @Component({
   selector: 'sc-password-field',
@@ -32,23 +31,36 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
         [formControl]="control()"
         [attr.placeholder]="placeholder()"
         [attr.autocomplete]="autocomplete()"
-        [class.sc-input-invalid]="control().touched && control().invalid" />
+        [class.sc-input-invalid]="control().touched && control().invalid"
+      />
 
       <button
         type="button"
         class="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sc text-ink-subtle hover:text-ink"
         (click)="isVisible.set(!isVisible())"
         [attr.aria-label]="isVisible() ? 'Hide password' : 'Show password'"
-        [attr.aria-pressed]="isVisible()">
-        <sc-icon [name]="isVisible() ? 'visibility_off' : 'visibility'" size="sm" />
+        [attr.aria-pressed]="isVisible()"
+      >
+        <sc-icon
+          [name]="isVisible() ? 'visibility_off' : 'visibility'"
+          size="sm"
+        />
       </button>
     </div>
 
     @if (control().touched && control().errors?.['required']) {
-      <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a password.</p>
+      <p class="sc-field-error">
+        <sc-icon name="error" size="xs" /> Enter a password.
+      </p>
     } @else if (control().touched && control().errors?.['minlength']) {
       <p class="sc-field-error">
-        <sc-icon name="error" size="xs" /> Use at least six characters.
+        <sc-icon name="error" size="xs" /> Use at least eight characters.
+      </p>
+    } @else if (control().touched && control().errors?.['passwordPolicy']) {
+      <p class="sc-field-error">
+        <sc-icon name="error" size="xs" /> Use at least 8 characters with
+        uppercase and lowercase letters, a number, and a non-alphanumeric
+        character.
       </p>
     } @else if (showStrength() && control().value) {
       <div class="mt-2 flex items-center gap-2">
@@ -56,9 +68,12 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
           <span
             class="sc-meter-fill transition-all"
             [style.width.%]="strength().percent"
-            [style.background-color]="strength().color"></span>
+            [style.background-color]="strength().color"
+          ></span>
         </span>
-        <span class="w-16 shrink-0 text-right text-xs text-ink-subtle">{{ strength().label }}</span>
+        <span class="w-16 shrink-0 text-right text-xs text-ink-subtle">{{
+          strength().label
+        }}</span>
       </div>
     }
   `,
@@ -77,11 +92,11 @@ export class PasswordFieldComponent {
     const value = this.control().value ?? '';
 
     let score = 0;
-    if (value.length >= 6) score++;
+    if (value.length >= 8) score++;
     if (value.length >= 10) score++;
-    if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
-    if (/\d/.test(value)) score++;
-    if (/[^A-Za-z0-9]/.test(value)) score++;
+    if (/\p{Lu}/u.test(value) && /\p{Ll}/u.test(value)) score++;
+    if (/\p{Nd}/u.test(value)) score++;
+    if (/[^\p{L}\p{Nd}]/u.test(value)) score++;
 
     const bands = [
       { percent: 20, label: 'Very weak', color: '#dc2626' },
