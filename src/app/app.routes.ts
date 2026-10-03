@@ -170,6 +170,13 @@ export const routes: Routes = [
   // =========================================================================
   // 4. MASTER FALLBACK SYSTEM WILDCARDS
   // =========================================================================
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/landing/landing.component').then(
+        (m) => m.LandingComponent,
+      ),
+  },
   { path: '**', redirectTo: 'login' },
 ];
