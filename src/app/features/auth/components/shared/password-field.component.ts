@@ -27,7 +27,7 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
       <input
         [id]="inputId()"
         [type]="isVisible() ? 'text' : 'password'"
-        class="sc-input pr-10"
+        class="sc-input sc-input-lg pr-11 text-ellipsis"
         [formControl]="control()"
         [attr.placeholder]="placeholder()"
         [attr.autocomplete]="autocomplete()"
@@ -36,7 +36,7 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 
       <button
         type="button"
-        class="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sc text-ink-subtle hover:text-ink"
+        class="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sc text-ink-subtle transition-colors duration-sc-fast ease-sc hover:bg-surface-sunken hover:text-ink"
         (click)="isVisible.set(!isVisible())"
         [attr.aria-label]="isVisible() ? 'Hide password' : 'Show password'"
         [attr.aria-pressed]="isVisible()"
@@ -66,14 +66,15 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
       <div class="mt-2 flex items-center gap-2">
         <span class="sc-meter" aria-hidden="true">
           <span
-            class="sc-meter-fill transition-all"
+            class="sc-meter-fill"
             [style.width.%]="strength().percent"
             [style.background-color]="strength().color"
           ></span>
         </span>
-        <span class="w-16 shrink-0 text-right text-xs text-ink-subtle">{{
-          strength().label
-        }}</span>
+        <span
+          class="w-16 shrink-0 text-right text-xs font-medium text-ink-muted"
+          >{{ strength().label }}</span
+        >
       </div>
     }
   `,
@@ -99,11 +100,11 @@ export class PasswordFieldComponent {
     if (/[^\p{L}\p{Nd}]/u.test(value)) score++;
 
     const bands = [
-      { percent: 20, label: 'Very weak', color: '#dc2626' },
-      { percent: 40, label: 'Weak', color: '#dc2626' },
-      { percent: 60, label: 'Fair', color: '#d97706' },
-      { percent: 80, label: 'Good', color: '#059669' },
-      { percent: 100, label: 'Strong', color: '#059669' },
+      { percent: 20, label: 'Very weak', color: 'var(--sc-danger-600)' },
+      { percent: 40, label: 'Weak', color: 'var(--sc-danger-600)' },
+      { percent: 60, label: 'Fair', color: 'var(--sc-warn-600)' },
+      { percent: 80, label: 'Good', color: 'var(--sc-success-600)' },
+      { percent: 100, label: 'Strong', color: 'var(--sc-success-600)' },
     ];
 
     return bands[Math.min(Math.max(score - 1, 0), bands.length - 1)];

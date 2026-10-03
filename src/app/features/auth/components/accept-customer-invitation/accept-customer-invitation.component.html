@@ -2,7 +2,7 @@
         ? 'You already have a ServiCore account, so there is no new password to set.'
         : 'Set a password to track your support tickets and reply to your service team.'">
 
-    <div class="sc-card p-6">
+    <div class="sc-card p-6 shadow-sc-md sm:p-7">
 
         @if (successMessage()) {
         <sc-alert tone="success" title="You're all set" class="mb-5 block">{{ successMessage() }}</sc-alert>
@@ -13,15 +13,27 @@
         }
 
         @if (!token) {
-        <p class="text-[13px] leading-relaxed text-ink-muted">
-            Open the link exactly as it appears in your invitation email — the token it carries is what identifies
-            your invitation.
-        </p>
+        <div class="flex items-start gap-3">
+            <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-warn">
+                <sc-icon name="link_off" size="sm" />
+            </span>
+            <p class="pt-1 text-[13px] leading-relaxed text-ink-muted">
+                Open the link exactly as it appears in your invitation email — the token it carries is what identifies
+                your invitation.
+            </p>
+        </div>
         } @else if (isLoadingPreview()) {
-        <p class="flex items-center gap-2 text-[13px] text-ink-muted">
-            <sc-icon name="progress_activity" size="sm" class="sc-spin" />
-            Checking your invitation
-        </p>
+        <div role="status">
+            <p class="flex items-center gap-2 text-[13px] text-ink-muted">
+                <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                Checking your invitation
+            </p>
+            <!-- Placeholder shaped like the form that replaces it, so the card does not jump. -->
+            <div class="mt-5 flex flex-col gap-4" aria-hidden="true">
+                <div class="sc-skeleton h-10 rounded-sc"></div>
+                <div class="sc-skeleton h-11 rounded-sc"></div>
+            </div>
+        </div>
         } @else if (!successMessage() && !inviteUnusable()) {
         <form [formGroup]="setupForm" (ngSubmit)="onCompleteCustomerOnboarding()" class="flex flex-col gap-4">
 
@@ -38,7 +50,8 @@
                 autocomplete="new-password" [showStrength]="true" />
             }
 
-            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="setupForm.invalid || isProcessing()">
+            <button type="submit" class="sc-btn sc-btn-primary sc-btn-lg mt-1 w-full"
+                [disabled]="setupForm.invalid || isProcessing()">
                 @if (isProcessing()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 {{ userExists() ? 'Accepting invitation' : 'Activating your account' }}
@@ -53,6 +66,6 @@
 
     <p class="mt-6 text-center text-[13px] text-ink-muted">
         Already activated?
-        <a routerLink="/login" class="font-semibold text-brand-700 hover:underline">Sign in</a>
+        <a routerLink="/login" class="font-semibold text-brand-700 underline-offset-2 hover:underline">Sign in</a>
     </p>
 </sc-auth-layout>

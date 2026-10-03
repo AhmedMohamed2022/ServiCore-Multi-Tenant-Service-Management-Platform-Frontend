@@ -1,6 +1,5 @@
 <sc-auth-layout heading="Choose an organization"
-    subheading="Your account has access to more than one. Pick the one you want to work in."
-    [wide]="true">
+    subheading="Your account has access to more than one. Pick the one you want to work in." [wide]="true">
 
     @if (errorMessage()) {
     <sc-alert tone="error" title="Couldn't switch organization" class="mb-5 block">{{ errorMessage() }}</sc-alert>
@@ -12,23 +11,26 @@
             description="This account isn't a member of any organization yet. Ask an owner to invite you, then sign in again." />
     </div>
     } @else {
-    <ul class="flex flex-col gap-2.5">
+    <ul class="sc-enter sc-enter-2 flex flex-col gap-2.5">
         @for (organization of organizations(); track organization.id) {
         <li>
-            <button type="button" class="sc-org-card" (click)="selectOrganization(organization)"
+            <button type="button" class="sc-org-card group" (click)="selectOrganization(organization)"
                 [disabled]="isSelecting()">
                 <sc-avatar [name]="organization.name" size="md" />
 
                 <span class="min-w-0 flex-1 text-left">
                     <span class="block truncate text-[14px] font-semibold text-ink">{{ organization.name }}</span>
-                    <span class="mt-0.5 block text-xs text-ink-subtle">Workspace</span>
+                    <span class="mt-0.5 block text-xs text-ink-muted">Workspace</span>
                 </span>
 
-                @if (pendingId() === organization.id) {
-                <sc-icon name="progress_activity" size="sm" class="sc-spin text-brand-600" />
-                } @else {
-                <sc-icon name="arrow_forward" size="sm" class="text-ink-subtle" />
-                }
+                <span
+                    class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-neutral transition-colors duration-sc-fast ease-sc group-hover:border-brand-200 group-hover:bg-surface group-hover:text-brand-600 group-focus-visible:border-brand-200 group-focus-visible:bg-surface group-focus-visible:text-brand-600">
+                    @if (pendingId() === organization.id) {
+                    <sc-icon name="progress_activity" size="sm" class="sc-spin text-brand-600" />
+                    } @else {
+                    <sc-icon name="arrow_forward" size="sm" />
+                    }
+                </span>
             </button>
         </li>
         }

@@ -1,5 +1,5 @@
 <sc-auth-layout heading="Sign in" subheading="Access your organization's service desk.">
-    <form class="sc-card p-6" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <form class="sc-card p-6 shadow-sc-md sm:p-7" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
 
         @if (errorMessage()) {
         <sc-alert tone="error" title="Sign-in failed" class="mb-5 block">{{ errorMessage() }}</sc-alert>
@@ -8,7 +8,7 @@
         <div class="flex flex-col gap-4">
             <div>
                 <label for="loginEmail" class="sc-label">Email</label>
-                <input id="loginEmail" type="email" class="sc-input" formControlName="email"
+                <input id="loginEmail" type="email" class="sc-input sc-input-lg" formControlName="email"
                     placeholder="you@company.com" autocomplete="username" autofocus
                     [class.sc-input-invalid]="loginForm.controls.email.touched && loginForm.controls.email.invalid" />
                 @if (loginForm.controls.email.touched && loginForm.controls.email.errors?.['required']) {
@@ -21,7 +21,7 @@
             <sc-password-field [control]="loginForm.controls.password" inputId="loginPassword"
                 placeholder="Your password" autocomplete="current-password" />
 
-            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="isLoading()">
+            <button type="submit" class="sc-btn sc-btn-primary sc-btn-lg mt-1 w-full" [disabled]="isLoading()">
                 @if (isLoading()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 Signing in
@@ -35,7 +35,8 @@
 
     <p class="mt-6 text-center text-[13px] text-ink-muted">
         Setting up a new organization?
-        <a routerLink="/register" class="font-semibold text-brand-700 hover:underline">Create an account</a>
+        <a routerLink="/register" class="font-semibold text-brand-700 underline-offset-2 hover:underline">Create an
+            account</a>
     </p>
 
     <p class="mt-2 text-center text-xs leading-relaxed text-ink-subtle">

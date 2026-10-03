@@ -1,7 +1,7 @@
 <sc-auth-layout heading="Create your organization"
     subheading="You'll be the owner, with full access to teams, customers and reporting.">
 
-    <form class="sc-card p-6" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+    <form class="sc-card p-6 shadow-sc-md sm:p-7" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
 
         @if (successMessage()) {
         <sc-alert tone="success" title="Organization created" class="mb-5 block">
@@ -18,7 +18,7 @@
         <div class="flex flex-col gap-4">
             <div>
                 <label for="orgName" class="sc-label">Organization name</label>
-                <input id="orgName" type="text" class="sc-input" formControlName="organizationName"
+                <input id="orgName" type="text" class="sc-input sc-input-lg" formControlName="organizationName"
                     placeholder="Contoso Support" autocomplete="organization"
                     [class.sc-input-invalid]="registerForm.controls.organizationName.touched && registerForm.controls.organizationName.invalid" />
                 @if (registerForm.controls.organizationName.touched && registerForm.controls.organizationName.invalid) {
@@ -32,8 +32,8 @@
 
             <div>
                 <label for="ownerName" class="sc-label">Your name</label>
-                <input id="ownerName" type="text" class="sc-input" formControlName="name" placeholder="Jane Smith"
-                    autocomplete="name"
+                <input id="ownerName" type="text" class="sc-input sc-input-lg" formControlName="name"
+                    placeholder="Jane Smith" autocomplete="name"
                     [class.sc-input-invalid]="registerForm.controls.name.touched && registerForm.controls.name.invalid" />
                 @if (registerForm.controls.name.touched && registerForm.controls.name.invalid) {
                 <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter your name.</p>
@@ -42,7 +42,7 @@
 
             <div>
                 <label for="ownerEmail" class="sc-label">Work email</label>
-                <input id="ownerEmail" type="email" class="sc-input" formControlName="email"
+                <input id="ownerEmail" type="email" class="sc-input sc-input-lg" formControlName="email"
                     placeholder="you@company.com" autocomplete="username"
                     [class.sc-input-invalid]="registerForm.controls.email.touched && registerForm.controls.email.invalid" />
                 @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
@@ -56,7 +56,8 @@
                 placeholder="8+ chars, mixed case, number, non-alphanumeric" autocomplete="new-password"
                 [showStrength]="true" />
 
-            <button type="submit" class="sc-btn sc-btn-primary w-full" [disabled]="isLoading() || !!successMessage()">
+            <button type="submit" class="sc-btn sc-btn-primary sc-btn-lg mt-1 w-full"
+                [disabled]="isLoading() || !!successMessage()">
                 @if (isLoading()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 Creating organization
@@ -70,6 +71,6 @@
 
     <p class="mt-6 text-center text-[13px] text-ink-muted">
         Already have an account?
-        <a routerLink="/login" class="font-semibold text-brand-700 hover:underline">Sign in</a>
+        <a routerLink="/login" class="font-semibold text-brand-700 underline-offset-2 hover:underline">Sign in</a>
     </p>
 </sc-auth-layout>

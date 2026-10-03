@@ -507,7 +507,14 @@ input[type="range"] {
   .sc-textarea {
     @apply py-2 leading-relaxed;
   }
-
+  /* Taller control for pages where the form is the whole screen (sign-in,
+     registration, invitations). Sibling of sc-btn-lg. Below `sm` the text is
+     16px: iOS Safari zooms the page on focus into any field smaller than
+     that. Must stay after .sc-input/.sc-select so it wins at equal
+     specificity. */
+  .sc-input-lg {
+    @apply h-10 text-[16px] sm:text-sm;
+  }
   .sc-input-invalid,
   .sc-input[aria-invalid="true"],
   .sc-select[aria-invalid="true"],
@@ -739,18 +746,28 @@ input[type="range"] {
   /* Selectable organization / workspace card, used on the public
      organization-picker and portal-activation screens. */
   .sc-org-card {
-    @apply flex w-full items-center gap-3 rounded-sc-lg border border-line bg-surface p-3.5 text-left
-           hover:border-brand-600 hover:bg-brand-50
-           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-           focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply flex w-full items-center gap-3 rounded-sc-lg border border-line bg-surface p-3.5 text-left shadow-sc
+           disabled:cursor-not-allowed disabled:opacity-60;
     transition:
-      background-color var(--sc-dur-fast) var(--sc-ease),
-      border-color var(--sc-dur-fast) var(--sc-ease),
-      box-shadow var(--sc-dur-fast) var(--sc-ease);
+      transform var(--sc-dur) var(--sc-ease),
+      background-color var(--sc-dur) var(--sc-ease),
+      border-color var(--sc-dur) var(--sc-ease),
+      box-shadow var(--sc-dur) var(--sc-ease);
   }
 
-  .sc-org-card:hover:not(:disabled) {
-    box-shadow: var(--sc-shadow-md);
+  /* Hover lift only on real hover devices, same as sc-card-interactive. */
+  @media (hover: hover) {
+    .sc-org-card:hover:not(:disabled) {
+      transform: translateY(var(--sc-lift));
+      border-color: var(--sc-brand-200);
+      background-color: var(--sc-brand-50);
+      box-shadow: var(--sc-shadow-lift);
+    }
+  }
+
+  .sc-org-card:focus-visible {
+    border-color: var(--sc-brand-600);
+    background-color: var(--sc-brand-50);
   }
 
   .sc-kbd-link {
