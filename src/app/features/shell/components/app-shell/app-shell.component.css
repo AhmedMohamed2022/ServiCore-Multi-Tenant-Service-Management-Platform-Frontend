@@ -4,58 +4,143 @@
   height: 100dvh;
 }
 
+/* Transparent so the faint indigo/violet page glow on <body> (--sc-page-bg)
+   shows through behind the topbar and the page content. */
 .sc-shell {
   height: 100%;
-  background-color: var(--sc-surface-muted);
+  background-color: transparent;
 }
 
 /* --- Sidebar ------------------------------------------------------------ */
 
+/* Material draws the drawer from these tokens: shape (16px right corners by
+   default), divider, and the shadow used in overlay mode on small screens. */
 .sc-sidebar {
+  --mat-sidenav-container-width: var(--sc-sidebar-w);
+  --mat-sidenav-container-shape: 0;
+  --mat-sidenav-container-background-color: var(--sc-surface);
+  --mat-sidenav-container-text-color: var(--sc-text);
+  --mat-sidenav-container-divider-color: var(--sc-border);
+  --mat-sidenav-container-elevation-shadow: var(--sc-shadow-float);
+
   width: var(--sc-sidebar-w);
-  background-color: var(--sc-surface-inverse);
-  border-right: none;
+  max-width: 86vw;
+  background-image: linear-gradient(
+    180deg,
+    var(--sc-brand-tint),
+    transparent 220px
+  );
 }
 
+/* Group labels. The collapsible one (Reports) is a real button, so it needs
+   an explicit reset, a hover state and a caret chip to read as interactive. */
+.sc-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sc-text-subtle);
+}
+
+.sc-nav-group-btn {
+  cursor: pointer;
+  border-radius: var(--sc-radius-sm);
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.sc-nav-group-btn:hover {
+  background-color: var(--sc-surface-sunken);
+  color: var(--sc-text);
+}
+
+.sc-nav-group-caret {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-surface-sunken);
+  color: var(--sc-text-subtle);
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.sc-nav-group-btn:hover .sc-nav-group-caret {
+  background-color: var(--sc-brand-50);
+  color: var(--sc-brand-600);
+}
+
+/* Nav items: a neutral icon chip that turns into the solid brand-gradient
+   chip (the logo mark's language) when the route is active. */
 .sc-nav-link {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
-  border-radius: var(--sc-radius);
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--sc-radius-md);
   font-size: 13px;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--sc-text-muted);
   transition:
-    background-color 150ms ease,
-    color 150ms ease;
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.sc-nav-ico {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  background-color: var(--sc-surface);
+  color: var(--sc-text-subtle);
+  box-shadow: var(--sc-shadow);
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease),
+    box-shadow var(--sc-dur-fast) var(--sc-ease);
 }
 
 .sc-nav-link:hover {
-  background-color: rgb(255 255 255 / 0.06);
-  color: #ffffff;
+  background-color: var(--sc-surface-sunken);
+  color: var(--sc-text);
+}
+
+.sc-nav-link:hover .sc-nav-ico {
+  border-color: var(--sc-brand-200);
+  color: var(--sc-brand-600);
 }
 
 .sc-nav-link.sc-nav-active {
-  background-color: var(--sc-brand-600);
-  color: #ffffff;
+  background-color: var(--sc-brand-50);
+  border-color: var(--sc-brand-100);
+  color: var(--sc-brand-700);
   font-weight: 600;
 }
 
-/* Active state is not carried by colour alone (§18/§19) — the marker rail is
-   still visible in greyscale and to colour-blind users. */
-.sc-nav-link.sc-nav-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 3px;
-  height: 20px;
-  border-radius: 0 3px 3px 0;
-  background-color: #ffffff;
-}
-
-.sc-nav-link {
-  position: relative;
+/* Active state is not carried by colour alone: the solid gradient chip, the
+   tinted row and the heavier weight all survive greyscale, and the link
+   exposes aria-current="page" for screen readers. */
+.sc-nav-link.sc-nav-active .sc-nav-ico {
+  border-color: transparent;
+  background-image: var(--sc-grad-brand);
+  color: var(--sc-on-brand);
+  box-shadow: var(--sc-shadow-brand);
 }
 
 .sc-account-btn {
@@ -64,15 +149,18 @@
   align-items: center;
   gap: 0.625rem;
   padding: 0.5rem;
-  border-radius: var(--sc-radius);
+  border: 1px solid transparent;
+  border-radius: var(--sc-radius-md);
   background: transparent;
-  border: none;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease);
 }
 
 .sc-account-btn:hover {
-  background-color: rgb(255 255 255 / 0.06);
+  background-color: var(--sc-surface-muted);
+  border-color: var(--sc-border);
 }
 
 /* --- Top bar and content ------------------------------------------------ */
@@ -86,8 +174,8 @@
   gap: 0.5rem;
   height: var(--sc-topbar-h);
   padding: 0 0.75rem;
-  background-color: rgb(255 255 255 / 0.85);
-  backdrop-filter: blur(8px);
+  background-color: var(--sc-surface-glass);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--sc-border);
 }
 
@@ -103,7 +191,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sc-nav-group-btn,
+  .sc-nav-group-caret,
   .sc-nav-link,
+  .sc-nav-ico,
   .sc-account-btn {
     transition: none;
   }

@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  output,
+} from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 
 /**
@@ -13,17 +18,26 @@ import { IconComponent } from '../icon/icon.component';
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col items-center justify-center text-center px-6 py-14">
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-full bg-surface-sunken text-ink-subtle mb-3">
+    <div
+      class="sc-enter flex flex-col items-center justify-center text-center px-6 py-14"
+    >
+      <div class="sc-icon-chip h-12 w-12 rounded-sc-lg shadow-sc mb-4">
         <sc-icon [name]="icon()" />
       </div>
-      <p class="text-sm font-semibold text-ink">{{ title() }}</p>
+      <p class="text-sm font-semibold tracking-[-0.011em] text-ink">
+        {{ title() }}
+      </p>
       @if (description()) {
-        <p class="mt-1 text-[13px] text-ink-subtle max-w-sm">{{ description() }}</p>
+        <p class="mt-1 text-[13px] text-ink-subtle max-w-sm">
+          {{ description() }}
+        </p>
       }
       @if (actionLabel()) {
-        <button type="button" class="sc-btn sc-btn-primary mt-4" (click)="action.emit()">
+        <button
+          type="button"
+          class="sc-btn sc-btn-primary mt-4"
+          (click)="action.emit()"
+        >
           {{ actionLabel() }}
         </button>
       }
@@ -49,31 +63,11 @@ export class EmptyStateComponent {
         <div
           class="sc-skeleton mb-2.5 h-[38px] rounded-sc"
           [style.opacity]="1 - $index * 0.12"
-          aria-hidden="true"></div>
+          aria-hidden="true"
+        ></div>
       }
     </div>
   `,
-  styles: [
-    `
-      .sc-skeleton {
-        background: linear-gradient(
-          90deg,
-          var(--sc-surface-sunken) 25%,
-          var(--sc-surface-muted) 37%,
-          var(--sc-surface-sunken) 63%
-        );
-        background-size: 400% 100%;
-        animation: sc-shimmer 1.4s ease-in-out infinite;
-      }
-      @keyframes sc-shimmer {
-        0% { background-position: 100% 50%; }
-        100% { background-position: 0 50%; }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .sc-skeleton { animation: none; }
-      }
-    `,
-  ],
 })
 export class LoadingStateComponent {
   readonly label = input<string>('Loading');
@@ -88,9 +82,10 @@ export class LoadingStateComponent {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      class="flex items-start gap-2.5 rounded-sc border px-3.5 py-3 text-[13px]"
+      class="flex items-start gap-2.5 rounded-sc-md border px-3.5 py-3 text-[13px]"
       [class]="toneClass()"
-      [attr.role]="tone() === 'error' ? 'alert' : 'status'">
+      [attr.role]="tone() === 'error' ? 'alert' : 'status'"
+    >
       <sc-icon [name]="toneIcon()" size="sm" class="mt-px" />
       <div class="min-w-0 flex-1">
         @if (title()) {
@@ -103,7 +98,8 @@ export class LoadingStateComponent {
           type="button"
           class="sc-btn sc-btn-ghost sc-btn-sm sc-btn-icon -my-1 -mr-1.5"
           (click)="dismiss.emit()"
-          aria-label="Dismiss message">
+          aria-label="Dismiss message"
+        >
           <sc-icon name="close" size="sm" />
         </button>
       }

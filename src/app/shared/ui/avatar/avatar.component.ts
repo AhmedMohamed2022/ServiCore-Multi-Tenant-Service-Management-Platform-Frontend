@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
 
 /**
  * Initials avatar. There is no avatar image anywhere in the backend contract,
@@ -15,7 +20,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       [class]="sizeClass()"
       [style.background-color]="tint().bg"
       [style.color]="tint().fg"
-      aria-hidden="true">
+      aria-hidden="true"
+    >
       {{ initials() }}
     </span>
   `,
@@ -47,18 +53,20 @@ export class AvatarComponent {
       })[this.size()],
   );
 
+  /** Same six tints as before, now read from the --sc-tint-* tokens. */
   private static readonly PALETTE = [
-    { bg: '#e0e7ff', fg: '#4338ca' },
-    { bg: '#ccfbf1', fg: '#0f766e' },
-    { bg: '#fef3c7', fg: '#b45309' },
-    { bg: '#fce7f3', fg: '#be185d' },
-    { bg: '#dbeafe', fg: '#1d4ed8' },
-    { bg: '#dcfce7', fg: '#15803d' },
+    { bg: 'var(--sc-tint-indigo-bg)', fg: 'var(--sc-tint-indigo-fg)' },
+    { bg: 'var(--sc-tint-teal-bg)', fg: 'var(--sc-tint-teal-fg)' },
+    { bg: 'var(--sc-tint-amber-bg)', fg: 'var(--sc-tint-amber-fg)' },
+    { bg: 'var(--sc-tint-pink-bg)', fg: 'var(--sc-tint-pink-fg)' },
+    { bg: 'var(--sc-tint-blue-bg)', fg: 'var(--sc-tint-blue-fg)' },
+    { bg: 'var(--sc-tint-green-bg)', fg: 'var(--sc-tint-green-fg)' },
   ];
 
   protected readonly tint = computed(() => {
     const key = (this.name() ?? '').trim().toLowerCase();
-    if (!key) return { bg: 'var(--sc-surface-sunken)', fg: 'var(--sc-text-subtle)' };
+    if (!key)
+      return { bg: 'var(--sc-surface-sunken)', fg: 'var(--sc-text-subtle)' };
 
     let hash = 0;
     for (let i = 0; i < key.length; i++) {

@@ -13,8 +13,11 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
   template: `
     <button
       type="button"
-      class="group flex w-full items-center gap-2.5 rounded-sc px-2 py-2 text-left
-             transition-colors hover:bg-white/5"
+      class="group flex w-full items-center gap-2.5 rounded-sc-md border border-line bg-surface-muted
+             px-2.5 py-2 text-left shadow-sc
+             transition-[background-color,border-color,box-shadow] duration-sc-fast ease-sc
+             hover:border-brand-200 hover:bg-surface hover:shadow-sc-md
+             disabled:cursor-not-allowed disabled:opacity-60"
       [matMenuTriggerFor]="orgMenu"
       [disabled]="organizations().length === 0"
       aria-label="Switch organization"
@@ -22,10 +25,10 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
       <sc-avatar [name]="activeOrganizationName()" size="sm" />
 
       <span class="min-w-0 flex-1">
-        <span class="block truncate text-[13px] font-semibold text-white">
+        <span class="block truncate text-[13px] font-semibold text-ink">
           {{ activeOrganizationName() || 'No organization' }}
         </span>
-        <span class="block text-2xs text-slate-400">
+        <span class="block text-2xs text-ink-subtle">
           @if (organizations().length > 1) {
             {{ organizations().length }} organizations
           } @else {
@@ -35,13 +38,17 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
       </span>
 
       @if (organizations().length > 1) {
-        <sc-icon name="unfold_more" size="sm" class="text-slate-400" />
+        <sc-icon
+          name="unfold_more"
+          size="sm"
+          class="text-ink-subtle transition-colors duration-sc-fast ease-sc group-hover:text-brand-600"
+        />
       }
     </button>
 
     <mat-menu #orgMenu="matMenu" class="sc-menu">
       <div
-        class="px-3 pb-1.5 pt-2 text-2xs font-semibold uppercase tracking-wider text-ink-subtle"
+        class="px-3 pb-1.5 pt-2 text-2xs font-semibold uppercase tracking-[0.1em] text-ink-subtle"
       >
         Switch organization
       </div>

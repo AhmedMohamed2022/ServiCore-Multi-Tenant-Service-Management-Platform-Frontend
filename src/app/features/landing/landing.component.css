@@ -1,4 +1,5 @@
-/* // Landing page styles. Colours, radii and shadows come from the global --sc-* tokens. */
+/* Landing page styles. Colours, radii, shadows and motion come from the global --sc-* tokens;
+   shared pieces (pill, eyebrow, icon chip, gradient text, large button, card) are sc-* primitives. */
 :host {
   display: block;
 }
@@ -13,10 +14,6 @@
   margin: 0 auto;
   padding: 0 24px;
 }
-.lp a {
-  text-decoration: none;
-  color: inherit;
-}
 .lp small {
   color: var(--sc-text-subtle);
   font-size: 0.6875rem;
@@ -28,7 +25,7 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgb(255 255 255 / 0.8);
+  background: var(--sc-surface-glass);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--sc-border);
 }
@@ -51,8 +48,8 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--sc-brand-500), var(--sc-brand-700));
+  color: var(--sc-on-brand);
+  background: var(--sc-grad-brand);
 }
 .lp-links {
   display: flex;
@@ -79,7 +76,6 @@
       56px,
     var(--sc-surface-muted);
   mask-image: linear-gradient(#000 70%, transparent);
-  -webkit-mask-image: linear-gradient(#000 70%, transparent);
 }
 .lp-hero::after {
   content: "";
@@ -111,31 +107,12 @@
   height: 360px;
   top: 40px;
   right: 6%;
-  background: #ddd6fe;
+  background: var(--sc-violet-200);
 }
 .lp-hero-inner {
   position: relative;
   z-index: 1;
   animation: lp-rise 0.7s ease both;
-}
-.lp-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  border: 1px solid var(--sc-brand-200);
-  background: var(--sc-brand-50);
-  color: var(--sc-brand-700);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.lp-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--sc-brand-500);
-  box-shadow: 0 0 0 3px var(--sc-focus-ring);
 }
 .lp-title {
   max-width: 800px;
@@ -144,12 +121,6 @@
   line-height: 1.08;
   letter-spacing: -0.035em;
   font-weight: 700;
-}
-.lp-grad {
-  background: linear-gradient(90deg, var(--sc-brand-600), #8b5cf6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 .lp-lead {
   max-width: 600px;
@@ -164,12 +135,6 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 32px;
-}
-.lp-btn-lg {
-  height: 44px;
-  padding: 0 22px;
-  font-size: 15px;
-  gap: 8px;
 }
 .lp-note {
   margin-top: 14px;
@@ -187,9 +152,7 @@
   border: 1px solid var(--sc-border-strong);
   border-radius: 14px 14px 0 0;
   border-bottom: 0;
-  box-shadow:
-    0 30px 80px -20px rgb(49 46 129 / 0.3),
-    var(--sc-shadow-pop);
+  box-shadow: var(--sc-shadow-float);
 }
 .lp-chrome {
   display: flex;
@@ -331,13 +294,6 @@
   padding-top: 88px;
   padding-bottom: 8px;
 }
-.lp-eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--sc-brand-600);
-}
 .lp-h2 {
   margin-top: 8px;
   font-size: clamp(1.6rem, 3vw, 2.25rem);
@@ -349,17 +305,6 @@
   max-width: 560px;
   color: var(--sc-text-muted);
 }
-.lp-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  color: var(--sc-brand-600);
-  background: var(--sc-brand-50);
-  border: 1px solid var(--sc-brand-100);
-}
-
 /* // Bento features */
 .lp-bento {
   display: grid;
@@ -369,13 +314,6 @@
 }
 .lp-card {
   padding: 24px;
-  background: var(--sc-surface);
-  border: 1px solid var(--sc-border);
-  border-radius: var(--sc-radius-lg);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s,
-    border-color 0.2s;
   h3 {
     margin: 16px 0 6px;
     font-size: 15px;
@@ -388,16 +326,7 @@
   }
   &.wide {
     grid-column: span 2;
-    background: linear-gradient(
-      135deg,
-      var(--sc-brand-50),
-      var(--sc-surface) 60%
-    );
-  }
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--sc-shadow-pop);
-    border-color: var(--sc-brand-200);
+    background-image: var(--sc-grad-tint);
   }
 }
 
@@ -419,9 +348,6 @@
 }
 .lp-role {
   padding: 24px;
-  background: var(--sc-surface);
-  border: 1px solid var(--sc-border);
-  border-radius: var(--sc-radius-lg);
   box-shadow: var(--sc-shadow-md);
   h3 {
     font-size: 16px;
@@ -468,7 +394,7 @@
     font-weight: 500;
     text-align: center;
     color: var(--sc-text-muted);
-    animation: lp-step-in 0.45s ease both;
+    animation: sc-rise 0.45s ease both;
     &:nth-child(2) {
       animation-delay: 70ms;
     }
@@ -520,10 +446,14 @@
   color: var(--sc-text-inverse);
   border-radius: 20px;
   background:
-    radial-gradient(ellipse at 20% 0, rgb(99 102 241 / 0.55), transparent 55%),
+    radial-gradient(
+      ellipse at 20% 0,
+      color-mix(in srgb, var(--sc-brand-500) 55%, transparent),
+      transparent 55%
+    ),
     radial-gradient(
       ellipse at 90% 100%,
-      rgb(139 92 246 / 0.4),
+      color-mix(in srgb, var(--sc-violet-500) 40%, transparent),
       transparent 50%
     ),
     var(--sc-surface-inverse);
@@ -538,7 +468,7 @@
   }
 }
 .lp-final .lp-btn-light {
-  background: #fff;
+  background: var(--sc-on-brand);
   color: var(--sc-brand-900);
   border: 0;
   font-weight: 600;
@@ -583,23 +513,12 @@
     transform: translateY(-8px);
   }
 }
-@keyframes lp-step-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 
 @media (max-width: 860px) {
   .lp-links {
     display: none;
   }
-  .lp-stats,
-  .lp-roles {
+  .lp-stats {
     grid-template-columns: 1fr 1fr;
   }
   .lp-roles {
@@ -639,8 +558,5 @@
   .lp-toast,
   .lp-steps li {
     animation: none;
-  }
-  .lp-card {
-    transition: none;
   }
 }

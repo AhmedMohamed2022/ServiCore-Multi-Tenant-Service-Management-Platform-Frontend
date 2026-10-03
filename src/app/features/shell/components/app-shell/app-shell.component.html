@@ -13,43 +13,44 @@
 
         <div class="flex h-full flex-col">
             <!-- Brand -->
-            <div class="flex items-center gap-2.5 px-4 py-4">
-                <img src="logo/logo-mark.svg" alt="" class="h-8 w-8" width="32" height="32" />
-                <span class="text-[15px] font-bold tracking-tight text-white">ServiCore</span>
+            <div class="flex items-center gap-2.5 px-4 pb-3 pt-4">
+                <img src="logo/logo-mark.svg" alt="" class="h-8 w-8 rounded-[9px] shadow-sc" width="32" height="32" />
+                <span class="text-[15px] font-bold tracking-[-0.02em] text-ink">ServiCore</span>
             </div>
 
             <!-- Active organization -->
-            <div class="px-2 pb-3">
+            <div class="px-3 pb-3">
                 <app-tenant-switcher />
             </div>
 
-            <div class="mx-4 h-px bg-white/10"></div>
+            <div class="mx-4 h-px bg-line"></div>
 
             <!-- Navigation -->
-            <nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
+            <nav class="flex-1 overflow-y-auto px-3 py-3" aria-label="Main navigation">
                 @for (group of visibleGroups(); track group.id) {
-                <div class="mb-1">
+                <div class="mb-3">
                     @if (group.collapsible) {
-                    <button type="button"
-                        class="flex w-full items-center gap-1 rounded px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-slate-200"
+                    <button type="button" class="sc-nav-group sc-nav-group-btn"
                         [attr.aria-expanded]="!isCollapsed(group.id)" (click)="toggleGroup(group.id)">
                         <span class="flex-1 text-left">{{ group.label }}</span>
-                        <sc-icon [name]="isCollapsed(group.id) ? 'expand_more' : 'expand_less'" size="xs" />
+                        <span class="sc-nav-group-caret" aria-hidden="true">
+                            <sc-icon [name]="isCollapsed(group.id) ? 'expand_more' : 'expand_less'" size="xs" />
+                        </span>
                     </button>
                     } @else {
-                    <p class="px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-400">
-                        {{ group.label }}
-                    </p>
+                    <p class="sc-nav-group">{{ group.label }}</p>
                     }
 
                     @if (!group.collapsible || !isCollapsed(group.id)) {
-                    <ul class="mt-0.5 space-y-0.5">
+                    <ul class="mt-1 space-y-0.5">
                         @for (item of group.items; track item.link) {
                         <li>
-                            <a [routerLink]="item.link" routerLinkActive="sc-nav-active"
+                            <a [routerLink]="item.link" routerLinkActive="sc-nav-active" ariaCurrentWhenActive="page"
                                 [routerLinkActiveOptions]="{ exact: !!item.exact }" (click)="onNavigate()"
                                 class="sc-nav-link">
-                                <sc-icon [name]="item.icon" size="sm" />
+                                <span class="sc-nav-ico" aria-hidden="true">
+                                    <sc-icon [name]="item.icon" size="sm" />
+                                </span>
                                 <span class="truncate">{{ item.label }}</span>
                             </a>
                         </li>
@@ -61,17 +62,17 @@
             </nav>
 
             <!-- Account -->
-            <div class="border-t border-white/10 p-2">
+            <div class="border-t border-line p-2">
                 <button type="button" class="sc-account-btn" [matMenuTriggerFor]="accountMenu"
                     aria-label="Account menu">
                     <sc-avatar [name]="userEmail()" size="sm" />
                     <span class="min-w-0 flex-1 text-left">
-                        <span class="block truncate text-[13px] font-medium text-white">
+                        <span class="block truncate text-[13px] font-semibold text-ink">
                             {{ userEmail() || 'Signed in' }}
                         </span>
-                        <span class="block text-2xs text-slate-400">Staff account</span>
+                        <span class="block text-2xs text-ink-subtle">Staff account</span>
                     </span>
-                    <sc-icon name="more_vert" size="sm" class="text-slate-400" />
+                    <sc-icon name="more_vert" size="sm" class="text-ink-subtle" />
                 </button>
             </div>
         </div>
@@ -90,7 +91,10 @@
             }
 
             <div class="min-w-0 flex-1">
-                <span class="text-[13px] font-medium text-ink-muted">Workspace</span>
+                <span class="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-muted">
+                    <span class="sc-pill-dot" aria-hidden="true"></span>
+                    Workspace
+                </span>
             </div>
 
             <div class="flex items-center gap-1">
@@ -117,12 +121,18 @@
 
 <!-- Shared by the sidebar footer and the top bar, so there is exactly one
      account menu definition. -->
-<mat-menu #accountMenu="matMenu" xPosition="before">
-    <div class="border-b border-line px-3.5 py-2.5">
-        <p class="truncate text-[13px] font-semibold text-ink">{{ userEmail() }}</p>
-        @if (userId()) {
-        <p class="mt-0.5 font-mono text-2xs text-ink-subtle">{{ userId().substring(0, 8) }}</p>
-        }
+<mat-menu #accountMenu="matMenu" xPosition="before" class="sc-menu">
+    <div class="flex items-center gap-3 border-b border-line px-3.5 py-3">
+        <sc-avatar [name]="userEmail()" size="md" />
+        <div class="min-w-0">
+            <p class="truncate text-[13px] font-semibold text-ink">{{ userEmail() }}</p>
+            @if (userId()) {
+            <p
+                class="mt-1 inline-flex rounded-sc-sm bg-surface-sunken px-1.5 py-0.5 font-mono text-2xs text-ink-subtle">
+                {{ userId().substring(0, 8) }}
+            </p>
+            }
+        </div>
     </div>
     <button type="button" mat-menu-item (click)="onLogoutClick()">
         <span class="flex items-center gap-2.5 text-[13px] text-danger-700">

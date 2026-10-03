@@ -22,23 +22,35 @@ export interface Breadcrumb {
   imports: [RouterLink, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-5">
+    <header class="sc-enter mb-5">
       @if (breadcrumbs().length) {
-        <nav aria-label="Breadcrumb" class="mb-2">
-          <ol class="flex items-center gap-1.5 text-xs text-ink-subtle">
+        <nav aria-label="Breadcrumb" class="mb-2.5">
+          <ol
+            class="flex flex-wrap items-center gap-1.5 text-xs text-ink-subtle"
+          >
             @for (crumb of breadcrumbs(); track crumb.label; let last = $last) {
               <li class="flex items-center gap-1.5">
                 @if (crumb.link && !last) {
-                  <a [routerLink]="crumb.link" class="hover:text-ink-muted hover:underline underline-offset-2">
+                  <a
+                    [routerLink]="crumb.link"
+                    class="rounded-sc-sm font-medium transition-colors duration-sc-fast ease-sc hover:text-brand-600 hover:underline underline-offset-2"
+                  >
                     {{ crumb.label }}
                   </a>
                 } @else {
-                  <span [attr.aria-current]="last ? 'page' : null" class="text-ink-muted font-medium">
+                  <span
+                    [attr.aria-current]="last ? 'page' : null"
+                    class="font-semibold text-ink-muted"
+                  >
                     {{ crumb.label }}
                   </span>
                 }
                 @if (!last) {
-                  <sc-icon name="chevron_right" size="xs" class="text-ink-subtle" />
+                  <sc-icon
+                    name="chevron_right"
+                    size="xs"
+                    class="text-line-strong"
+                  />
                 }
               </li>
             }
@@ -48,13 +60,21 @@ export interface Breadcrumb {
 
       <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div class="min-w-0">
-          <h1 class="text-xl font-semibold text-ink truncate">{{ title() }}</h1>
+          <h1
+            class="truncate text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink"
+          >
+            {{ title() }}
+          </h1>
           @if (description()) {
-            <p class="mt-1 text-[13px] text-ink-subtle max-w-2xl">{{ description() }}</p>
+            <p
+              class="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-ink-muted"
+            >
+              {{ description() }}
+            </p>
           }
         </div>
 
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex flex-wrap items-center gap-2">
           <ng-content select="[slot=actions]" />
         </div>
       </div>

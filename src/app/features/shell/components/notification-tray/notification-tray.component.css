@@ -14,14 +14,30 @@
   cursor: pointer;
   color: var(--sc-text-muted);
   background-color: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--sc-radius);
-  transition: background-color 150ms ease;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
 }
 
 .sc-tray-trigger:hover {
   color: var(--sc-text);
-  background-color: var(--sc-surface-muted);
+  background-color: var(--sc-surface-sunken);
+}
+
+/* With unread items the bell turns brand-tinted, so the state reads before
+   the count is even noticed. */
+.sc-tray-trigger-active {
+  color: var(--sc-brand-700);
+  background-color: var(--sc-brand-50);
+  border-color: var(--sc-brand-100);
+}
+
+.sc-tray-trigger-active:hover {
+  color: var(--sc-brand-700);
+  background-color: var(--sc-brand-100);
 }
 
 .sc-tray-trigger:focus-visible {
@@ -33,18 +49,19 @@
    work is readable without opening the tray. */
 .sc-tray-count {
   position: absolute;
-  top: 2px;
-  right: 1px;
-  min-width: 16px;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
   padding: 0 4px;
   font-size: 10px;
   font-weight: 700;
-  line-height: 16px;
+  line-height: 14px;
   text-align: center;
-  color: #ffffff;
+  color: var(--sc-on-brand);
   background-color: var(--sc-danger-600);
   border: 2px solid var(--sc-surface);
   border-radius: 999px;
+  box-shadow: var(--sc-shadow);
 }
 
 /* --- Panel -------------------------------------------------------------- */
@@ -66,19 +83,26 @@
   z-index: 1;
   padding: 0.5rem 1rem 0.375rem;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--sc-text-subtle);
-  background-color: var(--sc-surface);
+  background-color: var(--sc-surface-muted);
+  border-bottom: 1px solid var(--sc-border);
 }
 
 .sc-tray-item {
+  position: relative;
   display: flex;
   gap: 0.625rem;
   padding: 0.75rem 1rem;
-  border-left: 3px solid transparent;
-  transition: background-color 150ms ease;
+  border-bottom: 1px solid var(--sc-border);
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+/* No trailing hairline under the last row; the panel's own edge closes it. */
+.sc-tray-list > div:last-child li:last-child .sc-tray-item {
+  border-bottom: 0;
 }
 
 .sc-tray-item-linked {
@@ -94,17 +118,35 @@
   outline-offset: -2px;
 }
 
-/* Unread state is carried by the rail, the background tint and the explicit
-   dot button together — never by colour alone. */
+/* Unread state is carried by the gradient rail, the background tint and the
+   explicit dot button together, never by colour alone. */
+.sc-tray-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-image: var(--sc-grad-brand);
+  opacity: 0;
+  transition: opacity var(--sc-dur-fast) var(--sc-ease);
+}
+
 .sc-tray-item-unread {
   background-color: var(--sc-brand-50);
-  border-left-color: var(--sc-brand-600);
+}
+
+.sc-tray-item-unread::before {
+  opacity: 1;
 }
 
 .sc-tray-item-unread:hover {
-  background-color: var(--sc-brand-50);
+  background-color: var(--sc-brand-100);
 }
 
+/* Tone classes from the notification model set the fill and ink; the border
+   is derived from the ink so every tone gets a matching 1px edge, the same
+   tinted-chip treatment as .sc-icon-chip. */
 .sc-tray-icon {
   display: inline-flex;
   align-items: center;
@@ -112,54 +154,88 @@
   width: 32px;
   height: 32px;
   flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
   border-radius: var(--sc-radius);
 }
 
+/* 24px hit area with a 10px dot drawn inside it, so the control is easy to
+   tap without making the dot itself heavy. */
 .sc-tray-dot {
+  position: relative;
   align-self: center;
-  width: 10px;
-  height: 10px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   padding: 0;
   cursor: pointer;
-  background-color: var(--sc-brand-600);
+  background: transparent;
   border: none;
   border-radius: 999px;
 }
 
-.sc-tray-dot:focus-visible {
-  outline: 2px solid var(--sc-brand-600);
-  outline-offset: 2px;
+.sc-tray-dot::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background-color: var(--sc-brand-600);
+  box-shadow: 0 0 0 3px var(--sc-focus-ring);
+  transition: transform var(--sc-dur-fast) var(--sc-ease);
 }
 
-/* --- Tabs --------------------------------------------------------------- */
+.sc-tray-dot:hover::before {
+  transform: scale(1.2);
+}
+
+.sc-tray-dot:focus-visible {
+  outline: 2px solid var(--sc-brand-600);
+  outline-offset: 0;
+}
+
+/* --- Tabs: a segmented control ------------------------------------------ */
+
+.sc-tray-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background-color: var(--sc-surface-sunken);
+  border-radius: var(--sc-radius);
+}
 
 .sc-tray-tab {
   display: inline-flex;
   align-items: center;
-  padding: 0.3125rem 0.75rem;
+  padding: 0.25rem 0.75rem;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   color: var(--sc-text-subtle);
   background-color: transparent;
   border: none;
-  border-radius: var(--sc-radius);
+  border-radius: var(--sc-radius-sm);
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease),
+    box-shadow var(--sc-dur-fast) var(--sc-ease);
 }
 
 .sc-tray-tab:hover {
   color: var(--sc-text);
-  background-color: var(--sc-surface-muted);
 }
 
-.sc-tray-tab-active {
+.sc-tray-tab-active,
+.sc-tray-tab-active:hover {
   color: var(--sc-brand-700);
-  background-color: var(--sc-brand-50);
+  background-color: var(--sc-surface);
+  box-shadow: var(--sc-shadow);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sc-tray-trigger,
-  .sc-tray-item {
+  .sc-tray-item,
+  .sc-tray-item::before,
+  .sc-tray-dot::before,
+  .sc-tray-tab {
     transition: none;
   }
 }

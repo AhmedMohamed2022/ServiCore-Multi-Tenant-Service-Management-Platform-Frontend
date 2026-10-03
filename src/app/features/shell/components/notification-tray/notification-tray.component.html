@@ -1,4 +1,5 @@
-<button type="button" class="sc-tray-trigger" [matMenuTriggerFor]="trayMenu"
+<button type="button" class="sc-tray-trigger" [class.sc-tray-trigger-active]="unreadCount() > 0"
+    [matMenuTriggerFor]="trayMenu"
     [matTooltip]="unreadCount() > 0 ? unreadCount() + ' unread notifications' : 'Notifications'"
     [attr.aria-label]="unreadCount() > 0 ? unreadCount() + ' unread notifications' : 'Notifications'">
     <sc-icon [name]="unreadCount() > 0 ? 'notifications_active' : 'notifications'" size="sm" />
@@ -12,14 +13,19 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
-            <h2 class="text-[13px] font-semibold text-ink">Notifications</h2>
+            <div class="flex min-w-0 items-center gap-2.5">
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                    <sc-icon name="notifications" size="sm" />
+                </span>
+                <h2 class="text-[13px] font-semibold tracking-[-0.011em] text-ink">Notifications</h2>
+            </div>
             <div class="flex items-center gap-1">
                 <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm" (click)="onRefresh($event)"
                     aria-label="Refresh notifications">
                     <sc-icon name="refresh" size="sm" />
                 </button>
                 @if (unreadCount() > 0) {
-                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onMarkAllRead()"
+                <button type="button" class="sc-btn sc-btn-soft sc-btn-sm" (click)="onMarkAllRead()"
                     [disabled]="isMarkingAll()">
                     Mark all read
                 </button>
@@ -29,19 +35,20 @@
 
         <!-- Filter -->
         @if (hasAny()) {
-        <div class="flex items-center gap-1 border-b border-line px-3 py-2" role="tablist"
-            aria-label="Filter notifications">
-            <button type="button" role="tab" class="sc-tray-tab" [class.sc-tray-tab-active]="filter() === 'all'"
-                [attr.aria-selected]="filter() === 'all'" (click)="setFilter('all', $event)">
-                All
-            </button>
-            <button type="button" role="tab" class="sc-tray-tab" [class.sc-tray-tab-active]="filter() === 'unread'"
-                [attr.aria-selected]="filter() === 'unread'" (click)="setFilter('unread', $event)">
-                Unread
-                @if (unreadCount() > 0) {
-                <span class="sc-badge sc-badge-primary ml-1.5">{{ unreadCount() }}</span>
-                }
-            </button>
+        <div class="border-b border-line px-3 py-2">
+            <div class="sc-tray-seg" role="tablist" aria-label="Filter notifications">
+                <button type="button" role="tab" class="sc-tray-tab" [class.sc-tray-tab-active]="filter() === 'all'"
+                    [attr.aria-selected]="filter() === 'all'" (click)="setFilter('all', $event)">
+                    All
+                </button>
+                <button type="button" role="tab" class="sc-tray-tab" [class.sc-tray-tab-active]="filter() === 'unread'"
+                    [attr.aria-selected]="filter() === 'unread'" (click)="setFilter('unread', $event)">
+                    Unread
+                    @if (unreadCount() > 0) {
+                    <span class="sc-badge sc-badge-primary ml-1.5 h-[18px] px-1.5">{{ unreadCount() }}</span>
+                    }
+                </button>
+            </div>
         </div>
         }
 
@@ -83,7 +90,7 @@
                                 <span class="mt-1.5 flex items-center gap-2">
                                     <span class="sc-badge sc-badge-neutral">{{ item.typeLabel }}</span>
                                     @if (item.ticketId) {
-                                    <span class="flex items-center gap-1 text-2xs text-ink-subtle">
+                                    <span class="flex items-center gap-1 text-2xs font-medium text-brand-700">
                                         <sc-icon name="open_in_new" size="xs" />
                                         Open ticket
                                     </span>

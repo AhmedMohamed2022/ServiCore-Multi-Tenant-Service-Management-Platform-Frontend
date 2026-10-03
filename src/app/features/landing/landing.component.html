@@ -26,18 +26,19 @@
         <div class="lp-glow lp-glow-a"></div>
         <div class="lp-glow lp-glow-b"></div>
         <div class="lp-container lp-hero-inner">
-            <span class="lp-pill"><span class="lp-dot"></span> Multi-tenant service management</span>
-            <h1 class="lp-title">Every ticket accounted for, <span class="lp-grad">across every organization.</span>
+            <span class="sc-pill"><span class="sc-pill-dot"></span> Multi-tenant service management</span>
+            <h1 class="lp-title">Every ticket accounted for, <span class="sc-grad-text">across every
+                    organization.</span>
             </h1>
             <p class="lp-lead">
                 Route customer requests to the right team, move them through a strict workflow, and see
                 how your organization performs, with each tenant's data fully isolated.
             </p>
             <div class="lp-cta">
-                <a routerLink="/register" class="sc-btn sc-btn-primary lp-btn-lg">
+                <a routerLink="/register" class="sc-btn sc-btn-primary sc-btn-lg">
                     Create your organization <sc-icon name="arrow_forward" size="sm" />
                 </a>
-                <a routerLink="/login" class="sc-btn sc-btn-secondary lp-btn-lg">Sign in</a>
+                <a routerLink="/login" class="sc-btn sc-btn-secondary sc-btn-lg">Sign in</a>
             </div>
             <p class="lp-note">Registering creates a private workspace where you are the Owner.</p>
 
@@ -91,13 +92,13 @@
 
     <!-- Features -->
     <section id="features" class="lp-container lp-section">
-        <p class="lp-eyebrow">Features</p>
+        <p class="sc-eyebrow">Features</p>
         <h2 class="lp-h2">Built for how support teams actually work</h2>
         <p class="lp-sub">The pieces a service desk needs, designed to work together.</p>
         <div class="lp-bento">
             @for (f of features; track f.title) {
-            <article class="lp-card" [class.wide]="f.wide">
-                <span class="lp-icon"><sc-icon [name]="f.icon" /></span>
+            <article class="sc-card sc-card-interactive lp-card" [class.wide]="f.wide">
+                <span class="sc-icon-chip sc-icon-chip-lg"><sc-icon [name]="f.icon" /></span>
                 <h3>{{ f.title }}</h3>
                 <p>{{ f.body }}</p>
             </article>
@@ -108,13 +109,13 @@
     <!-- Roles -->
     <section id="roles" class="lp-band">
         <div class="lp-container lp-section">
-            <p class="lp-eyebrow">Workspaces</p>
+            <p class="sc-eyebrow">Workspaces</p>
             <h2 class="lp-h2">One platform, three experiences</h2>
             <div class="lp-roles">
                 @for (r of roles; track r.name) {
-                <article class="lp-role">
+                <article class="sc-card lp-role">
                     <div class="lp-role-head">
-                        <span class="lp-icon"><sc-icon [name]="r.icon" /></span>
+                        <span class="sc-icon-chip sc-icon-chip-lg"><sc-icon [name]="r.icon" /></span>
                         <div>
                             <h3>{{ r.name }}</h3><small>{{ r.tag }}</small>
                         </div>
@@ -132,7 +133,7 @@
 
     <!-- Workflow -->
     <section id="workflow" class="lp-container lp-section">
-        <p class="lp-eyebrow">Workflow</p>
+        <p class="sc-eyebrow">Workflow</p>
         <h2 class="lp-h2">A ticket lifecycle that can't be skipped</h2>
         <p class="lp-sub">Transitions are enforced by the API and offered only to people allowed to make them.</p>
         <ol class="lp-steps">
@@ -147,7 +148,7 @@
         <div class="lp-final">
             <h2>See it with your own data</h2>
             <p>Create an organization in under a minute. It's yours alone.</p>
-            <a routerLink="/register" class="sc-btn lp-btn-lg lp-btn-light">Get started free</a>
+            <a routerLink="/register" class="sc-btn sc-btn-lg lp-btn-light">Get started free</a>
         </div>
     </section>
 
