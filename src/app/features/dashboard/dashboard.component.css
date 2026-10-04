@@ -2,46 +2,371 @@
   display: block;
 }
 
-/* ngx-charts renders its own typography and tooltips; align them with the
-   ServiCore token layer rather than leaving library defaults in place. */
-:host ::ng-deep .ngx-charts text {
-  fill: var(--sc-text-subtle);
+/* =========================================================================
+   Hero
+   ========================================================================= */
+.db-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-lg);
+  background-color: var(--sc-surface);
+  box-shadow: var(--sc-shadow-md);
+}
+
+/* Soft brand glow in the corner: the landing page's tinted wash, scaled
+   down for a work surface. Purely decorative. */
+.db-hero-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      520px 220px at 100% 0%,
+      var(--sc-violet-tint),
+      transparent 70%
+    ),
+    radial-gradient(420px 200px at 0% 0%, var(--sc-brand-tint), transparent 70%);
+}
+
+.db-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  background-color: var(--sc-brand-100);
+}
+
+.db-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--sc-grad-brand);
+  animation: db-slide 1.1s var(--sc-ease) infinite;
+}
+
+@keyframes db-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-progress::after {
+    width: 100%;
+    animation: none;
+  }
+}
+
+/* At-a-glance chips */
+.db-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--sc-border);
+  border-radius: 999px;
+  background-color: var(--sc-surface);
+  font-size: 12.5px;
+  color: var(--sc-text-muted);
+}
+
+.db-chip strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
+}
+
+.db-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.db-chip-alert {
+  border-color: var(--sc-warn-200);
+  background-color: var(--sc-warn-50);
+  color: var(--sc-warn-700);
+}
+
+.db-chip-alert strong {
+  color: var(--sc-warn-700);
+}
+
+/* =========================================================================
+   KPI tiles
+   ========================================================================= */
+.db-kpi {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  min-height: 132px;
+}
+
+.db-kpi-label {
   font-size: 11px;
-  font-family: Inter, system-ui, sans-serif;
-}
-
-:host ::ng-deep .advanced-pie-legend .total-value,
-:host ::ng-deep .advanced-pie-legend .total-label {
-  color: var(--sc-text);
-}
-
-:host ::ng-deep .advanced-pie-legend .total-value {
-  font-size: 26px;
-  font-weight: 600;
-}
-
-:host ::ng-deep .advanced-pie-legend .legend-item .item-value {
-  font-size: 15px;
-  color: var(--sc-text);
-}
-
-:host ::ng-deep .advanced-pie-legend .legend-item .item-label {
-  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--sc-text-subtle);
 }
 
-:host ::ng-deep .chart-legend .legend-labels {
-  background: transparent !important;
+.db-kpi-value {
+  margin-top: 4px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
 }
 
-:host ::ng-deep .chart-legend .legend-label-text {
+.db-kpi-unit {
+  margin-left: 1px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--sc-text-muted);
+}
+
+.db-kpi-spark {
+  height: 32px;
+  margin-top: 10px;
+}
+
+.db-kpi-hint {
+  margin-top: 8px;
   font-size: 12px;
   color: var(--sc-text-muted);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :host ::ng-deep .ngx-charts * {
-    animation: none !important;
-    transition: none !important;
+/* Segmented bar: the live work split by status */
+.db-split {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.db-split > span {
+  min-width: 4px;
+  transition: flex-grow var(--sc-dur-slow) var(--sc-ease);
+}
+
+/* Completion track */
+.db-track {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--sc-surface-sunken);
+}
+
+.db-track-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--sc-success-600),
+    var(--sc-status-open)
+  );
+  transition: width var(--sc-dur-slow) var(--sc-ease);
+}
+
+/* =========================================================================
+   Workflow pipeline
+   ========================================================================= */
+.db-pipeline {
+  display: flex;
+  gap: 3px;
+  height: 18px;
+}
+
+.db-pipe-seg {
+  min-width: 6px;
+  border-radius: 6px;
+  transform-origin: left center;
+  animation: db-grow calc(var(--sc-dur-slow) * 2) var(--sc-ease) both;
+}
+
+@keyframes db-grow {
+  from {
+    transform: scaleX(0);
+    opacity: 0.4;
   }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.db-tile {
+  padding: 10px 12px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  background-color: var(--sc-surface-muted);
+}
+
+/* =========================================================================
+   Breakdown (tabs + stacked bars)
+   ========================================================================= */
+.db-tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  background-color: var(--sc-surface-muted);
+}
+
+.db-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: calc(var(--sc-radius-md) - 3px);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sc-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease),
+    box-shadow var(--sc-dur-fast) var(--sc-ease);
+}
+
+.db-tab:hover {
+  color: var(--sc-text);
+}
+
+.db-tab[aria-selected="true"] {
+  background-color: var(--sc-surface);
+  color: var(--sc-brand-700);
+  box-shadow: var(--sc-shadow);
+}
+
+.db-key {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+.db-bd-row {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 1.3fr) 36px;
+  align-items: center;
+  column-gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.db-bd-row:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 479px) {
+  .db-bd-row {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    row-gap: 8px;
+  }
+  .db-stack {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.db-stack {
+  display: flex;
+  height: 8px;
+  gap: 2px;
+  border-radius: 999px;
+  background-color: var(--sc-surface-sunken);
+  overflow: hidden;
+}
+
+.db-stack > span {
+  display: block;
+  height: 100%;
+  transition: width var(--sc-dur-slow) var(--sc-ease);
+}
+
+.db-bd-total {
+  text-align: right;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
+}
+
+/* =========================================================================
+   Clickable rows (needs attention, recent tickets)
+   ========================================================================= */
+.db-row {
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.db-row:hover,
+.db-row:focus-visible {
+  background-color: var(--sc-brand-tint);
+}
+
+/* The global outline would be clipped by the card's rounded overflow. */
+.db-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.db-foot {
+  background-color: var(--sc-surface-muted);
+  text-decoration: none;
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.db-foot:hover,
+.db-foot:focus-visible {
+  background-color: var(--sc-brand-tint);
+}
+
+.db-foot:focus-visible {
+  outline-offset: -2px;
+}
+
+/* =========================================================================
+   Organization tiles
+   ========================================================================= */
+.db-org {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+.db-org-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
+}
+
+.db-org-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--sc-text-muted);
 }

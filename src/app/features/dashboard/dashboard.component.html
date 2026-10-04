@@ -1,216 +1,551 @@
-<sc-page-header title="Dashboard" [description]="'Service overview for your organization.'">
-    <form slot="actions" [formGroup]="filterForm" (ngSubmit)="onApplyFilters()"
-        class="flex flex-wrap items-end gap-2">
-        <div>
-            <label class="sc-label" for="dateFrom">From</label>
-            <input id="dateFrom" type="date" formControlName="from" class="sc-input w-[150px]" />
-        </div>
-        <div>
-            <label class="sc-label" for="dateTo">To</label>
-            <input id="dateTo" type="date" formControlName="to" class="sc-input w-[150px]" />
-        </div>
-        <button type="submit" class="sc-btn sc-btn-primary" [disabled]="isLoading()">
-            <sc-icon name="filter_alt" size="sm" />
-            Apply
-        </button>
-        @if (hasActiveFilter()) {
-        <button type="button" class="sc-btn sc-btn-secondary" (click)="onResetFilters()" [disabled]="isLoading()">
-            Reset
-        </button>
-        }
-    </form>
-</sc-page-header>
+<div [attr.aria-busy]="isLoading()" class="flex flex-col gap-4 sm:gap-5">
 
-@if (errorMessage()) {
-<sc-alert tone="error" title="Couldn't load the dashboard" class="mb-5 block">
-    {{ errorMessage() }}
-</sc-alert>
-}
+    <!-- ==================================================================
+         Hero: greeting, one-line insight, range control, at-a-glance chips
+         ================================================================== -->
+    <section class="db-hero sc-enter" aria-labelledby="db-title">
+        <div class="db-hero-glow" aria-hidden="true"></div>
 
-@if (isLoading()) {
-<sc-loading-state label="Loading dashboard metrics" [count]="4" />
-} @else {
-@if (metrics(); as data) {
-
-<!-- ==================================================================
-     KPI row
-     ================================================================== -->
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <sc-stat-card label="Total tickets" [value]="data.ticketOverview.totalTickets" icon="confirmation_number"
-        tone="info" [hint]="hasActiveFilter() ? 'In selected range' : 'All time'" />
-
-    <sc-stat-card label="Active workload" [value]="activeTickets()" icon="bolt" tone="primary"
-        [hint]="unassignedHint()" />
-
-    <sc-stat-card label="Waiting on customer" [value]="data.ticketOverview.waitingForCustomerTickets"
-        icon="schedule" tone="warn" hint="Blocked pending a reply" />
-
-    <sc-stat-card label="Avg. resolution time" [value]="data.performance.averageResolutionTime | scDuration"
-        icon="timer" tone="success" [hint]="data.performance.resolvedCount + ' tickets resolved'" />
-</div>
-
-@if (!hasAnyTickets()) {
-<div class="sc-card mt-4">
-    <sc-empty-state icon="inbox" title="No tickets in this period"
-        description="Once tickets are created they'll be summarised here. Try widening the date range." />
-</div>
-} @else {
-
-<!-- ==================================================================
-     Distributions
-     ================================================================== -->
-<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-
-    <!-- Status distribution: chart plus an explicit numeric breakdown, so the
-         information is never carried by colour alone. -->
-    <sc-chart-card class="lg:col-span-2" title="Status distribution"
-        description="Where every ticket currently sits in the workflow">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div class="h-[240px]">
-                <ngx-charts-advanced-pie-chart [results]="statusChartData()" [scheme]="statusColors"
-                    [gradient]="false" />
+        <div class="relative flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+            <div class="min-w-0">
+                <p class="sc-eyebrow">
+                    Dashboard
+                    <span class="ml-1.5 font-medium normal-case tracking-normal text-ink-muted">
+                        {{ today | date:'EEEE, d MMMM' }}
+                    </span>
+                </p>
+                <h1 id="db-title"
+                    class="mt-2 text-[26px] font-semibold leading-tight tracking-[-0.025em] text-ink sm:text-[32px]">
+                    {{ greeting() }}@if (firstName()) {, <span class="sc-grad-text">{{ firstName() }}</span>}
+                </h1>
+                <p class="mt-2 min-h-[2.75rem] max-w-xl text-[13.5px] leading-relaxed text-ink-muted">
+                    {{ heroInsight() }}
+                </p>
             </div>
 
-            <ul class="flex flex-col justify-center gap-2.5 px-1">
-                @for (row of statusBreakdown(); track row.status) {
-                <li>
-                    <div class="flex items-center justify-between gap-3 text-[13px]">
-                        <span class="flex min-w-0 items-center gap-2">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm"
-                                [style.background-color]="row.color" aria-hidden="true"></span>
-                            <sc-ticket-status-badge [status]="row.status" />
+            <div class="flex flex-wrap items-center gap-2">
+                <sc-report-range (rangeChange)="onRangeChange($event)" />
+                <button type="button" class="sc-btn sc-btn-secondary" (click)="refresh()" [disabled]="isLoading()"
+                    aria-label="Refresh dashboard">
+                    <span class="inline-flex" [class.sc-spin]="isLoading()">
+                        <sc-icon name="refresh" size="sm" />
+                    </span>
+                    <span class="hidden sm:inline">Refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- At a glance. Chips fed by the tickets list appear once it lands. -->
+        <ul class="relative flex min-h-[58px] flex-wrap items-center gap-2 border-t border-line bg-surface-muted px-5 py-3 sm:px-6"
+            role="list" aria-label="At a glance">
+            @if (metrics(); as data) {
+            <li class="db-chip">
+                <span class="db-chip-dot" style="background-color: var(--sc-status-progress)" aria-hidden="true"></span>
+                <strong>{{ activeTickets() }}</strong> active
+            </li>
+            <li class="db-chip">
+                <span class="db-chip-dot" style="background-color: var(--sc-status-waiting)" aria-hidden="true"></span>
+                <strong>{{ data.ticketOverview.waitingForCustomerTickets }}</strong> waiting on customer
+            </li>
+            @if (ticketsLoaded()) {
+            <li class="db-chip" [class.db-chip-alert]="unassignedOpen() > 0">
+                <sc-icon name="person_off" size="xs" />
+                <strong>{{ unassignedOpen() }}</strong> unassigned
+            </li>
+            <li class="db-chip" [class.db-chip-alert]="criticalOpen() > 0">
+                <sc-icon name="priority_high" size="xs" />
+                <strong>{{ criticalOpen() }}</strong> critical open
+            </li>
+            }
+            }
+        </ul>
+
+        @if (isLoading() && metrics()) {
+        <div class="db-progress" role="status" aria-label="Refreshing"></div>
+        }
+    </section>
+
+    @if (errorMessage()) {
+    <sc-alert tone="error" title="Couldn't load the dashboard">
+        {{ errorMessage() }}
+    </sc-alert>
+    }
+
+    @if (!metrics() && isLoading()) {
+    <!-- First-load skeleton mirrors the real layout, so nothing jumps. -->
+    <div role="status" aria-label="Loading dashboard metrics">
+        <span class="sc-sr-only">Loading dashboard metrics</span>
+        <div class="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2 sm:gap-4 xl:grid-cols-4" aria-hidden="true">
+            @for (i of [1, 2, 3, 4]; track i) {
+            <div class="sc-skeleton h-[132px] rounded-sc-lg border border-line"></div>
+            }
+        </div>
+        <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3" aria-hidden="true">
+            <div class="sc-skeleton h-[420px] rounded-sc-lg border border-line lg:col-span-2"></div>
+            <div class="sc-skeleton h-[420px] rounded-sc-lg border border-line"></div>
+        </div>
+    </div>
+    }
+
+    @if (metrics(); as data) {
+
+    <!-- ==================================================================
+         KPI tiles
+         ================================================================== -->
+    <div class="sc-enter sc-enter-2 grid grid-cols-1 gap-3 min-[560px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+
+        <article class="sc-card db-kpi">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="db-kpi-label">Total tickets</p>
+                    <p class="db-kpi-value"><span [appCountUp]="data.ticketOverview.totalTickets"></span></p>
+                </div>
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                    <sc-icon name="confirmation_number" size="sm" />
+                </span>
+            </div>
+            <div class="db-kpi-spark"><app-sparkline [values]="volumeSpark()" /></div>
+            <p class="db-kpi-hint">{{ hasActiveFilter() ? 'Created in the selected range' : 'Created, all time' }}</p>
+        </article>
+
+        <article class="sc-card db-kpi">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="db-kpi-label">Active workload</p>
+                    <p class="db-kpi-value"><span [appCountUp]="activeTickets()"></span></p>
+                </div>
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                    <sc-icon name="bolt" size="sm" />
+                </span>
+            </div>
+            <!-- Where the live work sits: new, open, in progress, waiting. -->
+            <div class="db-kpi-spark flex items-center">
+                <div class="db-split" role="img"
+                    [attr.aria-label]="data.ticketOverview.newTickets + ' new, ' + data.ticketOverview.openTickets + ' open, ' + data.ticketOverview.inProgressTickets + ' in progress, ' + data.ticketOverview.waitingForCustomerTickets + ' waiting'">
+                    @if (data.ticketOverview.newTickets) {
+                    <span [style.flex-grow]="data.ticketOverview.newTickets"
+                        style="background-color: var(--sc-status-new)"></span>
+                    }
+                    @if (data.ticketOverview.openTickets) {
+                    <span [style.flex-grow]="data.ticketOverview.openTickets"
+                        style="background-color: var(--sc-status-open)"></span>
+                    }
+                    @if (data.ticketOverview.inProgressTickets) {
+                    <span [style.flex-grow]="data.ticketOverview.inProgressTickets"
+                        style="background-color: var(--sc-status-progress)"></span>
+                    }
+                    @if (data.ticketOverview.waitingForCustomerTickets) {
+                    <span [style.flex-grow]="data.ticketOverview.waitingForCustomerTickets"
+                        style="background-color: var(--sc-status-waiting)"></span>
+                    }
+                </div>
+            </div>
+            <p class="db-kpi-hint">
+                {{ data.ticketOverview.newTickets }} new · {{ data.ticketOverview.inProgressTickets }} in progress
+            </p>
+        </article>
+
+        <article class="sc-card db-kpi">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="db-kpi-label">Completion rate</p>
+                    <p class="db-kpi-value">
+                        <span [appCountUp]="completionRate()"></span><span class="db-kpi-unit">%</span>
+                    </p>
+                </div>
+                <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-success" aria-hidden="true">
+                    <sc-icon name="task_alt" size="sm" />
+                </span>
+            </div>
+            <div class="db-kpi-spark flex items-center">
+                <div class="db-track" role="img" [attr.aria-label]="completionRate() + ' percent finished'">
+                    <span class="db-track-fill" [style.width.%]="completionRate()"></span>
+                </div>
+            </div>
+            <p class="db-kpi-hint">{{ finishedTickets() }} of {{ data.ticketOverview.totalTickets }} resolved or
+                closed</p>
+        </article>
+
+        <article class="sc-card db-kpi">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="db-kpi-label">Avg. resolution time</p>
+                    <p class="db-kpi-value">{{ data.performance.averageResolutionTime | scDuration }}</p>
+                </div>
+                <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-success" aria-hidden="true">
+                    <sc-icon name="timer" size="sm" />
+                </span>
+            </div>
+            <div class="db-kpi-spark"><app-sparkline [values]="resolvedSpark()" tone="success" /></div>
+            <p class="db-kpi-hint">
+                Close takes {{ data.performance.averageClosureTime | scDuration }} · {{ data.performance.resolvedCount
+                }} resolved
+            </p>
+        </article>
+    </div>
+
+    @if (!hasAnyTickets()) {
+    <div class="sc-card sc-enter sc-enter-3">
+        <sc-empty-state icon="inbox" title="No tickets in this period"
+            description="Once tickets are created they'll be summarised here. Try widening the date range." />
+    </div>
+    } @else {
+
+    <!-- ==================================================================
+         Ticket flow + Needs attention
+         ================================================================== -->
+    <div class="sc-enter sc-enter-3 grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3">
+
+        <section class="sc-card flex flex-col lg:col-span-2" aria-labelledby="db-flow-title">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="show_chart"
+                            size="xs" /></span>
+                    <div class="min-w-0">
+                        <h2 id="db-flow-title" class="sc-card-title">Ticket flow</h2>
+                        <p class="text-xs text-ink-muted">Raised against finished, day by day</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    @if (trendPoints().length > 0) {
+                    @if (netChange() > 0) {
+                    <span class="sc-badge sc-badge-success"
+                        title="More tickets were finished than raised in this period">
+                        <sc-icon name="trending_down" size="xs" /> Backlog −{{ netChange() }}
+                    </span>
+                    } @else if (netChange() < 0) { <span class="sc-badge sc-badge-warn"
+                        title="More tickets were raised than finished in this period">
+                        <sc-icon name="trending_up" size="xs" /> Backlog +{{ -netChange() }}
                         </span>
-                        <span class="shrink-0 tabular-nums text-ink-muted">
-                            <strong class="font-semibold text-ink">{{ row.count }}</strong>
-                            <span class="ml-1 text-xs text-ink-subtle">{{ row.percent }}%</span>
+                        } @else {
+                        <span class="sc-badge sc-badge-neutral">Holding steady</span>
+                        }
+                        }
+                        <a routerLink="/app/reports/time-series" class="sc-btn sc-btn-ghost sc-btn-sm max-sm:hidden">
+                            Report <sc-icon name="arrow_forward" size="xs" />
+                        </a>
+                </div>
+            </div>
+
+            <div class="flex-1 p-4 sm:p-5">
+                @if (trend.error()) {
+                <div class="flex flex-col items-start gap-3 py-6">
+                    <p class="text-[13px] text-ink-muted">Couldn't load the trend: {{ trend.error() }}</p>
+                    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm" (click)="fetchAnalyticsData()">Try
+                        again</button>
+                </div>
+                } @else if (trend.loading() && trendPoints().length === 0) {
+                <div class="sc-skeleton h-[300px] rounded-sc-lg" role="status" aria-label="Loading ticket flow"></div>
+                } @else if (trendPoints().length === 0) {
+                <sc-empty-state icon="show_chart" title="No activity in this period"
+                    description="Ticket volume will chart here as tickets are raised and resolved." />
+                } @else {
+                <app-trend-chart [points]="trendPoints()" />
+                }
+            </div>
+        </section>
+
+        <section class="sc-card flex flex-col" aria-labelledby="db-attn-title">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-danger" aria-hidden="true"><sc-icon
+                            name="notification_important" size="xs" /></span>
+                    <div class="min-w-0">
+                        <h2 id="db-attn-title" class="sc-card-title">Needs attention</h2>
+                        <p class="text-xs text-ink-muted">High and critical, still open</p>
+                    </div>
+                </div>
+                @if (ticketsLoaded() && attentionTotal() > 0) {
+                <span class="sc-badge sc-badge-danger">{{ attentionTotal() }}</span>
+                }
+            </div>
+
+            @if (isLoadingRecent() && !ticketsLoaded()) {
+            <div class="p-3"><sc-loading-state label="Loading tickets" [count]="4" /></div>
+            } @else if (attention().length === 0) {
+            <div class="flex flex-1 items-center">
+                <sc-empty-state icon="verified" title="All clear"
+                    description="No high or critical tickets are waiting right now." />
+            </div>
+            } @else {
+            <ul class="flex flex-col divide-y divide-line" role="list">
+                @for (item of attention(); track item.ticket.id) {
+                <li>
+                    <a [routerLink]="['/app/tickets', item.ticket.id]" class="db-row flex flex-col gap-1.5 px-5 py-3.5">
+                        <p class="truncate text-[13px] font-medium text-ink">{{ item.ticket.title }}</p>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <sc-ticket-priority-badge [priority]="item.ticket.priority" />
+                            <sc-ticket-status-badge [status]="item.ticket.status" />
+                            @if (!item.ticket.assignedAgentId) {
+                            <span class="sc-badge sc-badge-warn">Unassigned</span>
+                            }
+                            <span class="ml-auto text-2xs tabular-nums text-ink-muted" title="Time since created">
+                                {{ item.age }} old
+                            </span>
+                        </div>
+                    </a>
+                </li>
+                }
+            </ul>
+            <a routerLink="/app/tickets"
+                class="db-foot mt-auto flex items-center justify-between gap-2 border-t border-line px-5 py-3 text-[13px] font-medium text-brand-700">
+                Triage in the ticket list
+                <sc-icon name="arrow_forward" size="xs" />
+            </a>
+            }
+        </section>
+    </div>
+
+    <!-- ==================================================================
+         Workflow pipeline + priority
+         ================================================================== -->
+    <div class="sc-enter sc-enter-3 grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3">
+
+        <section class="sc-card lg:col-span-2" aria-labelledby="db-wf-title">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="account_tree"
+                            size="xs" /></span>
+                    <div class="min-w-0">
+                        <h2 id="db-wf-title" class="sc-card-title">Workflow</h2>
+                        <p class="text-xs text-ink-muted">Where every ticket sits right now</p>
+                    </div>
+                </div>
+                <a routerLink="/app/tickets" class="sc-btn sc-btn-ghost sc-btn-sm">
+                    Open tickets <sc-icon name="arrow_forward" size="xs" />
+                </a>
+            </div>
+
+            <div class="p-4 sm:p-5">
+                <div class="db-pipeline" role="img"
+                    aria-label="Ticket pipeline, from new to closed. The figures are listed below.">
+                    @for (row of statusBreakdown(); track row.status) {
+                    @if (row.count > 0) {
+                    <span class="db-pipe-seg" [style.flex-grow]="row.count" [style.background-color]="row.color"
+                        [title]="row.label + ': ' + row.count"></span>
+                    }
+                    }
+                </div>
+
+                <ul class="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3" role="list">
+                    @for (row of statusBreakdown(); track row.status) {
+                    <li class="db-tile">
+                        <div class="flex items-center gap-2">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background-color]="row.color"
+                                aria-hidden="true"></span>
+                            <span class="text-xs font-medium leading-tight text-ink-muted">{{ row.label }}</span>
+                        </div>
+                        <p class="mt-1.5 flex items-baseline gap-1.5">
+                            <span class="text-xl font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{{
+                                row.count }}</span>
+                            <span class="text-xs tabular-nums text-ink-muted">{{ row.percent }}%</span>
+                        </p>
+                    </li>
+                    }
+                </ul>
+            </div>
+        </section>
+
+        <section class="sc-card" aria-labelledby="db-pr-title">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-warn" aria-hidden="true"><sc-icon name="flag"
+                            size="xs" /></span>
+                    <div class="min-w-0">
+                        <h2 id="db-pr-title" class="sc-card-title">Priority mix</h2>
+                        <p class="text-xs text-ink-muted">Severity across the period</p>
+                    </div>
+                </div>
+            </div>
+            <ul class="flex flex-col gap-4 p-4 sm:p-5" role="list">
+                @for (row of priorityRows(); track row.label) {
+                <li>
+                    <div class="flex items-baseline justify-between gap-3 text-[13px]">
+                        <span class="font-medium text-ink">{{ row.label }}</span>
+                        <span class="tabular-nums text-ink-muted">
+                            <strong class="font-semibold text-ink">{{ row.value }}</strong>
+                            <span class="ml-1 text-xs">{{ row.percent }}%</span>
                         </span>
                     </div>
-                    <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
-                        <div class="h-full rounded-full transition-[width] duration-500"
-                            [style.width.%]="row.percent" [style.background-color]="row.color"></div>
+                    <div class="sc-meter mt-1.5" aria-hidden="true">
+                        <span class="sc-meter-fill" [style.width.%]="row.percent"
+                            [style.background-color]="row.color"></span>
                     </div>
                 </li>
                 }
             </ul>
-        </div>
-    </sc-chart-card>
+        </section>
+    </div>
 
-    <!-- Priority distribution -->
-    <sc-chart-card title="Priority mix" description="Severity spread across the same period">
-        <div class="h-[240px]">
-            <ngx-charts-pie-chart [results]="priorityChartData()" [scheme]="priorityColors" [doughnut]="true"
-                [arcWidth]="0.35" [labels]="false" [legend]="true" [legendPosition]="legendBelow" />
-        </div>
-    </sc-chart-card>
-</div>
+    <!-- ==================================================================
+         Breakdown by team / agent / category + recent tickets
+         ================================================================== -->
+    <div class="sc-enter sc-enter-3 grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3">
 
-<!-- ==================================================================
-     Performance + organization counts + recent activity
-     ================================================================== -->
-<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section class="sc-card flex flex-col lg:col-span-2" aria-labelledby="db-bd-title">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="leaderboard"
+                            size="xs" /></span>
+                    <div class="min-w-0">
+                        <h2 id="db-bd-title" class="sc-card-title">Workload breakdown</h2>
+                        <p class="text-xs text-ink-muted">Who and what the tickets belong to</p>
+                    </div>
+                </div>
+                <a [routerLink]="breakdownLink()" class="sc-btn sc-btn-ghost sc-btn-sm">
+                    Full report <sc-icon name="arrow_forward" size="xs" />
+                </a>
+            </div>
 
-    <section class="sc-card">
-        <div class="sc-card-header">
-            <h2 class="sc-card-title">Resolution performance</h2>
-        </div>
-        <dl class="divide-y divide-line">
-            <div class="flex items-center justify-between px-5 py-3">
-                <dt class="text-[13px] text-ink-muted">Resolved</dt>
-                <dd class="text-[15px] font-semibold tabular-nums text-ink">
-                    {{ data.performance.resolvedCount }}
-                </dd>
+            <div class="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-5">
+                <div class="db-tabs" role="tablist" aria-label="Group tickets by" (keydown)="onTabKeydown($event)">
+                    @for (tab of [{k: 'teams', l: 'Teams', i: 'groups'}, {k: 'agents', l: 'Agents', i: 'support_agent'},
+                    {k: 'categories', l: 'Categories', i: 'sell'}]; track tab.k) {
+                    <button type="button" role="tab" class="db-tab" [id]="'db-tab-' + tab.k"
+                        [attr.aria-selected]="breakdownTab() === tab.k" [attr.aria-controls]="'db-panel'"
+                        [attr.tabindex]="breakdownTab() === tab.k ? 0 : -1" (click)="selectTab($any(tab.k))">
+                        <sc-icon [name]="tab.i" size="xs" /> {{ tab.l }}
+                    </button>
+                    }
+                </div>
+                <ul class="flex items-center gap-3 text-xs text-ink-muted" role="list" aria-label="Legend">
+                    <li class="flex items-center gap-1.5"><span class="db-key"
+                            style="background-color: var(--sc-status-progress)"></span>Active</li>
+                    <li class="flex items-center gap-1.5"><span class="db-key"
+                            style="background-color: var(--sc-status-resolved)"></span>Resolved</li>
+                    <li class="flex items-center gap-1.5"><span class="db-key"
+                            style="background-color: var(--sc-status-closed)"></span>Closed</li>
+                </ul>
             </div>
-            <div class="flex items-center justify-between px-5 py-3">
-                <dt class="text-[13px] text-ink-muted">Closed</dt>
-                <dd class="text-[15px] font-semibold tabular-nums text-ink">
-                    {{ data.performance.closedCount }}
-                </dd>
-            </div>
-            <div class="flex items-center justify-between px-5 py-3">
-                <dt class="text-[13px] text-ink-muted">Avg. time to resolve</dt>
-                <dd class="text-[15px] font-semibold tabular-nums text-ink">
-                    {{ data.performance.averageResolutionTime | scDuration }}
-                </dd>
-            </div>
-            <div class="flex items-center justify-between px-5 py-3">
-                <dt class="text-[13px] text-ink-muted">Avg. time to close</dt>
-                <dd class="text-[15px] font-semibold tabular-nums text-ink">
-                    {{ data.performance.averageClosureTime | scDuration }}
-                </dd>
-            </div>
-        </dl>
-    </section>
 
-    <section class="sc-card">
-        <div class="sc-card-header">
-            <h2 class="sc-card-title">Organization</h2>
-        </div>
-        <div class="grid grid-cols-2 divide-x divide-y divide-line">
-            <div class="p-4">
-                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Customers</p>
-                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
-                    {{ data.organizationCounts.totalCustomers }}
-                </p>
+            <div id="db-panel" role="tabpanel" [attr.aria-labelledby]="'db-tab-' + breakdownTab()"
+                class="flex flex-1 flex-col px-4 pb-4 pt-2 sm:px-5 sm:pb-5">
+                @if (breakdownState().error()) {
+                <div class="flex flex-col items-start gap-3 py-6">
+                    <p class="text-[13px] text-ink-muted">Couldn't load this breakdown: {{ breakdownState().error() }}
+                    </p>
+                    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm" (click)="fetchBreakdowns()">Try
+                        again</button>
+                </div>
+                } @else if (breakdownState().loading() && breakdownRows().length === 0) {
+                <div class="flex flex-col gap-3 pt-3" role="status" aria-label="Loading breakdown">
+                    @for (i of [1, 2, 3, 4]; track i) {
+                    <div class="sc-skeleton h-11 rounded-sc"></div>
+                    }
+                </div>
+                } @else if (breakdownRows().length === 0) {
+                <sc-empty-state icon="inbox" title="Nothing to show yet"
+                    description="Tickets will be grouped here once there is data for this period." />
+                } @else {
+                <ul class="flex flex-1 flex-col" role="list">
+                    @for (row of breakdownRows(); track row.id; let i = $index) {
+                    <li class="db-bd-row">
+                        <div class="flex min-w-0 items-center gap-3">
+                            @if (breakdownTab() === 'agents') {
+                            <sc-avatar [name]="row.name" size="sm" />
+                            } @else {
+                            <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                                <sc-icon [name]="breakdownTab() === 'teams' ? 'groups' : 'sell'" size="xs" />
+                            </span>
+                            }
+                            <div class="min-w-0">
+                                <p class="truncate text-[13px] font-medium text-ink">{{ row.name }}</p>
+                                <p class="truncate text-2xs text-ink-muted">{{ row.sub }}</p>
+                            </div>
+                        </div>
+                        <div class="db-stack" role="img"
+                            [attr.aria-label]="row.active + ' active, ' + row.resolved + ' resolved, ' + row.closed + ' closed'">
+                            <span [style.width.%]="row.activePct"
+                                style="background-color: var(--sc-status-progress)"></span>
+                            <span [style.width.%]="row.resolvedPct"
+                                style="background-color: var(--sc-status-resolved)"></span>
+                            <span [style.width.%]="row.closedPct"
+                                style="background-color: var(--sc-status-closed)"></span>
+                        </div>
+                        <p class="db-bd-total">{{ row.total }}</p>
+                    </li>
+                    }
+                </ul>
+                }
             </div>
-            <div class="p-4">
-                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Agents</p>
-                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
-                    {{ data.organizationCounts.totalAgents }}
-                </p>
-            </div>
-            <div class="p-4">
-                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Teams</p>
-                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
-                    {{ data.organizationCounts.totalTeams }}
-                </p>
-            </div>
-            <div class="p-4">
-                <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Categories</p>
-                <p class="mt-1 text-xl font-semibold tabular-nums text-ink">
-                    {{ data.organizationCounts.totalCategories }}
-                </p>
-            </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="sc-card flex flex-col">
-        <div class="sc-card-header">
-            <h2 class="sc-card-title">Recent tickets</h2>
-            <a routerLink="/app/tickets" class="sc-btn sc-btn-ghost sc-btn-sm">
-                View all
-                <sc-icon name="arrow_forward" size="xs" />
+        <section class="sc-card flex flex-col" aria-labelledby="db-recent-title">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="history"
+                            size="xs" /></span>
+                    <h2 id="db-recent-title" class="sc-card-title">Recent tickets</h2>
+                </div>
+                <a routerLink="/app/tickets" class="sc-btn sc-btn-ghost sc-btn-sm">
+                    View all <sc-icon name="arrow_forward" size="xs" />
+                </a>
+            </div>
+
+            @if (isLoadingRecent() && !ticketsLoaded()) {
+            <div class="p-3"><sc-loading-state label="Loading recent tickets" [count]="4" /></div>
+            } @else if (recentTickets().length === 0) {
+            <sc-empty-state icon="inbox" title="Nothing yet" description="New tickets will appear here." />
+            } @else {
+            <ul class="flex flex-1 flex-col divide-y divide-line" role="list">
+                @for (ticket of recentTickets(); track ticket.id) {
+                <li class="flex-1">
+                    <a [routerLink]="['/app/tickets', ticket.id]"
+                        class="db-row flex h-full flex-col justify-center gap-1.5 px-5 py-3">
+                        <p class="truncate text-[13px] font-medium text-ink">{{ ticket.title }}</p>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <sc-ticket-status-badge [status]="ticket.status" />
+                            @if (ticket.priority >= TicketPriority.High) {
+                            <sc-ticket-priority-badge [priority]="ticket.priority" />
+                            }
+                            <span class="ml-auto text-2xs tabular-nums text-ink-muted">{{ ticket.createdAt |
+                                date:'MMM d' }}</span>
+                        </div>
+                    </a>
+                </li>
+                }
+            </ul>
+            }
+        </section>
+    </div>
+    }
+
+    <!-- ==================================================================
+         Organization at a glance: each tile jumps to where it is managed
+         ================================================================== -->
+    <section class="sc-enter sc-enter-3" aria-labelledby="db-org-title">
+        <h2 id="db-org-title" class="sc-sr-only">Organization</h2>
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <a routerLink="/app/management/customers" class="sc-card sc-card-interactive db-org">
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="domain" size="xs" /></span>
+                <span class="min-w-0">
+                    <span class="db-org-value" [appCountUp]="data.organizationCounts.totalCustomers"></span>
+                    <span class="db-org-label">Customers</span>
+                </span>
+            </a>
+            <a routerLink="/app/reports/agents" class="sc-card sc-card-interactive db-org">
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="support_agent"
+                        size="xs" /></span>
+                <span class="min-w-0">
+                    <span class="db-org-value" [appCountUp]="data.organizationCounts.totalAgents"></span>
+                    <span class="db-org-label">Agents</span>
+                </span>
+            </a>
+            <a routerLink="/app/management/teams" class="sc-card sc-card-interactive db-org">
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="groups" size="xs" /></span>
+                <span class="min-w-0">
+                    <span class="db-org-value" [appCountUp]="data.organizationCounts.totalTeams"></span>
+                    <span class="db-org-label">Teams</span>
+                </span>
+            </a>
+            <a routerLink="/app/management/categories" class="sc-card sc-card-interactive db-org">
+                <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="sell" size="xs" /></span>
+                <span class="min-w-0">
+                    <span class="db-org-value" [appCountUp]="data.organizationCounts.totalCategories"></span>
+                    <span class="db-org-label">Categories</span>
+                </span>
             </a>
         </div>
-
-        @if (isLoadingRecent()) {
-        <div class="p-3">
-            <sc-loading-state label="Loading recent tickets" [count]="4" />
-        </div>
-        } @else if (recentTickets().length === 0) {
-        <sc-empty-state icon="inbox" title="Nothing yet" description="New tickets will appear here." />
-        } @else {
-        <ul class="flex-1 divide-y divide-line">
-            @for (ticket of recentTickets(); track ticket.id) {
-            <li>
-                <a [routerLink]="['/app/tickets', ticket.id]"
-                    class="block px-5 py-3 transition-colors hover:bg-surface-muted">
-                    <p class="truncate text-[13px] font-medium text-ink">{{ ticket.title }}</p>
-                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        <sc-ticket-status-badge [status]="ticket.status" />
-                        @if (ticket.priority >= TicketPriority.High) {
-                        <sc-ticket-priority-badge [priority]="ticket.priority" />
-                        }
-                        <span class="text-2xs text-ink-subtle">
-                            {{ ticket.createdAt | date:'MMM d' }}
-                        </span>
-                    </div>
-                </a>
-            </li>
-            }
-        </ul>
-        }
     </section>
+    }
 </div>
-}
-}
-}

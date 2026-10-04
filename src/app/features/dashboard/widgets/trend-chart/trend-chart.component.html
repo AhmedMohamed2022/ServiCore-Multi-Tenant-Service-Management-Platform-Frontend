@@ -1,0 +1,84 @@
+<!-- Legend doubles as the series toggle. Each chip prints its own total, so
+     the numbers are readable without the plot. -->
+<div class="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Series">
+    @for (s of seriesMeta; track s.key) {
+    <button type="button" class="tc-chip" [attr.data-series]="s.key" [attr.aria-pressed]="visible()[s.key]"
+        (click)="toggle(s.key)">
+        <span class="tc-swatch" aria-hidden="true"></span>
+        <span class="tc-chip-label">{{ s.label }}</span>
+        <strong class="tc-chip-total">{{ totals()[s.key] }}</strong>
+    </button>
+    }
+</div>
+
+<div class="tc-layout">
+    <!-- Y axis -->
+    <div class="tc-yaxis" aria-hidden="true">
+        @for (t of ticks(); track t.value) {
+        <span class="tc-ytick" [style.top.%]="t.top">{{ t.value }}</span>
+        }
+    </div>
+
+    <!-- Plot -->
+    <div class="tc-plot" tabindex="0" role="group" [attr.aria-label]="plotLabel()" (pointermove)="onPointer($event)"
+        (pointerdown)="onPointer($event)" (pointerleave)="clear()" (keydown)="onKey($event)" (blur)="clear()">
+        <svg class="tc-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <defs>
+                <linearGradient [attr.id]="gradId" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" class="tc-stop-top" />
+                    <stop offset="1" class="tc-stop-bottom" />
+                </linearGradient>
+            </defs>
+
+            @for (t of ticks(); track t.value) {
+            <line class="tc-grid" x1="0" x2="100" [attr.y1]="t.top" [attr.y2]="t.top" />
+            }
+
+            @if (visible().raised) {
+            <path class="tc-area" [attr.d]="paths().raised.area" [attr.fill]="'url(#' + gradId + ')'" />
+            <path class="tc-line tc-line-raised" [attr.d]="paths().raised.line" />
+            }
+            @if (visible().closed) {
+            <path class="tc-line tc-line-closed" [attr.d]="paths().closed.line" />
+            }
+            @if (visible().resolved) {
+            <path class="tc-line tc-line-resolved" [attr.d]="paths().resolved.line" />
+            }
+        </svg>
+
+        @if (activeBucket(); as b) {
+        <div class="tc-guide" [style.left.%]="xAt(active()!)" aria-hidden="true"></div>
+
+        @for (s of seriesMeta; track s.key) {
+        @if (visible()[s.key]) {
+        <span class="tc-dot" [attr.data-series]="s.key" [style.left.%]="xAt(active()!)" [style.top.%]="yAt(b[s.key])"
+            aria-hidden="true"></span>
+        }
+        }
+
+        <div class="tc-tip" [class.tc-tip-left]="xAt(active()!) > 58" [style.left.%]="xAt(active()!)"
+            aria-hidden="true">
+            <p class="tc-tip-title">{{ b.title }}</p>
+            @for (s of seriesMeta; track s.key) {
+            @if (visible()[s.key]) {
+            <p class="tc-tip-row" [attr.data-series]="s.key">
+                <span class="tc-swatch" aria-hidden="true"></span>
+                <span>{{ s.label }}</span>
+                <strong>{{ b[s.key] }}</strong>
+            </p>
+            }
+            }
+        </div>
+        }
+    </div>
+
+    <!-- X axis -->
+    <div class="tc-xaxis" aria-hidden="true">
+        @for (l of xLabels(); track l.i; let first = $first; let last = $last) {
+        <span class="tc-xtick" [class.tc-xtick-start]="first && !last" [class.tc-xtick-end]="last && !first"
+            [style.left.%]="l.left">{{ l.text }}</span>
+        }
+    </div>
+</div>
+
+<p class="sc-sr-only" aria-live="polite">{{ activeSummary() }}</p>

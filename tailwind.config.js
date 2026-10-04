@@ -52,6 +52,21 @@ module.exports = {
           600: "var(--sc-warn-600)",
           700: "var(--sc-warn-700)",
         },
+        // Data-viz colours for ticket status and priority.
+        status: {
+          new: "var(--sc-status-new)",
+          open: "var(--sc-status-open)",
+          progress: "var(--sc-status-progress)",
+          waiting: "var(--sc-status-waiting)",
+          resolved: "var(--sc-status-resolved)",
+          closed: "var(--sc-status-closed)",
+        },
+        priority: {
+          low: "var(--sc-priority-low)",
+          medium: "var(--sc-priority-medium)",
+          high: "var(--sc-priority-high)",
+          critical: "var(--sc-priority-critical)",
+        },
         danger: {
           50: "var(--sc-danger-50)",
           200: "var(--sc-danger-200)",

@@ -71,6 +71,21 @@
   --sc-danger-600: #dc2626;
   --sc-danger-700: #b91c1c;
 
+  /* Data-viz: one colour per ticket status and priority, shared by every
+     bar, ring and legend so a segment and its badge always agree. Charts
+     that must compute fills in JS (ngx-charts) still need hex; everything
+     rendered as HTML/SVG reads these. ---------------------------------------- */
+  --sc-status-new: #94a3b8;
+  --sc-status-open: #60a5fa;
+  --sc-status-progress: var(--sc-brand-600);
+  --sc-status-waiting: var(--sc-warn-600);
+  --sc-status-resolved: var(--sc-success-600);
+  --sc-status-closed: #64748b;
+  --sc-priority-low: var(--sc-status-new);
+  --sc-priority-medium: var(--sc-status-open);
+  --sc-priority-high: var(--sc-warn-600);
+  --sc-priority-critical: var(--sc-danger-600);
+
   /* Categorical tints: avatars, and anything else that needs a stable,
      identity-based colour. Each pair is a soft fill plus a readable ink. -- */
   --sc-tint-indigo-bg: var(--sc-brand-100);

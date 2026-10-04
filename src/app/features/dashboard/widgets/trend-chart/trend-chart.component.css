@@ -1,0 +1,258 @@
+:host {
+  display: block;
+}
+
+/* Series colours live here as custom properties so the legend, lines, dots
+   and tooltip all read the same source. */
+[data-series="raised"] {
+  --tc-color: var(--sc-brand-600);
+}
+[data-series="resolved"] {
+  --tc-color: var(--sc-success-600);
+}
+[data-series="closed"] {
+  --tc-color: var(--sc-status-closed);
+}
+
+/* --- Legend chips --------------------------------------------------------- */
+.tc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--sc-border);
+  border-radius: 999px;
+  background-color: var(--sc-surface);
+  color: var(--sc-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.tc-chip:hover {
+  border-color: var(--sc-border-strong);
+  color: var(--sc-text);
+}
+
+.tc-chip[aria-pressed="true"] {
+  background-color: var(--sc-surface-muted);
+  border-color: var(--sc-border-strong);
+  color: var(--sc-text);
+}
+
+.tc-chip[aria-pressed="false"] .tc-swatch {
+  background-color: transparent;
+  border: 2px solid var(--sc-border-strong);
+}
+
+.tc-chip[aria-pressed="false"] .tc-chip-total {
+  color: var(--sc-text-subtle);
+}
+
+.tc-chip-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
+}
+
+.tc-swatch {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background-color: var(--tc-color);
+  border: 2px solid var(--tc-color);
+}
+
+/* --- Layout: [y axis | plot] over [ | x axis] ------------------------------ */
+.tc-layout {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: 220px auto;
+  column-gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .tc-layout {
+    grid-template-rows: 260px auto;
+  }
+}
+
+.tc-yaxis {
+  position: relative;
+}
+
+.tc-ytick {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text-subtle);
+}
+
+.tc-plot {
+  position: relative;
+  border-radius: var(--sc-radius-sm);
+  cursor: crosshair;
+  touch-action: pan-y;
+  /* The focus ring would be clipped by the card, so sit it inside. */
+}
+
+.tc-plot:focus-visible {
+  outline: 2px solid var(--sc-brand-600);
+  outline-offset: 2px;
+}
+
+.tc-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tc-grid {
+  stroke: var(--sc-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.tc-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.tc-line-raised {
+  stroke: var(--sc-brand-600);
+}
+.tc-line-resolved {
+  stroke: var(--sc-success-600);
+}
+.tc-line-closed {
+  stroke: var(--sc-status-closed);
+  stroke-dasharray: 5 4;
+}
+
+.tc-stop-top {
+  stop-color: var(--sc-brand-500);
+  stop-opacity: 0.26;
+}
+.tc-stop-bottom {
+  stop-color: var(--sc-violet-500);
+  stop-opacity: 0;
+}
+
+/* Lines draw in left to right once. Duration is a motion token, so it is
+   effectively instant under prefers-reduced-motion. */
+@keyframes tc-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.tc-svg {
+  animation: tc-reveal calc(var(--sc-dur-slow) * 2.5) var(--sc-ease) both;
+}
+
+/* --- Hover layer ------------------------------------------------------------ */
+.tc-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--sc-border-strong);
+  pointer-events: none;
+}
+
+.tc-dot {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background-color: var(--sc-surface);
+  border: 2.5px solid var(--tc-color);
+  box-shadow: var(--sc-shadow);
+  pointer-events: none;
+}
+
+.tc-tip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(14px);
+  min-width: 148px;
+  padding: 10px 12px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  background-color: var(--sc-surface);
+  box-shadow: var(--sc-shadow-pop);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tc-tip-left {
+  transform: translateX(calc(-100% - 14px));
+}
+
+.tc-tip-title {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--sc-text-subtle);
+}
+
+.tc-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--sc-text-muted);
+}
+
+.tc-tip-row + .tc-tip-row {
+  margin-top: 3px;
+}
+
+.tc-tip-row strong {
+  margin-left: auto;
+  padding-left: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
+}
+
+/* --- X axis ----------------------------------------------------------------- */
+.tc-xaxis {
+  position: relative;
+  grid-column: 2;
+  height: 24px;
+  margin-top: 6px;
+}
+
+.tc-xtick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--sc-text-subtle);
+}
+
+.tc-xtick-start {
+  transform: none;
+}
+
+.tc-xtick-end {
+  transform: translateX(-100%);
+}

@@ -1,0 +1,34 @@
+:host {
+  display: block;
+}
+
+.sp-svg {
+  display: block;
+  width: 100%;
+  height: 32px;
+  overflow: visible;
+  --sp-color: var(--sc-brand-600);
+}
+
+.sp-svg.sp-success {
+  --sp-color: var(--sc-success-600);
+}
+
+.sp-line {
+  fill: none;
+  stroke: var(--sp-color);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sp-stop-top {
+  stop-color: var(--sp-color);
+  stop-opacity: 0.22;
+}
+
+.sp-stop-bottom {
+  stop-color: var(--sp-color);
+  stop-opacity: 0;
+}
