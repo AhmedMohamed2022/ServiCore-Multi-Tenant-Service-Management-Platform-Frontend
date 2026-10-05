@@ -2,13 +2,55 @@
   display: block;
 }
 
-.sc-row-inactive {
-  opacity: 0.6;
+/* One row: icon, text, usage, actions. On a phone the usage and actions drop
+   under the text instead of squeezing it. */
+.tx-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 12px;
+  padding: 16px;
 }
 
-@media (min-width: 1280px) {
-  .sc-sticky-panel {
-    position: sticky;
-    top: 1.25rem;
+.tx-usage {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+}
+
+.tx-usage:empty {
+  display: none;
+}
+
+.tx-actions {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+@media (min-width: 640px) {
+  .tx-row {
+    grid-template-columns: auto minmax(0, 1fr) 180px auto;
+    align-items: center;
+    gap: 12px;
   }
+
+  .tx-usage,
+  .tx-actions {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .tx-usage:empty {
+    display: block;
+  }
+}
+
+/* Deactivated: recede, with an explicit badge carrying the state too. */
+.tx-inactive > :nth-child(2) {
+  opacity: 0.75;
+}
+
+.tx-editing {
+  background-color: var(--sc-brand-50);
+  box-shadow: inset 3px 0 0 var(--sc-brand-600);
 }

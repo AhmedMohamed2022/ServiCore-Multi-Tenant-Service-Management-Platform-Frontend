@@ -2,36 +2,193 @@
   display: block;
 }
 
-.sc-team-row {
+/* =========================================================================
+   Team list
+   ========================================================================= */
+.tr-team {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  gap: 12px;
+  padding: 12px 16px;
   cursor: pointer;
   background-color: transparent;
   border: none;
   border-left: 3px solid transparent;
-  transition: background-color 150ms ease;
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
 }
 
-.sc-team-row:hover {
+.tr-team:hover {
   background-color: var(--sc-surface-muted);
 }
 
-/* Selection is carried by the rail and the background together, so it
-   survives greyscale. */
-.sc-team-selected {
+/* Selection is carried by the rail, the tint and aria-current together, so
+   it survives greyscale and screen readers. */
+.tr-team-selected,
+.tr-team-selected:hover {
   background-color: var(--sc-brand-50);
   border-left-color: var(--sc-brand-600);
 }
 
-.sc-team-selected:hover {
+/* --sc-text-subtle on --sc-brand-50 is 4.25:1, just under AA, so the
+   secondary lines of the selected row step up to the muted text colour. */
+.tr-team-selected .text-ink-subtle {
+  color: var(--sc-text-muted);
+}
+
+.tr-team:focus-visible {
+  outline-offset: -2px;
+}
+
+/* =========================================================================
+   Selected team
+   ========================================================================= */
+.tr-detail {
+  outline: none;
+  /* The topbar is sticky, so a scrolled-to pane parks below it. */
+  scroll-margin-top: calc(var(--sc-topbar-h) + 0.75rem);
+}
+
+.tr-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--sc-border);
+  background-image:
+    radial-gradient(
+      420px 160px at 0% 0%,
+      var(--sc-brand-tint),
+      transparent 70%
+    ),
+    radial-gradient(
+      360px 160px at 100% 0%,
+      var(--sc-violet-tint),
+      transparent 70%
+    );
+}
+
+.tr-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.tr-stats dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sc-text-subtle);
+}
+
+.tr-stats dd {
+  margin: 2px 0 0;
+  min-height: 28px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  color: var(--sc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tr-stat-skel {
+  display: block;
+  width: 36px;
+  height: 20px;
+  margin-top: 4px;
+  border-radius: var(--sc-radius-sm);
+}
+
+.tr-load {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+/* =========================================================================
+   People view
+   ========================================================================= */
+.tr-person {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+}
+
+.tr-person-teams {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tr-person-load:empty {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .tr-person {
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) 96px;
+    gap: 16px;
+  }
+
+  .tr-person-load {
+    text-align: right;
+  }
+
+  .tr-person-load:empty {
+    display: block;
+  }
+}
+
+.tr-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--sc-brand-200);
+  border-radius: 999px;
   background-color: var(--sc-brand-50);
+  color: var(--sc-brand-700);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.tr-chip:hover {
+  background-color: var(--sc-brand-100);
+  border-color: var(--sc-brand-500);
+}
+
+/* A team this viewer cannot open (a Manager outside it): same shape, plain. */
+.tr-chip-static,
+.tr-chip-static:hover {
+  border-color: var(--sc-border-strong);
+  background-color: var(--sc-surface-sunken);
+  color: var(--sc-text-muted);
+  cursor: default;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sc-team-row {
+  .tr-team,
+  .tr-chip {
     transition: none;
   }
 }

@@ -2,15 +2,17 @@
   display: block;
 }
 
-/* Deactivated records stay legible but recede — the state is also carried by
-   an explicit badge, never by the dimming alone. */
-.sc-row-inactive {
-  opacity: 0.6;
+/* Deactivated records stay legible but recede. The state is also carried by
+   an explicit badge, never by the dimming alone. Dimmed text on white stays
+   above AA because only the identity cells are dimmed. */
+.cd-inactive td:first-child,
+li.cd-inactive {
+  opacity: 0.7;
 }
 
-@media (min-width: 1280px) {
-  .sc-sticky-panel {
-    position: sticky;
-    top: 1.25rem;
-  }
+/* The row being edited carries a rail and a tint, so it is findable after
+   scrolling down to the form on a narrow screen. */
+.cd-editing {
+  background-color: var(--sc-brand-50);
+  box-shadow: inset 3px 0 0 var(--sc-brand-600);
 }

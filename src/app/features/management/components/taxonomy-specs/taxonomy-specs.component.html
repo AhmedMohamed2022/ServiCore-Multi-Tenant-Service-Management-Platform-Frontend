@@ -1,11 +1,18 @@
 <sc-page-header title="Categories"
     description="How incoming tickets are classified. Categories drive routing and every category-based report."
     [breadcrumbs]="[{ label: 'Management' }, { label: 'Categories' }]">
-    <button slot="actions" type="button" class="sc-btn sc-btn-secondary" (click)="loadCategories()"
-        [disabled]="isLoading()">
-        <sc-icon name="refresh" size="sm" />
-        <span class="hidden sm:inline">Refresh</span>
-    </button>
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+        <button type="button" class="sc-btn sc-btn-primary xl:hidden" (click)="focusForm()">
+            <sc-icon name="add" size="sm" />
+            <span class="hidden sm:inline">Add category</span>
+            <span class="sc-sr-only sm:hidden">Add category</span>
+        </button>
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="refresh()" [disabled]="isLoading()"
+            aria-label="Refresh categories">
+            <span class="inline-flex" [class.sc-spin]="isLoading()"><sc-icon name="refresh" size="sm" /></span>
+            <span class="hidden sm:inline">Refresh</span>
+        </button>
+    </div>
 </sc-page-header>
 
 @if (errorMessage()) {
@@ -13,23 +20,103 @@
     (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
 }
 
-<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+<section class="sc-enter sc-enter-2 mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Category overview">
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="sell" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Active categories</p>
+            <p class="sc-metric-value">
+                @if (isLoading() && categories().length === 0) { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span [appCountUp]="counts().active"></span> }
+            </p>
+            <p class="sc-metric-hint">{{ counts().inactive }} deactivated</p>
+        </div>
+    </div>
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="confirmation_number"
+                size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Tickets classified</p>
+            <p class="sc-metric-value">
+                @if (statsState() === 'ready') { <span [appCountUp]="totalFiled()"></span> }
+                @else if (statsState() === 'loading') { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span aria-label="Not available">—</span> }
+            </p>
+            <p class="sc-metric-hint">{{ statsState() === 'unavailable' ? 'Reports unavailable' : 'All time' }}</p>
+        </div>
+    </div>
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="trending_up" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Most used</p>
+            <p class="sc-metric-value truncate text-[17px]">
+                @if (statsState() === 'ready') {
+                @if (topCategory(); as top) { {{ top.name }} } @else { <span class="text-ink-subtle">None yet</span> }
+                } @else if (statsState() === 'loading') { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span aria-label="Not available">—</span> }
+            </p>
+            <p class="sc-metric-hint">
+                @if (statsState() === 'ready' && topCategory(); as top) { {{ top.count }} tickets }
+                @else if (statsState() === 'unavailable') { Reports unavailable }
+                @else { &nbsp; }
+            </p>
+        </div>
+    </div>
+    <div class="sc-metric" [class.sc-metric-attn]="statsState() === 'ready' && unusedCount() > 0">
+        <span class="sc-icon-chip sc-icon-chip-sm"
+            [class.sc-icon-chip-warn]="statsState() === 'ready' && unusedCount() > 0" aria-hidden="true">
+            <sc-icon name="inventory_2" size="sm" />
+        </span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Never used</p>
+            <p class="sc-metric-value">
+                @if (statsState() === 'ready') { <span [appCountUp]="unusedCount()"></span> }
+                @else if (statsState() === 'loading') { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span aria-label="Not available">—</span> }
+            </p>
+            <p class="sc-metric-hint">
+                @if (statsState() === 'ready' && unusedCount() > 0) { Active, with no tickets filed }
+                @else if (statsState() === 'unavailable') { Reports unavailable }
+                @else { Every category has been used }
+            </p>
+        </div>
+    </div>
+</section>
 
-    <section class="sc-card min-w-0">
-        <div class="flex flex-wrap items-center gap-2 border-b border-line p-3">
-            <div class="relative min-w-[180px] flex-1">
-                <sc-icon name="search" size="sm"
-                    class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
+
+    <section class="sc-card min-w-0" aria-label="Categories">
+        <div class="sc-toolbar">
+            <div class="sc-search">
+                <sc-icon name="search" size="sm" class="sc-search-icon" />
                 <label for="categorySearch" class="sc-sr-only">Search categories</label>
-                <input id="categorySearch" type="search" class="sc-input pl-9" placeholder="Search categories"
+                <input id="categorySearch" type="search" class="sc-input" placeholder="Search categories"
                     [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
             </div>
 
-            <button type="button" class="sc-btn sc-btn-secondary" (click)="showInactive.set(!showInactive())"
-                [attr.aria-pressed]="showInactive()">
-                <sc-icon [name]="showInactive() ? 'visibility' : 'visibility_off'" size="sm" />
-                <span class="hidden sm:inline">Inactive</span>
-            </button>
+            <div class="sc-segmented" role="group" aria-label="Filter by status">
+                <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="statusFilter() === 'active'"
+                    (click)="statusFilter.set('active')">Active <span class="sc-segmented-count">{{ counts().active
+                        }}</span></button>
+                <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="statusFilter() === 'inactive'"
+                    (click)="statusFilter.set('inactive')">Inactive <span class="sc-segmented-count">{{
+                        counts().inactive }}</span></button>
+                <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="statusFilter() === 'all'"
+                    (click)="statusFilter.set('all')">All <span class="sc-segmented-count">{{ counts().all
+                        }}</span></button>
+            </div>
+
+            <label for="categorySort" class="sc-sr-only">Sort categories</label>
+            <select id="categorySort" class="sc-select sc-select-sm" [ngModel]="sortKey()"
+                (ngModelChange)="sortKey.set($event)">
+                <option value="name">Name</option>
+                <option value="usage" [disabled]="statsState() !== 'ready'">Most used</option>
+                <option value="newest">Newest</option>
+            </select>
 
             @if (hasFilters()) {
             <button type="button" class="sc-btn sc-btn-ghost" (click)="clearFilters()">
@@ -39,15 +126,24 @@
             }
         </div>
 
-        @if (isLoading()) {
-        <div class="p-3">
-            <sc-loading-state label="Loading categories" [count]="5" />
+        @if (isLoading() && categories().length === 0) {
+        <div role="status" aria-label="Loading categories" class="divide-y divide-line">
+            <span class="sc-sr-only">Loading categories</span>
+            @for (i of [1, 2, 3, 4, 5]; track i) {
+            <div class="flex items-start gap-3 p-4" aria-hidden="true">
+                <span class="sc-skeleton h-8 w-8 shrink-0 rounded-sc"></span>
+                <div class="min-w-0 flex-1">
+                    <span class="sc-skeleton block h-3 w-32 rounded-sc-sm"></span>
+                    <span class="sc-skeleton mt-2 block h-2.5 w-64 max-w-full rounded-sc-sm"></span>
+                </div>
+            </div>
+            }
         </div>
         } @else if (visibleCategories().length === 0) {
         @if (hasFilters()) {
         <sc-empty-state icon="search_off" title="No categories match"
-            description="Try a different search term, or include inactive categories."
-            actionLabel="Clear filters" (action)="clearFilters()" />
+            description="Try a different search term, or include inactive categories." actionLabel="Clear filters"
+            (action)="clearFilters()" />
         } @else {
         <sc-empty-state icon="sell" title="No categories yet"
             description="Add a few so incoming tickets can be classified and reported on." />
@@ -55,13 +151,15 @@
         } @else {
         <ul class="divide-y divide-line">
             @for (category of visibleCategories(); track category.id) {
-            <li class="flex items-start gap-3 p-4" [class.sc-row-inactive]="!category.isActive">
-                <span
-                    class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-sc bg-brand-50 text-brand-700">
+            @let u = usageFor(category.id);
+            <li class="sc-list-row tx-row" [class.tx-inactive]="!category.isActive"
+                [class.tx-editing]="editingCategoryId() === category.id">
+                <span class="sc-icon-chip sc-icon-chip-sm mt-0.5" [class.sc-icon-chip-neutral]="!category.isActive"
+                    aria-hidden="true">
                     <sc-icon name="sell" size="sm" />
                 </span>
 
-                <div class="min-w-0 flex-1">
+                <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                         <p class="text-[13px] font-semibold text-ink">{{ category.name }}</p>
                         @if (!category.isActive) {
@@ -69,15 +167,33 @@
                             <sc-icon name="do_not_disturb_on" size="xs" />
                             Inactive
                         </span>
+                        } @else if (u && u.totalTickets === 0) {
+                        <span class="sc-badge sc-badge-warn">Never used</span>
                         }
                     </div>
                     @if (category.description) {
-                    <p class="mt-0.5 text-[13px] text-ink-subtle">{{ category.description }}</p>
+                    <p class="mt-0.5 text-[13px] leading-relaxed text-ink-muted">{{ category.description }}</p>
                     }
                     <p class="mt-1 text-xs text-ink-subtle">Added {{ category.createdAt | date:'MMM d, y' }}</p>
                 </div>
 
-                <div class="flex shrink-0 items-center gap-1">
+                <div class="tx-usage">
+                    @if (u) {
+                    <p class="text-xs text-ink-subtle">
+                        <strong class="font-semibold tabular-nums text-ink">{{ u.totalTickets }}</strong>
+                        {{ u.totalTickets === 1 ? 'ticket' : 'tickets' }}
+                        @if (u.activeTickets > 0) { · <span class="tabular-nums">{{ u.activeTickets }}</span> active }
+                    </p>
+                    <span class="sc-meter mt-1.5" aria-hidden="true">
+                        <span class="sc-meter-fill" [style.width.%]="usagePercent(category.id)"></span>
+                    </span>
+                    } @else if (statsState() === 'loading') {
+                    <span class="sc-skeleton block h-3 w-24 rounded-sc-sm" aria-hidden="true"></span>
+                    <span class="sc-sr-only">Loading usage</span>
+                    }
+                </div>
+
+                <div class="tx-actions flex items-center gap-1">
                     <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm"
                         (click)="onEditInit(category)" [attr.aria-label]="'Edit ' + category.name">
                         <sc-icon name="edit" size="sm" />
@@ -92,24 +208,33 @@
             </li>
             }
         </ul>
+        <p class="border-t border-line px-4 py-2.5 text-xs text-ink-subtle" aria-live="polite">
+            Showing {{ visibleCategories().length }} of {{ counts().all }}
+        </p>
         }
     </section>
 
     <aside class="min-w-0">
         <section class="sc-card sc-sticky-panel" aria-labelledby="categoryFormHeading">
             <div class="sc-card-header">
-                <h2 id="categoryFormHeading" class="sc-card-title">
-                    {{ isEditing() ? 'Edit category' : 'Add category' }}
-                </h2>
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                        <sc-icon [name]="isEditing() ? 'edit' : 'add'" size="sm" />
+                    </span>
+                    <h2 id="categoryFormHeading" class="sc-card-title">
+                        {{ isEditing() ? 'Edit category' : 'Add category' }}
+                    </h2>
+                </div>
                 @if (isEditing()) {
                 <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelEdit()">Cancel</button>
                 }
             </div>
 
-            <form class="sc-card-body flex flex-col gap-4" [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
+            <form class="sc-card-body flex flex-col gap-4" [formGroup]="categoryForm" (ngSubmit)="onSubmit()"
+                (keydown.escape)="isEditing() && cancelEdit()">
                 <div>
                     <label for="categoryName" class="sc-label">Name</label>
-                    <input id="categoryName" type="text" class="sc-input" formControlName="name"
+                    <input #categoryNameInput id="categoryName" type="text" class="sc-input" formControlName="name"
                         placeholder="Billing, Hardware, Network outage"
                         [class.sc-input-invalid]="categoryForm.controls.name.touched && categoryForm.controls.name.invalid" />
                     @if (categoryForm.controls.name.touched && categoryForm.controls.name.invalid) {
@@ -126,10 +251,14 @@
                     <p class="sc-hint">Shown to staff when they classify a ticket.</p>
                 </div>
 
-                <button type="submit" class="sc-btn sc-btn-primary"
-                    [disabled]="categoryForm.invalid || isSaving()">
+                <button type="submit" class="sc-btn sc-btn-primary" [disabled]="categoryForm.invalid || isSaving()">
+                    @if (isSaving()) {
+                    <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                    Saving
+                    } @else {
                     <sc-icon [name]="isEditing() ? 'save' : 'add'" size="sm" />
                     {{ isEditing() ? 'Save changes' : 'Add category' }}
+                    }
                 </button>
             </form>
         </section>

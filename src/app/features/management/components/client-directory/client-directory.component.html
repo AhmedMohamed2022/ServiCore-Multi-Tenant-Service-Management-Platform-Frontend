@@ -1,9 +1,19 @@
-<sc-page-header title="Customers"
-    description="The people and companies that raise tickets in this organization."
+<sc-page-header title="Customers" description="The people and companies that raise tickets in this organization."
     [breadcrumbs]="[{ label: 'Management' }, { label: 'Customers' }]">
-    <div slot="actions" class="flex items-center gap-2">
-        <button type="button" class="sc-btn sc-btn-secondary" (click)="loadCustomers()" [disabled]="isLoading()">
-            <sc-icon name="refresh" size="sm" />
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+        <a routerLink="/app/management/invitations" class="sc-btn sc-btn-secondary">
+            <sc-icon name="group_add" size="sm" />
+            <span class="hidden sm:inline">Invite to portal</span>
+            <span class="sc-sr-only sm:hidden">Invite to portal</span>
+        </a>
+        <button type="button" class="sc-btn sc-btn-primary xl:hidden" (click)="focusForm()">
+            <sc-icon name="add" size="sm" />
+            <span class="hidden sm:inline">Add customer</span>
+            <span class="sc-sr-only sm:hidden">Add customer</span>
+        </button>
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="refresh()" [disabled]="isLoading()"
+            aria-label="Refresh customers">
+            <span class="inline-flex" [class.sc-spin]="isLoading()"><sc-icon name="refresh" size="sm" /></span>
             <span class="hidden sm:inline">Refresh</span>
         </button>
     </div>
@@ -14,26 +24,86 @@
     (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
 }
 
-<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+<!-- At a glance. The first three come from /customers, the last from /reports/customers. -->
+<section class="sc-enter sc-enter-2 mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Customer overview">
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="group" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Customers</p>
+            <p class="sc-metric-value">
+                @if (isLoading() && customers().length === 0) { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span [appCountUp]="counts().all"></span> }
+            </p>
+            <p class="sc-metric-hint">All records</p>
+        </div>
+    </div>
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-success" aria-hidden="true"><sc-icon name="check_circle"
+                size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Active</p>
+            <p class="sc-metric-value">
+                @if (isLoading() && customers().length === 0) { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span [appCountUp]="counts().active"></span> }
+            </p>
+            <p class="sc-metric-hint">{{ counts().inactive }} deactivated</p>
+        </div>
+    </div>
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="bolt" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">With open tickets</p>
+            <p class="sc-metric-value">
+                @if (statsState() === 'ready') { <span [appCountUp]="withActiveWork()"></span> }
+                @else if (statsState() === 'loading') { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span aria-label="Not available">—</span> }
+            </p>
+            <p class="sc-metric-hint">{{ statsState() === 'unavailable' ? 'Reports unavailable' : 'Active customers
+                being worked for' }}</p>
+        </div>
+    </div>
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="person_add" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">New this month</p>
+            <p class="sc-metric-value">
+                @if (isLoading() && customers().length === 0) { <span class="sc-skeleton sc-metric-skel"
+                    aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                @else { <span [appCountUp]="counts().recent"></span> }
+            </p>
+            <p class="sc-metric-hint">Added in the last 30 days</p>
+        </div>
+    </div>
+</section>
+
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
 
     <!-- ==================================================================
          Directory
          ================================================================== -->
-    <section class="sc-card min-w-0">
-        <div class="flex flex-wrap items-center gap-2 border-b border-line p-3">
-            <div class="relative min-w-[180px] flex-1">
-                <sc-icon name="search" size="sm"
-                    class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
+    <section class="sc-card min-w-0" aria-label="Customer directory">
+        <div class="sc-toolbar">
+            <div class="sc-search">
+                <sc-icon name="search" size="sm" class="sc-search-icon" />
                 <label for="customerSearch" class="sc-sr-only">Search customers</label>
-                <input id="customerSearch" type="search" class="sc-input pl-9" placeholder="Search by name, email or phone"
+                <input id="customerSearch" type="search" class="sc-input" placeholder="Search by name, email or phone"
                     [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
             </div>
 
-            <button type="button" class="sc-btn sc-btn-secondary" (click)="showInactive.set(!showInactive())"
-                [attr.aria-pressed]="showInactive()">
-                <sc-icon [name]="showInactive() ? 'visibility' : 'visibility_off'" size="sm" />
-                <span class="hidden sm:inline">Inactive</span>
-            </button>
+            <div class="sc-segmented" role="group" aria-label="Filter by status">
+                <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="statusFilter() === 'active'"
+                    (click)="statusFilter.set('active')">Active <span class="sc-segmented-count">{{ counts().active
+                        }}</span></button>
+                <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="statusFilter() === 'inactive'"
+                    (click)="statusFilter.set('inactive')">Inactive <span class="sc-segmented-count">{{
+                        counts().inactive }}</span></button>
+                <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="statusFilter() === 'all'"
+                    (click)="statusFilter.set('all')">All <span class="sc-segmented-count">{{ counts().all
+                        }}</span></button>
+            </div>
 
             @if (hasFilters()) {
             <button type="button" class="sc-btn sc-btn-ghost" (click)="clearFilters()">
@@ -43,15 +113,25 @@
             }
         </div>
 
-        @if (isLoading()) {
-        <div class="p-3">
-            <sc-loading-state label="Loading customers" [count]="5" />
+        @if (isLoading() && customers().length === 0) {
+        <div role="status" aria-label="Loading customers" class="divide-y divide-line">
+            <span class="sc-sr-only">Loading customers</span>
+            @for (i of [1, 2, 3, 4, 5]; track i) {
+            <div class="flex items-center gap-3 px-4 py-3.5" aria-hidden="true">
+                <span class="sc-skeleton h-8 w-8 shrink-0 rounded-full"></span>
+                <div class="min-w-0 flex-1">
+                    <span class="sc-skeleton block h-3 w-40 max-w-full rounded-sc-sm"></span>
+                    <span class="sc-skeleton mt-2 block h-2.5 w-56 max-w-full rounded-sc-sm"></span>
+                </div>
+                <span class="sc-skeleton hidden h-5 w-16 rounded-full md:block"></span>
+            </div>
+            }
         </div>
         } @else if (visibleCustomers().length === 0) {
         @if (hasFilters()) {
         <sc-empty-state icon="search_off" title="No customers match"
-            description="Try a different search term, or include inactive records."
-            actionLabel="Clear filters" (action)="clearFilters()" />
+            description="Try a different search term, or include inactive records." actionLabel="Clear filters"
+            (action)="clearFilters()" />
         } @else {
         <sc-empty-state icon="group" title="No customers yet"
             description="Add the first customer using the form, then they can have tickets raised against them." />
@@ -60,48 +140,98 @@
 
         <!-- Desktop table -->
         <div class="hidden overflow-x-auto md:block">
-            <table class="sc-table">
+            <table class="sc-table table-fixed">
                 <caption class="sc-sr-only">Customers in this organization</caption>
+                <colgroup>
+                    <col class="w-[25%]" />
+                    <col class="w-[16%]" />
+                    <col class="w-[18%]" />
+                    <col class="w-[14%]" />
+                    <col class="w-[15%]" />
+                    <col class="w-[12%]" />
+                </colgroup>
                 <thead>
                     <tr>
-                        <th scope="col">Customer</th>
+                        <th scope="col" [attr.aria-sort]="ariaSort('name')">
+                            <button type="button" class="sc-sort-btn" (click)="setSort('name')">
+                                Customer
+                                <sc-icon
+                                    [name]="sortKey() === 'name' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'"
+                                    size="xs" />
+                            </button>
+                        </th>
                         <th scope="col">Phone</th>
+                        <th scope="col" [attr.aria-sort]="ariaSort('tickets')">
+                            <button type="button" class="sc-sort-btn" (click)="setSort('tickets')">
+                                Tickets
+                                <sc-icon
+                                    [name]="sortKey() === 'tickets' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'"
+                                    size="xs" />
+                            </button>
+                        </th>
                         <th scope="col">Status</th>
-                        <th scope="col">Added</th>
+                        <th scope="col" [attr.aria-sort]="ariaSort('added')">
+                            <button type="button" class="sc-sort-btn" (click)="setSort('added')">
+                                Added
+                                <sc-icon
+                                    [name]="sortKey() === 'added' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'"
+                                    size="xs" />
+                            </button>
+                        </th>
                         <th scope="col"><span class="sc-sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (customer of visibleCustomers(); track customer.id) {
-                    <tr [class.sc-row-inactive]="!customer.isActive">
-                        <td>
+                    @let t = ticketsFor(customer.id);
+                    <tr class="sc-list-row" [class.cd-inactive]="!customer.isActive"
+                        [class.cd-editing]="editingCustomerId() === customer.id">
+                        <td class="max-w-[320px]">
                             <div class="flex items-center gap-2.5">
                                 <sc-avatar [name]="customer.name" size="sm" />
                                 <div class="min-w-0">
-                                    <p class="truncate font-semibold text-ink">{{ customer.name }}</p>
-                                    <p class="truncate text-xs text-ink-subtle">{{ customer.email }}</p>
+                                    <p class="truncate font-semibold text-ink" [attr.title]="customer.name">{{
+                                        customer.name }}</p>
+                                    <p class="truncate text-xs text-ink-subtle" [attr.title]="customer.email">{{
+                                        customer.email }}</p>
                                 </div>
                             </div>
                         </td>
-                        <td class="whitespace-nowrap">{{ customer.phoneNumber || '—' }}</td>
+                        <td class="truncate whitespace-nowrap" [attr.title]="customer.phoneNumber || null">{{
+                            customer.phoneNumber || '—' }}</td>
+                        <td class="whitespace-nowrap">
+                            @if (t) {
+                            @if (t.totalTickets === 0) {
+                            <span class="text-xs text-ink-subtle">None yet</span>
+                            } @else {
+                            <span class="text-[13px]"><strong class="font-semibold tabular-nums text-ink">{{
+                                    t.activeTickets }}</strong> active</span>
+                            <span class="text-xs text-ink-subtle"> · {{ t.totalTickets }} total</span>
+                            }
+                            } @else if (statsState() === 'loading') {
+                            <span class="sc-skeleton block h-3.5 w-20 rounded-sc-sm" aria-hidden="true"></span>
+                            <span class="sc-sr-only">Loading</span>
+                            } @else {
+                            <span class="text-ink-subtle" aria-label="Not available">—</span>
+                            }
+                        </td>
                         <td>
-                            <span class="sc-badge" [class]="customer.isActive ? 'sc-badge-success' : 'sc-badge-neutral'">
+                            <span class="sc-badge"
+                                [class]="customer.isActive ? 'sc-badge-success' : 'sc-badge-neutral'">
                                 <sc-icon [name]="customer.isActive ? 'check_circle' : 'do_not_disturb_on'" size="xs" />
                                 {{ customer.isActive ? 'Active' : 'Inactive' }}
                             </span>
                         </td>
                         <td class="whitespace-nowrap text-ink-subtle">{{ customer.createdAt | date:'MMM d, y' }}</td>
-                        <td class="w-24">
+                        <td>
                             <div class="flex items-center justify-end gap-1">
                                 <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm"
                                     (click)="onEditInit(customer)" [attr.aria-label]="'Edit ' + customer.name">
                                     <sc-icon name="edit" size="sm" />
                                 </button>
                                 @if (customer.isActive) {
-                                <button type="button"
-                                    class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm text-danger-700"
-                                    (click)="onDeactivate(customer)"
-                                    [attr.aria-label]="'Deactivate ' + customer.name">
+                                <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm text-danger-700"
+                                    (click)="onDeactivate(customer)" [attr.aria-label]="'Deactivate ' + customer.name">
                                     <sc-icon name="person_off" size="sm" />
                                 </button>
                                 }
@@ -116,7 +246,9 @@
         <!-- Mobile cards -->
         <ul class="divide-y divide-line md:hidden">
             @for (customer of visibleCustomers(); track customer.id) {
-            <li class="p-4" [class.sc-row-inactive]="!customer.isActive">
+            @let t = ticketsFor(customer.id);
+            <li class="p-4" [class.cd-inactive]="!customer.isActive"
+                [class.cd-editing]="editingCustomerId() === customer.id">
                 <div class="flex items-start gap-2.5">
                     <sc-avatar [name]="customer.name" size="sm" />
                     <div class="min-w-0 flex-1">
@@ -125,13 +257,20 @@
                         @if (customer.phoneNumber) {
                         <p class="text-xs text-ink-subtle">{{ customer.phoneNumber }}</p>
                         }
-                        <div class="mt-2 flex items-center gap-2">
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
                             <span class="sc-badge"
                                 [class]="customer.isActive ? 'sc-badge-success' : 'sc-badge-neutral'">
                                 {{ customer.isActive ? 'Active' : 'Inactive' }}
                             </span>
-                            <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onEditInit(customer)">
-                                Edit
+                            @if (t && t.totalTickets > 0) {
+                            <span class="text-xs text-ink-subtle"><strong class="font-semibold tabular-nums text-ink">{{
+                                    t.activeTickets }}</strong> active · {{ t.totalTickets }} total</span>
+                            }
+                        </div>
+                        <div class="mt-2 flex items-center gap-1">
+                            <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm"
+                                (click)="onEditInit(customer)">
+                                <sc-icon name="edit" size="sm" /> Edit
                             </button>
                             @if (customer.isActive) {
                             <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700"
@@ -143,6 +282,10 @@
             </li>
             }
         </ul>
+
+        <p class="border-t border-line px-4 py-2.5 text-xs text-ink-subtle" aria-live="polite">
+            Showing {{ visibleCustomers().length }} of {{ counts().all }}
+        </p>
         }
     </section>
 
@@ -152,22 +295,29 @@
     <aside class="min-w-0">
         <section class="sc-card sc-sticky-panel" aria-labelledby="customerFormHeading">
             <div class="sc-card-header">
-                <h2 id="customerFormHeading" class="sc-card-title">
-                    {{ isEditing() ? 'Edit customer' : 'Add customer' }}
-                </h2>
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                        <sc-icon [name]="isEditing() ? 'edit' : 'person_add'" size="sm" />
+                    </span>
+                    <h2 id="customerFormHeading" class="sc-card-title">
+                        {{ isEditing() ? 'Edit customer' : 'Add customer' }}
+                    </h2>
+                </div>
                 @if (isEditing()) {
                 <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelEdit()">Cancel</button>
                 }
             </div>
 
-            <form class="sc-card-body flex flex-col gap-4" [formGroup]="customerForm" (ngSubmit)="onSubmit()">
+            <form class="sc-card-body flex flex-col gap-4" [formGroup]="customerForm" (ngSubmit)="onSubmit()"
+                (keydown.escape)="isEditing() && cancelEdit()">
                 <div>
                     <label for="customerName" class="sc-label">Name</label>
-                    <input id="customerName" type="text" class="sc-input" formControlName="name"
+                    <input #customerNameInput id="customerName" type="text" class="sc-input" formControlName="name"
                         placeholder="Jane Smith or Contoso Ltd"
                         [class.sc-input-invalid]="customerForm.controls.name.touched && customerForm.controls.name.invalid" />
                     @if (customerForm.controls.name.touched && customerForm.controls.name.invalid) {
-                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a name of at least two characters.</p>
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Enter a name of at least two
+                        characters.</p>
                     }
                 </div>
 
@@ -184,7 +334,8 @@
                 </div>
 
                 <div>
-                    <label for="customerPhone" class="sc-label">Phone <span class="font-normal text-ink-subtle">(optional)</span></label>
+                    <label for="customerPhone" class="sc-label">Phone <span
+                            class="font-normal text-ink-subtle">(optional)</span></label>
                     <input id="customerPhone" type="tel" class="sc-input" formControlName="phoneNumber"
                         placeholder="+20 100 000 0000" autocomplete="off" />
                 </div>
@@ -192,8 +343,13 @@
                 <div class="flex gap-2">
                     <button type="submit" class="sc-btn sc-btn-primary flex-1"
                         [disabled]="customerForm.invalid || isSaving()">
+                        @if (isSaving()) {
+                        <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                        Saving
+                        } @else {
                         <sc-icon [name]="isEditing() ? 'save' : 'add'" size="sm" />
                         {{ isEditing() ? 'Save changes' : 'Add customer' }}
+                        }
                     </button>
                 </div>
             </form>

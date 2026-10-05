@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import {
   FormBuilder,
@@ -7,16 +16,23 @@ import {
   Validators,
 } from '@angular/forms';
 import { MatMenuModule } from '@angular/material/menu';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 
 import { TeamService } from '../../../../core/services/team.service';
 import { AgentDirectoryService } from '../../../../core/services/agent-directory.service';
 import { OrganizationService } from '../../../../core/services/organization.service';
+import { ReportingService } from '../../../../core/services/reporting.service';
 import { TeamDto, TeamMemberDto } from '../../models/team.model';
 import {
   OrganizationMemberDto,
   OrganizationRole,
 } from '../../models/organization.model';
+
+import {
+  AgentStatisticsData,
+  TeamStatisticsData,
+} from '../../../dashboard/models/reporting.model';
+import { CountUpDirective } from '../../../dashboard/widgets/directives/count-up.directive';
 
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
@@ -24,10 +40,14 @@ import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import { ConfirmService } from '../../../../shared/ui/confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../../../../shared/ui/toast/toast.service';
+
+type RoleLabel = 'Owner' | 'Manager' | 'Agent';
+type LoadState = 'loading' | 'ready' | 'unavailable';
+type TeamSort = 'name' | 'workload' | 'members';
+type PeopleRoleFilter = 'all' | 'owner' | 'manager' | 'agent';
 
 /** A member row with whatever display name we can honestly produce. */
 interface RosterEntry {
@@ -35,6 +55,24 @@ interface RosterEntry {
   readonly name: string;
   readonly isNamed: boolean;
   readonly joinedAt: string;
+  /** From the org member list (or the agent directory); null when unknown. */
+  readonly role: RoleLabel | null;
+  /** From GET /reports/agents; null for non-agents or when unavailable. */
+  readonly activeTickets: number | null;
+  readonly resolvedTickets: number | null;
+}
+
+/** One organization member in the People view. */
+interface PersonRow {
+  readonly userId: string;
+  readonly name: string;
+  readonly role: RoleLabel;
+  /** Null until the team memberships have loaded (or if they failed). */
+  readonly teams:
+    | readonly { id: string; name: string; manageable: boolean }[]
+    | null;
+  readonly activeTickets: number | null;
+  readonly resolvedTickets: number | null;
 }
 
 /** A user who could be added to the selected team, as an agent or a manager. */
@@ -56,7 +94,7 @@ interface AddableMember {
     AvatarComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
+    CountUpDirective,
   ],
   templateUrl: './team-roster.component.html',
   styleUrls: ['./team-roster.component.css'],
@@ -65,6 +103,7 @@ export class TeamRosterComponent implements OnInit {
   private readonly teamService = inject(TeamService);
   private readonly agentDirectory = inject(AgentDirectoryService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly reportingService = inject(ReportingService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
@@ -81,6 +120,38 @@ export class TeamRosterComponent implements OnInit {
   readonly editingTeamId = signal<string | null>(null);
 
   readonly searchTerm = signal<string>('');
+
+  // ---- Presentation state (view toggles, sorting, filters) ----------------
+  readonly view = signal<'teams' | 'people'>('teams');
+  readonly teamSort = signal<TeamSort>('name');
+  readonly rosterSearch = signal<string>('');
+  readonly peopleSearch = signal<string>('');
+  readonly peopleRole = signal<PeopleRoleFilter>('all');
+  readonly onlyUnassigned = signal<boolean>(false);
+
+  // ---- Independent data widgets: each loads and fails on its own ----------
+  /** GET /reports/teams: per-team member and ticket counts. */
+  readonly teamStats = signal<TeamStatisticsData[]>([]);
+  readonly statsState = signal<LoadState>('loading');
+  /** GET /reports/agents: per-agent workload. */
+  readonly agentStats = signal<AgentStatisticsData[]>([]);
+  readonly agentStatsState = signal<LoadState>('loading');
+  /** GET /organizations/members. */
+  readonly membersState = signal<LoadState>('loading');
+  /**
+   * userId -> ids of the teams they belong to. Built from one members call
+   * per team, and only when the People view is opened, so the roster page
+   * does not pay for it up front. Null until loaded.
+   */
+  readonly memberships = signal<ReadonlyMap<string, readonly string[]> | null>(
+    null,
+  );
+  readonly membershipState = signal<'idle' | 'loading' | 'ready' | 'failed'>(
+    'idle',
+  );
+
+  private readonly teamNameInput =
+    viewChild<ElementRef<HTMLInputElement>>('teamNameInput');
 
   /**
    * Team ids the current user has a TeamMember row for — see
@@ -140,8 +211,17 @@ export class TeamRosterComponent implements OnInit {
     return mine.size === 0 ? all : all.filter((team) => mine.has(team.id));
   });
 
+  readonly teamStatsById = computed(
+    () => new Map(this.teamStats().map((stat) => [stat.teamId, stat])),
+  );
+
+  readonly statsAvailable = computed(() => this.statsState() === 'ready');
+
   readonly visibleTeams = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
+    const sort = this.teamSort();
+    const stats = this.teamStatsById();
+
     return this.manageableTeams()
       .filter(
         (team) =>
@@ -149,8 +229,72 @@ export class TeamRosterComponent implements OnInit {
           team.name.toLowerCase().includes(term) ||
           (team.description ?? '').toLowerCase().includes(term),
       )
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        if (sort === 'workload') {
+          const delta =
+            (stats.get(b.id)?.activeTickets ?? 0) -
+            (stats.get(a.id)?.activeTickets ?? 0);
+          if (delta) return delta;
+        } else if (sort === 'members') {
+          const delta =
+            (stats.get(b.id)?.memberCount ?? 0) -
+            (stats.get(a.id)?.memberCount ?? 0);
+          if (delta) return delta;
+        }
+        return a.name.localeCompare(b.name);
+      });
   });
+
+  /** Report rows for the teams this viewer can see, for the KPI strip. */
+  private readonly scopeStats = computed(() => {
+    const byId = this.teamStatsById();
+    return this.manageableTeams()
+      .map((team) => byId.get(team.id))
+      .filter((stat): stat is TeamStatisticsData => !!stat);
+  });
+
+  readonly kpiMemberships = computed(() =>
+    this.scopeStats().reduce((sum, stat) => sum + stat.memberCount, 0),
+  );
+  readonly kpiActiveTickets = computed(() =>
+    this.scopeStats().reduce((sum, stat) => sum + stat.activeTickets, 0),
+  );
+  readonly kpiEmptyTeams = computed(
+    () => this.scopeStats().filter((stat) => stat.memberCount === 0).length,
+  );
+
+  readonly selectedStats = computed(() => {
+    const id = this.selectedTeam()?.id;
+    return id ? (this.teamStatsById().get(id) ?? null) : null;
+  });
+
+  /** Active, resolved and closed counts as share of the selected team's total. */
+  readonly selectedHasTickets = computed(() => {
+    const stat = this.selectedStats();
+    return (
+      !!stat &&
+      stat.activeTickets + stat.resolvedTickets + stat.closedTickets > 0
+    );
+  });
+
+  private readonly agentStatsById = computed(
+    () => new Map(this.agentStats().map((stat) => [stat.agentId, stat])),
+  );
+
+  /** Role by user id: the org member list first, the agent directory second. */
+  private readonly roleById = computed(() => {
+    const roles = new Map<string, RoleLabel>();
+    for (const member of this.orgMembers()) {
+      roles.set(member.userId, TeamRosterComponent.roleLabel(member.role));
+    }
+    return roles;
+  });
+
+  private static roleLabel(role: OrganizationRole): RoleLabel {
+    if (role === OrganizationRole.Owner) return 'Owner';
+    if (role === OrganizationRole.Manager) return 'Manager';
+    return 'Agent';
+  }
 
   /**
    * TeamMemberDto is (TeamId, UserId, JoinedAt) — there is no name on this
@@ -171,15 +315,36 @@ export class TeamRosterComponent implements OnInit {
           this.agentDirectory.nameFor(member.userId) ??
           orgNames.get(member.userId) ??
           null;
+        const stat = this.agentStatsById().get(member.userId);
+        const role =
+          this.roleById().get(member.userId) ??
+          (this.agentDirectory.nameFor(member.userId) ? 'Agent' : null);
         return {
           userId: member.userId,
           name: name ?? `Unnamed member · ${member.userId.substring(0, 8)}`,
           isNamed: !!name,
           joinedAt: member.joinedAt,
+          role,
+          activeTickets: stat ? stat.activeTickets : null,
+          resolvedTickets: stat ? stat.resolvedTickets : null,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   });
+
+  /** The roster after the in-pane search; the header count uses `roster()`. */
+  readonly rosterView = computed(() => {
+    const term = this.rosterSearch().trim().toLowerCase();
+    if (!term) return this.roster();
+    return this.roster().filter((entry) =>
+      entry.name.toLowerCase().includes(term),
+    );
+  });
+
+  /** Busiest member of the selected team, so workload bars share one scale. */
+  readonly rosterMaxActive = computed(() =>
+    Math.max(1, ...this.roster().map((entry) => entry.activeTickets ?? 0)),
+  );
 
   /**
    * Adding a member used to mean pasting an Identity GUID by hand, with no
@@ -189,13 +354,27 @@ export class TeamRosterComponent implements OnInit {
    */
   readonly addableAgents = computed<AddableMember[]>(() => {
     const joined = new Set(this.currentMembers().map((m) => m.userId));
-    return [...this.agentDirectory.names().entries()]
+    // The org member list is what this page is already guarded by, so it is
+    // available the moment the page is. The agent directory depends on a
+    // separate reports probe that may not have settled yet on a hard refresh,
+    // which used to leave "Add agent" missing. Either source is enough.
+    const pool = new Map<string, string>(this.agentDirectory.names());
+    for (const member of this.orgMembers()) {
+      if (member.role === OrganizationRole.Agent) {
+        pool.set(member.userId, member.userName);
+      }
+    }
+    return [...pool.entries()]
       .filter(([userId]) => !joined.has(userId))
       .map(([userId, name]) => ({ userId, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
   });
 
-  readonly isDirectoryAvailable = this.agentDirectory.isAvailable;
+  readonly isDirectoryAvailable = computed(
+    () =>
+      this.agentDirectory.isAvailable() ||
+      this.orgMembers().some((m) => m.role === OrganizationRole.Agent),
+  );
 
   /**
    * Managers who could be added to the selected team — GET /organizations/
@@ -210,7 +389,8 @@ export class TeamRosterComponent implements OnInit {
     return this.orgMembers()
       .filter(
         (member) =>
-          member.role === OrganizationRole.Manager && !joined.has(member.userId),
+          member.role === OrganizationRole.Manager &&
+          !joined.has(member.userId),
       )
       .map((member) => ({ userId: member.userId, name: member.userName }))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -218,6 +398,89 @@ export class TeamRosterComponent implements OnInit {
 
   readonly isManagerDirectoryAvailable = computed(
     () => this.orgMembers().length > 0,
+  );
+
+  // ---------------------------------------------------------------------
+  // People view
+  // ---------------------------------------------------------------------
+
+  readonly people = computed<PersonRow[]>(() => {
+    const membership = this.memberships();
+    const teamsById = new Map(this.teams().map((team) => [team.id, team]));
+    const manageable = new Set(this.manageableTeams().map((team) => team.id));
+    const stats = this.agentStatsById();
+
+    return this.orgMembers().map((member) => {
+      const stat = stats.get(member.userId);
+      const teamIds = membership?.get(member.userId);
+      return {
+        userId: member.userId,
+        name: member.userName,
+        role: TeamRosterComponent.roleLabel(member.role),
+        teams: membership
+          ? (teamIds ?? [])
+              .map((id) => teamsById.get(id))
+              .filter((team): team is TeamDto => !!team)
+              .map((team) => ({
+                id: team.id,
+                name: team.name,
+                manageable: manageable.has(team.id),
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          : null,
+        activeTickets: stat ? stat.activeTickets : null,
+        resolvedTickets: stat ? stat.resolvedTickets : null,
+      };
+    });
+  });
+
+  readonly roleCounts = computed(() => {
+    const all = this.people();
+    return {
+      all: all.length,
+      owner: all.filter((p) => p.role === 'Owner').length,
+      manager: all.filter((p) => p.role === 'Manager').length,
+      agent: all.filter((p) => p.role === 'Agent').length,
+    };
+  });
+
+  /** Managers and agents with no team at all. Owners are not expected on teams. */
+  readonly unassignedPeople = computed(
+    () =>
+      this.people().filter(
+        (person) =>
+          person.role !== 'Owner' &&
+          !!person.teams &&
+          person.teams.length === 0,
+      ).length,
+  );
+
+  readonly visiblePeople = computed(() => {
+    const term = this.peopleSearch().trim().toLowerCase();
+    const role = this.peopleRole();
+    const unassignedOnly = this.onlyUnassigned();
+    const rank: Record<RoleLabel, number> = { Owner: 0, Manager: 1, Agent: 2 };
+
+    return this.people()
+      .filter((person) => role === 'all' || person.role.toLowerCase() === role)
+      .filter((person) => !term || person.name.toLowerCase().includes(term))
+      .filter(
+        (person) =>
+          !unassignedOnly ||
+          (person.role !== 'Owner' &&
+            !!person.teams &&
+            person.teams.length === 0),
+      )
+      .sort(
+        (a, b) => rank[a.role] - rank[b.role] || a.name.localeCompare(b.name),
+      );
+  });
+
+  readonly hasPeopleFilters = computed(
+    () =>
+      this.peopleSearch().trim().length > 0 ||
+      this.peopleRole() !== 'all' ||
+      this.onlyUnassigned(),
   );
 
   constructor() {
@@ -247,6 +510,8 @@ export class TeamRosterComponent implements OnInit {
     this.agentDirectory.loadIfPermitted();
     this.loadOrgMembers();
     this.loadTeams();
+    this.loadStats();
+    this.loadAgentStats();
     this.teamService
       .getMyTeamMemberships()
       .subscribe((ids) => this.myTeamIds.set(ids));
@@ -261,10 +526,160 @@ export class TeamRosterComponent implements OnInit {
    * degrade path agentDirectory already uses.
    */
   loadOrgMembers(): void {
+    if (this.membersState() !== 'ready') this.membersState.set('loading');
+
     this.organizationService
       .getMembers()
-      .pipe(catchError(() => of([])))
-      .subscribe((members) => this.orgMembers.set(members));
+      .pipe(
+        map((members) => ({ members, ok: true })),
+        catchError(() =>
+          of({ members: [] as OrganizationMemberDto[], ok: false }),
+        ),
+      )
+      .subscribe(({ members, ok }) => {
+        this.orgMembers.set(members);
+        this.membersState.set(ok ? 'ready' : 'unavailable');
+      });
+  }
+
+  /** Header refresh: every widget on the page, each on its own. */
+  refresh(): void {
+    this.loadOrgMembers();
+    this.loadTeams();
+    this.loadStats();
+    this.loadAgentStats();
+  }
+
+  /**
+   * Per-team member and ticket counts. A failure only blanks the numbers that
+   * depend on it; the team list and roster keep working without them.
+   */
+  loadStats(): void {
+    if (this.statsState() !== 'ready') this.statsState.set('loading');
+
+    this.reportingService.getTeamStatistics({}).subscribe({
+      next: (data) => {
+        this.teamStats.set(data);
+        this.statsState.set('ready');
+      },
+      error: () => {
+        if (this.statsState() !== 'ready') this.statsState.set('unavailable');
+      },
+    });
+  }
+
+  loadAgentStats(): void {
+    if (this.agentStatsState() !== 'ready') this.agentStatsState.set('loading');
+
+    this.reportingService.getAgentStatistics({}).subscribe({
+      next: (data) => {
+        this.agentStats.set(data);
+        this.agentStatsState.set('ready');
+      },
+      error: () => {
+        if (this.agentStatsState() !== 'ready') {
+          this.agentStatsState.set('unavailable');
+        }
+      },
+    });
+  }
+
+  setView(view: 'teams' | 'people'): void {
+    this.view.set(view);
+    if (view === 'people' && this.membershipState() === 'idle') {
+      this.loadMemberships();
+    }
+  }
+
+  /** One members call per team; all-or-nothing so the chips are never half right. */
+  loadMemberships(): void {
+    const teams = this.teams();
+    if (teams.length === 0) {
+      this.memberships.set(new Map());
+      this.membershipState.set('ready');
+      return;
+    }
+
+    this.membershipState.set('loading');
+    forkJoin(
+      teams.map((team) =>
+        this.teamService.getTeamMembers(team.id).pipe(
+          map((members) => ({
+            teamId: team.id,
+            users: members.map((m) => m.userId),
+          })),
+          catchError(() => of(null)),
+        ),
+      ),
+    ).subscribe((results) => {
+      if (results.some((result) => result === null)) {
+        this.membershipState.set('failed');
+        return;
+      }
+      const byUser = new Map<string, string[]>();
+      for (const result of results) {
+        if (!result) continue;
+        for (const userId of result.users) {
+          byUser.set(userId, [...(byUser.get(userId) ?? []), result.teamId]);
+        }
+      }
+      this.memberships.set(byUser);
+      this.membershipState.set('ready');
+    });
+  }
+
+  /** Membership changed somewhere: drop the cache, refetch if it is on screen. */
+  private invalidateMemberships(): void {
+    this.memberships.set(null);
+    this.membershipState.set('idle');
+    if (this.view() === 'people') this.loadMemberships();
+  }
+
+  /** A team chip in the People view opens that team on the Teams view. */
+  openTeam(teamId: string): void {
+    const team = this.manageableTeams().find((t) => t.id === teamId);
+    if (!team) return;
+    this.view.set('teams');
+    this.onSelectTeam(team);
+  }
+
+  clearPeopleFilters(): void {
+    this.peopleSearch.set('');
+    this.peopleRole.set('all');
+    this.onlyUnassigned.set(false);
+  }
+
+  roleBadge(role: RoleLabel | null): string {
+    if (role === 'Owner') return 'sc-badge-primary';
+    if (role === 'Manager') return 'sc-badge-info';
+    return 'sc-badge-neutral';
+  }
+
+  /** Workload bar width for one roster entry, on the team's own scale. */
+  loadPercent(entry: RosterEntry): number {
+    return entry.activeTickets === null
+      ? 0
+      : Math.round((entry.activeTickets / this.rosterMaxActive()) * 100);
+  }
+
+  /** Moves the Edit action's attention to the form, which may be off screen. */
+  focusTeamForm(): void {
+    this.teamNameInput()?.nativeElement.focus();
+  }
+
+  /**
+   * On a stacked (phone/tablet) layout the roster sits below the list, so
+   * picking a team scrolls it into view. Side by side, nothing moves.
+   */
+  revealDetail(pane: HTMLElement): void {
+    if (
+      typeof matchMedia === 'function' &&
+      matchMedia('(min-width: 1280px)').matches
+    ) {
+      return;
+    }
+    pane.scrollIntoView({ block: 'start' });
+    pane.focus({ preventScroll: true });
   }
 
   loadTeams(): void {
@@ -275,6 +690,7 @@ export class TeamRosterComponent implements OnInit {
       next: (data) => {
         this.teams.set(data);
         this.isTeamLoading.set(false);
+        this.invalidateMemberships();
         // Selection is kept valid by the constructor's effect, above.
       },
       error: (err: Error) => {
@@ -286,6 +702,7 @@ export class TeamRosterComponent implements OnInit {
 
   onSelectTeam(team: TeamDto): void {
     this.selectedTeam.set(team);
+    this.rosterSearch.set('');
     this.memberForm.reset({ userId: '' });
     this.loadMembers(team.id);
   }
@@ -332,6 +749,7 @@ export class TeamRosterComponent implements OnInit {
         this.isSavingTeam.set(false);
         this.cancelTeamEdit();
         this.loadTeams();
+        this.loadStats();
       },
       error: (err: Error) => {
         this.errorMessage.set(err.message);
@@ -380,6 +798,7 @@ export class TeamRosterComponent implements OnInit {
             }
             if (this.editingTeamId() === team.id) this.cancelTeamEdit();
             this.loadTeams();
+            this.loadStats();
           },
           error: (err: Error) => {
             this.errorMessage.set(err.message);
@@ -418,6 +837,8 @@ export class TeamRosterComponent implements OnInit {
           this.memberForm.reset({ userId: '' });
           this.isAddingMember.set(false);
           this.loadMembers(team.id);
+          this.loadStats();
+          this.invalidateMemberships();
         },
         error: (err: Error) => {
           this.errorMessage.set(err.message);
@@ -445,6 +866,8 @@ export class TeamRosterComponent implements OnInit {
           next: () => {
             this.toast.success('Member removed.');
             this.loadMembers(team.id);
+            this.loadStats();
+            this.invalidateMemberships();
           },
           error: (err: Error) => {
             this.errorMessage.set(err.message);

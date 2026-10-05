@@ -1,10 +1,22 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 
 import { CustomerService } from '../../../../core/services/customer.service';
+import { ReportingService } from '../../../../core/services/reporting.service';
+import { CustomerStatisticsData } from '../../../dashboard/models/reporting.model';
+import { CountUpDirective } from '../../../dashboard/widgets/directives/count-up.directive';
 import { CustomerDto } from '../../models/customer.model';
 
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
@@ -13,10 +25,12 @@ import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import { ConfirmService } from '../../../../shared/ui/confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../../../../shared/ui/toast/toast.service';
+
+type StatusFilter = 'active' | 'inactive' | 'all';
+type SortKey = 'name' | 'tickets' | 'added';
 
 @Component({
   selector: 'app-client-directory',
@@ -30,13 +44,15 @@ import { ToastService } from '../../../../shared/ui/toast/toast.service';
     AvatarComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
+    RouterLink,
+    CountUpDirective,
   ],
   templateUrl: './client-directory.component.html',
   styleUrls: ['./client-directory.component.css'],
 })
 export class ClientDirectoryComponent implements OnInit {
   private readonly customerService = inject(CustomerService);
+  private readonly reportingService = inject(ReportingService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
@@ -48,7 +64,21 @@ export class ClientDirectoryComponent implements OnInit {
   readonly editingCustomerId = signal<string | null>(null);
 
   readonly searchTerm = signal<string>('');
-  readonly showInactive = signal<boolean>(false);
+  readonly statusFilter = signal<StatusFilter>('active');
+  /** Kept for compatibility: true whenever deactivated records are included. */
+  readonly showInactive = computed(() => this.statusFilter() !== 'active');
+  readonly sortKey = signal<SortKey>('name');
+  readonly sortDir = signal<'asc' | 'desc'>('asc');
+
+  /** GET /reports/customers, an independent widget: its failure only blanks ticket numbers. */
+  readonly stats = signal<CustomerStatisticsData[]>([]);
+  readonly statsState = signal<'loading' | 'ready' | 'unavailable'>('loading');
+  readonly statsById = computed(
+    () => new Map(this.stats().map((stat) => [stat.customerId, stat])),
+  );
+
+  private readonly nameInput =
+    viewChild<ElementRef<HTMLInputElement>>('customerNameInput');
 
   readonly isEditing = computed(() => this.editingCustomerId() !== null);
 
@@ -63,12 +93,38 @@ export class ClientDirectoryComponent implements OnInit {
     phoneNumber: [''],
   });
 
+  /**
+   * Tickets for a customer from the report. A customer the report does not
+   * list has no tickets in it, so a loaded report reads as zero; an unloaded
+   * or failed one reads as unknown (null), never as zero.
+   */
+  ticketsFor(customerId: string): CustomerStatisticsData | null {
+    if (this.statsState() !== 'ready') return null;
+    return (
+      this.statsById().get(customerId) ?? {
+        customerId,
+        customerName: '',
+        totalTickets: 0,
+        activeTickets: 0,
+        resolvedTickets: 0,
+        closedTickets: 0,
+      }
+    );
+  }
+
   readonly visibleCustomers = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
-    const includeInactive = this.showInactive();
+    const status = this.statusFilter();
+    const key = this.sortKey();
+    const dir = this.sortDir() === 'asc' ? 1 : -1;
+    const stats = this.statsById();
 
     return this.customers()
-      .filter((customer) => includeInactive || customer.isActive)
+      .filter(
+        (customer) =>
+          status === 'all' ||
+          (status === 'active' ? customer.isActive : !customer.isActive),
+      )
       .filter(
         (customer) =>
           !term ||
@@ -76,15 +132,89 @@ export class ClientDirectoryComponent implements OnInit {
           customer.email.toLowerCase().includes(term) ||
           (customer.phoneNumber ?? '').toLowerCase().includes(term),
       )
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        let delta = 0;
+        if (key === 'tickets') {
+          delta =
+            (stats.get(a.id)?.activeTickets ?? 0) -
+            (stats.get(b.id)?.activeTickets ?? 0);
+        } else if (key === 'added') {
+          delta = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+        }
+        return delta * dir || a.name.localeCompare(b.name);
+      });
   });
 
-  readonly hasFilters = computed(
-    () => this.searchTerm().trim().length > 0 || this.showInactive(),
+  readonly counts = computed(() => {
+    const all = this.customers();
+    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return {
+      all: all.length,
+      active: all.filter((c) => c.isActive).length,
+      inactive: all.filter((c) => !c.isActive).length,
+      recent: all.filter(
+        (c) => c.isActive && Date.parse(c.createdAt) >= monthAgo,
+      ).length,
+    };
+  });
+
+  /** Active customers with at least one ticket still being worked. */
+  readonly withActiveWork = computed(
+    () =>
+      this.customers().filter(
+        (c) =>
+          c.isActive && (this.statsById().get(c.id)?.activeTickets ?? 0) > 0,
+      ).length,
   );
+
+  readonly hasFilters = computed(
+    () =>
+      this.searchTerm().trim().length > 0 || this.statusFilter() !== 'active',
+  );
+
+  setSort(key: SortKey): void {
+    if (this.sortKey() === key) {
+      this.sortDir.set(this.sortDir() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortKey.set(key);
+      this.sortDir.set(key === 'name' ? 'asc' : 'desc');
+    }
+  }
+
+  ariaSort(key: SortKey): 'ascending' | 'descending' | 'none' {
+    if (this.sortKey() !== key) return 'none';
+    return this.sortDir() === 'asc' ? 'ascending' : 'descending';
+  }
+
+  /** Focuses the form, which sits below the list on narrow screens. */
+  focusForm(): void {
+    const input = this.nameInput()?.nativeElement;
+    if (!input) return;
+    input.scrollIntoView({ block: 'center' });
+    input.focus({ preventScroll: true });
+  }
 
   ngOnInit(): void {
     this.loadCustomers();
+    this.loadStats();
+  }
+
+  refresh(): void {
+    this.loadCustomers();
+    this.loadStats();
+  }
+
+  loadStats(): void {
+    if (this.statsState() !== 'ready') this.statsState.set('loading');
+    this.reportingService.getCustomerStatistics({}).subscribe({
+      next: (data) => {
+        this.stats.set(data);
+        this.statsState.set('ready');
+      },
+      error: () => {
+        if (this.statsState() !== 'ready') this.statsState.set('unavailable');
+      },
+    });
   }
 
   loadCustomers(): void {
@@ -147,6 +277,7 @@ export class ClientDirectoryComponent implements OnInit {
       email: customer.email,
       phoneNumber: customer.phoneNumber ?? '',
     });
+    this.focusForm();
   }
 
   /**
@@ -197,6 +328,6 @@ export class ClientDirectoryComponent implements OnInit {
 
   clearFilters(): void {
     this.searchTerm.set('');
-    this.showInactive.set(false);
+    this.statusFilter.set('active');
   }
 }

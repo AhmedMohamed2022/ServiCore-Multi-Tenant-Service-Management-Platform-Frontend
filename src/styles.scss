@@ -731,6 +731,235 @@ input[type="range"] {
     }
   }
 
+  /* --- List screens (management console) ------------------------------- */
+
+  /* Compact KPI tile for a row of at-a-glance numbers above a list. The
+     value is always printed; colour and icon only add emphasis. */
+  .sc-metric {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--sc-border);
+    border-radius: var(--sc-radius-lg);
+    background-color: var(--sc-surface);
+    box-shadow: var(--sc-shadow);
+  }
+
+  .sc-metric-label {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--sc-text-subtle);
+  }
+
+  .sc-metric-value {
+    margin-top: 2px;
+    min-height: 30px;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 30px;
+    letter-spacing: -0.02em;
+    color: var(--sc-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-metric-hint {
+    margin-top: 2px;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    color: var(--sc-text-subtle);
+  }
+
+  /* One tile that needs a look: warm wash, warm hint text (still AA). */
+  .sc-metric-attn {
+    border-color: var(--sc-warn-200);
+    background-image: linear-gradient(
+      135deg,
+      var(--sc-warn-50),
+      var(--sc-surface) 70%
+    );
+  }
+  .sc-metric-attn .sc-metric-hint {
+    color: var(--sc-warn-700);
+  }
+
+  /* Placeholder for a number that is still loading. Same box as the value,
+     so nothing moves when it lands. */
+  .sc-metric-skel {
+    display: block;
+    width: 56px;
+    height: 22px;
+    margin-top: 4px;
+    border-radius: var(--sc-radius-sm);
+  }
+
+  /* Segmented control: a small set of mutually exclusive views or filters.
+     Buttons carry aria-pressed; give the group a role and a label. */
+  .sc-segmented {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 100%;
+    padding: 3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid var(--sc-border);
+    border-radius: var(--sc-radius-md);
+    background-color: var(--sc-surface-sunken);
+  }
+
+  .sc-segmented-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: var(--sc-radius);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--sc-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--sc-dur-fast) var(--sc-ease),
+      color var(--sc-dur-fast) var(--sc-ease),
+      box-shadow var(--sc-dur-fast) var(--sc-ease);
+  }
+
+  .sc-segmented-btn:hover {
+    color: var(--sc-text);
+  }
+
+  .sc-segmented-btn[aria-pressed="true"] {
+    border-color: var(--sc-border);
+    background-color: var(--sc-surface);
+    color: var(--sc-brand-700);
+    box-shadow: var(--sc-shadow);
+  }
+
+  /* The group scrolls sideways on very narrow screens, which would clip an
+     outside outline, so the ring is drawn inside the button. */
+  .sc-segmented-btn:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .sc-segmented-count {
+    min-width: 18px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background-color: var(--sc-border);
+    color: var(--sc-text-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-segmented-btn[aria-pressed="true"] .sc-segmented-count {
+    background-color: var(--sc-brand-100);
+    color: var(--sc-brand-800);
+  }
+
+  /* Filter bar that sits on top of a list card. */
+  .sc-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--sc-border);
+  }
+
+  /* Search field: wrapper plus an icon element. The input keeps its own id,
+     label and bindings. */
+  .sc-search {
+    position: relative;
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .sc-search > .sc-input {
+    padding-left: 2.25rem;
+  }
+  .sc-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--sc-text-subtle);
+    pointer-events: none;
+  }
+
+  .sc-select-sm {
+    width: auto;
+    height: 32px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Sortable column header: a real button inside the <th>, with aria-sort on
+     the <th> itself. */
+  .sc-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: -2px -4px;
+    padding: 2px 4px;
+    border-radius: var(--sc-radius-sm);
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  .sc-sort-btn:hover {
+    color: var(--sc-text);
+  }
+  th[aria-sort="ascending"] .sc-sort-btn,
+  th[aria-sort="descending"] .sc-sort-btn {
+    color: var(--sc-brand-700);
+  }
+
+  /* Stacked proportion bar (for example active, resolved and closed). The
+     segments are sized with flex-grow and coloured with a status token. Always
+     placed next to the numbers it summarises. */
+  .sc-split {
+    display: flex;
+    height: 6px;
+    gap: 2px;
+    overflow: hidden;
+    border-radius: 999px;
+    background-color: var(--sc-surface-sunken);
+  }
+  .sc-split > span {
+    display: block;
+    flex-basis: 0;
+    min-width: 4px;
+  }
+
+  /* Row in a list card. */
+  .sc-list-row {
+    transition: background-color var(--sc-dur-fast) var(--sc-ease);
+  }
+  .sc-list-row:hover {
+    background-color: var(--sc-surface-muted);
+  }
+
+  /* Side form that stays in view next to a long list. The topbar is sticky
+     inside the same scroll container, so the panel parks below it. */
+  @media (min-width: 1280px) {
+    .sc-sticky-panel {
+      position: sticky;
+      top: calc(var(--sc-topbar-h) + 1rem);
+    }
+  }
+
   /* --- Misc ------------------------------------------------------------- */
   .sc-divider {
     @apply h-px w-full bg-line;

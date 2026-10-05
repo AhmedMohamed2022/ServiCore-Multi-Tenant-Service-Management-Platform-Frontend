@@ -1,11 +1,27 @@
 <sc-page-header title="Teams"
     description="Service teams and who is on them. A ticket can only be assigned to a member of its own team."
     [breadcrumbs]="[{ label: 'Management' }, { label: 'Teams' }]">
-    <button slot="actions" type="button" class="sc-btn sc-btn-secondary" (click)="loadTeams()"
-        [disabled]="isTeamLoading()">
-        <sc-icon name="refresh" size="sm" />
-        <span class="hidden sm:inline">Refresh</span>
-    </button>
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+        <div class="sc-segmented" role="group" aria-label="Choose a view">
+            <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="view() === 'teams'"
+                (click)="setView('teams')">
+                <sc-icon name="groups" size="xs" />
+                Teams
+            </button>
+            <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="view() === 'people'"
+                (click)="setView('people')">
+                <sc-icon name="badge" size="xs" />
+                People
+            </button>
+        </div>
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="refresh()" [disabled]="isTeamLoading()"
+            aria-label="Refresh teams">
+            <span class="inline-flex" [class.sc-spin]="isTeamLoading()">
+                <sc-icon name="refresh" size="sm" />
+            </span>
+            <span class="hidden sm:inline">Refresh</span>
+        </button>
+    </div>
 </sc-page-header>
 
 @if (errorMessage()) {
@@ -13,142 +29,275 @@
     (dismiss)="errorMessage.set(null)">{{ errorMessage() }}</sc-alert>
 }
 
-<div class="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-
-    <!-- ==================================================================
-         Teams
-         ================================================================== -->
-    <div class="flex min-w-0 flex-col gap-5">
-        <section class="sc-card">
-            <div class="border-b border-line p-3">
-                <div class="relative">
-                    <sc-icon name="search" size="sm"
-                        class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
-                    <label for="teamSearch" class="sc-sr-only">Search teams</label>
-                    <input id="teamSearch" type="search" class="sc-input pl-9" placeholder="Search teams"
-                        [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
-                </div>
-            </div>
-
-            @if (isTeamLoading()) {
-            <div class="p-3">
-                <sc-loading-state label="Loading teams" [count]="4" />
-            </div>
-            } @else if (visibleTeams().length === 0) {
-            @if (searchTerm().trim()) {
-            <sc-empty-state icon="search_off" title="No teams match"
-                description="Try a different search term." actionLabel="Clear search"
-                (action)="searchTerm.set('')" />
-            } @else {
-            <sc-empty-state icon="groups" title="No teams yet"
-                description="Create a team so tickets have somewhere to be routed." />
-            }
-            } @else {
-            <ul class="divide-y divide-line">
-                @for (team of visibleTeams(); track team.id) {
-                <li>
-                    <button type="button" class="sc-team-row" [class.sc-team-selected]="selectedTeam()?.id === team.id"
-                        (click)="onSelectTeam(team)" [attr.aria-current]="selectedTeam()?.id === team.id">
-                        <span class="min-w-0 flex-1 text-left">
-                            <span class="block truncate text-[13px] font-semibold text-ink">{{ team.name }}</span>
-                            @if (team.description) {
-                            <span class="mt-0.5 block truncate text-xs text-ink-subtle">{{ team.description }}</span>
-                            }
-                        </span>
-                        <sc-icon name="chevron_right" size="sm" class="text-ink-subtle" />
-                    </button>
-                </li>
+<!-- ======================================================================
+     At a glance. Each tile loads and fails on its own.
+     ====================================================================== -->
+<section class="sc-enter sc-enter-2 mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Team overview">
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="groups" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Teams</p>
+            <p class="sc-metric-value">
+                @if (isTeamLoading() && teams().length === 0) {
+                <span class="sc-skeleton sc-metric-skel" aria-hidden="true"></span>
+                <span class="sc-sr-only">Loading</span>
+                } @else {
+                <span [appCountUp]="manageableTeams().length"></span>
                 }
-            </ul>
-            }
-        </section>
-
-        <!-- Create / edit team — Owner only. CanManageTeams (create/update/
-             deactivate) is Owner-only on the backend; a Manager only manages
-             membership within teams they already belong to. -->
-        @if (canAdministerTeams()) {
-        <section class="sc-card" aria-labelledby="teamFormHeading">
-            <div class="sc-card-header">
-                <h2 id="teamFormHeading" class="sc-card-title">
-                    {{ isEditingTeam() ? 'Edit team' : 'New team' }}
-                </h2>
-                @if (isEditingTeam()) {
-                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelTeamEdit()">Cancel</button>
-                }
-            </div>
-
-            <form class="sc-card-body flex flex-col gap-4" [formGroup]="teamForm" (ngSubmit)="onSubmitTeam()">
-                <div>
-                    <label for="teamName" class="sc-label">Name</label>
-                    <input id="teamName" type="text" class="sc-input" formControlName="name"
-                        placeholder="Tier 2 Support"
-                        [class.sc-input-invalid]="teamForm.controls.name.touched && teamForm.controls.name.invalid" />
-                    @if (teamForm.controls.name.touched && teamForm.controls.name.invalid) {
-                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use between 3 and 60 characters.</p>
-                    }
-                </div>
-
-                <div>
-                    <label for="teamDescription" class="sc-label">
-                        Description <span class="font-normal text-ink-subtle">(optional)</span>
-                    </label>
-                    <textarea id="teamDescription" class="sc-textarea" formControlName="description" rows="2"
-                        placeholder="What this team handles."></textarea>
-                </div>
-
-                <button type="submit" class="sc-btn sc-btn-primary"
-                    [disabled]="teamForm.invalid || isSavingTeam()">
-                    <sc-icon [name]="isEditingTeam() ? 'save' : 'add'" size="sm" />
-                    {{ isEditingTeam() ? 'Save changes' : 'Create team' }}
-                </button>
-            </form>
-        </section>
-        } @else {
-        <section class="sc-card p-4">
-            <p class="text-xs text-ink-subtle">
-                Creating, renaming and deactivating teams is an organization owner action. You can manage
-                agent membership for the teams you belong to below.
             </p>
-        </section>
-        }
+            <p class="sc-metric-hint">{{ isRestrictedToOwnTeams() ? 'Teams you belong to' : 'In this organization' }}
+            </p>
+        </div>
     </div>
 
-    <!-- ==================================================================
-         Selected team
-         ================================================================== -->
-    <div class="min-w-0">
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="group" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Team members</p>
+            <p class="sc-metric-value">
+                @if (statsState() === 'ready') {
+                <span [appCountUp]="kpiMemberships()"></span>
+                } @else if (statsState() === 'loading') {
+                <span class="sc-skeleton sc-metric-skel" aria-hidden="true"></span>
+                <span class="sc-sr-only">Loading</span>
+                } @else {
+                <span aria-label="Not available">—</span>
+                }
+            </p>
+            <p class="sc-metric-hint">{{ statsState() === 'unavailable' ? 'Reports unavailable' : 'Memberships across
+                teams' }}</p>
+        </div>
+    </div>
+
+    <div class="sc-metric">
+        <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true"><sc-icon name="bolt" size="sm" /></span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Active tickets</p>
+            <p class="sc-metric-value">
+                @if (statsState() === 'ready') {
+                <span [appCountUp]="kpiActiveTickets()"></span>
+                } @else if (statsState() === 'loading') {
+                <span class="sc-skeleton sc-metric-skel" aria-hidden="true"></span>
+                <span class="sc-sr-only">Loading</span>
+                } @else {
+                <span aria-label="Not available">—</span>
+                }
+            </p>
+            <p class="sc-metric-hint">{{ statsState() === 'unavailable' ? 'Reports unavailable' : 'Being worked across
+                teams' }}</p>
+        </div>
+    </div>
+
+    <div class="sc-metric" [class.sc-metric-attn]="statsState() === 'ready' && kpiEmptyTeams() > 0">
+        <span class="sc-icon-chip sc-icon-chip-sm"
+            [class.sc-icon-chip-warn]="statsState() === 'ready' && kpiEmptyTeams() > 0" aria-hidden="true">
+            <sc-icon name="person_off" size="sm" />
+        </span>
+        <div class="min-w-0">
+            <p class="sc-metric-label">Teams with no members</p>
+            <p class="sc-metric-value">
+                @if (statsState() === 'ready') {
+                <span [appCountUp]="kpiEmptyTeams()"></span>
+                } @else if (statsState() === 'loading') {
+                <span class="sc-skeleton sc-metric-skel" aria-hidden="true"></span>
+                <span class="sc-sr-only">Loading</span>
+                } @else {
+                <span aria-label="Not available">—</span>
+                }
+            </p>
+            <p class="sc-metric-hint">
+                @if (statsState() === 'ready' && kpiEmptyTeams() > 0) {
+                Tickets routed there can't be assigned
+                } @else if (statsState() === 'unavailable') {
+                Reports unavailable
+                } @else {
+                Every team has someone on it
+                }
+            </p>
+        </div>
+    </div>
+</section>
+
+@if (view() === 'teams') {
+<!-- ======================================================================
+     Teams view
+     ====================================================================== -->
+<div class="grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)] xl:items-start">
+
+    <!-- Team list -->
+    <section class="sc-card min-w-0 xl:col-start-1 xl:row-start-1" aria-label="Teams">
+        <div class="sc-toolbar">
+            <div class="sc-search">
+                <sc-icon name="search" size="sm" class="sc-search-icon" />
+                <label for="teamSearch" class="sc-sr-only">Search teams</label>
+                <input id="teamSearch" type="search" class="sc-input" placeholder="Search teams"
+                    [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
+            </div>
+            <label for="teamSort" class="sc-sr-only">Sort teams</label>
+            <select id="teamSort" class="sc-select sc-select-sm" [ngModel]="teamSort()"
+                (ngModelChange)="teamSort.set($event)">
+                <option value="name">Name</option>
+                <option value="workload" [disabled]="!statsAvailable()">Most active tickets</option>
+                <option value="members" [disabled]="!statsAvailable()">Most members</option>
+            </select>
+        </div>
+
+        @if (isTeamLoading() && teams().length === 0) {
+        <div role="status" aria-label="Loading teams" class="divide-y divide-line">
+            <span class="sc-sr-only">Loading teams</span>
+            @for (i of [1, 2, 3, 4]; track i) {
+            <div class="flex items-center gap-3 px-4 py-3" aria-hidden="true">
+                <span class="sc-skeleton h-7 w-7 shrink-0 rounded-sc"></span>
+                <div class="min-w-0 flex-1">
+                    <span class="sc-skeleton block h-3 w-32 rounded-sc-sm"></span>
+                    <span class="sc-skeleton mt-2 block h-2.5 w-44 max-w-full rounded-sc-sm"></span>
+                </div>
+            </div>
+            }
+        </div>
+        } @else if (visibleTeams().length === 0) {
+        @if (searchTerm().trim()) {
+        <sc-empty-state icon="search_off" title="No teams match" description="Try a different search term."
+            actionLabel="Clear search" (action)="searchTerm.set('')" />
+        } @else {
+        <sc-empty-state icon="groups" title="No teams yet"
+            description="Create a team so tickets have somewhere to be routed." />
+        }
+        } @else {
+        <ul class="divide-y divide-line">
+            @for (team of visibleTeams(); track team.id) {
+            @let stat = teamStatsById().get(team.id);
+            <li>
+                <button type="button" class="tr-team" [class.tr-team-selected]="selectedTeam()?.id === team.id"
+                    (click)="onSelectTeam(team); revealDetail(detailPane)"
+                    [attr.aria-current]="selectedTeam()?.id === team.id ? 'true' : null">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                        <sc-icon name="groups" size="sm" />
+                    </span>
+                    <span class="min-w-0 flex-1 text-left">
+                        <span class="block truncate text-[13px] font-semibold text-ink">{{ team.name }}</span>
+                        <span class="mt-0.5 block truncate text-xs text-ink-subtle">
+                            {{ team.description || 'No description' }}
+                        </span>
+                    </span>
+                    @if (stat) {
+                    <span class="flex shrink-0 flex-col items-end gap-0.5">
+                        <span class="text-xs font-semibold tabular-nums text-ink">
+                            {{ stat.activeTickets }}<span class="font-normal text-ink-subtle"> active</span>
+                        </span>
+                        @if (stat.memberCount === 0) {
+                        <span class="sc-badge sc-badge-warn">No members</span>
+                        } @else {
+                        <span class="text-xs tabular-nums text-ink-subtle">
+                            {{ stat.memberCount }} {{ stat.memberCount === 1 ? 'member' : 'members' }}
+                        </span>
+                        }
+                    </span>
+                    }
+                    <sc-icon name="chevron_right" size="sm" class="shrink-0 text-ink-subtle" />
+                </button>
+            </li>
+            }
+        </ul>
+        }
+    </section>
+
+    <!-- Selected team. On a stacked layout, picking a team scrolls here. -->
+    <div #detailPane tabindex="-1" class="tr-detail min-w-0 xl:col-start-2 xl:row-span-2 xl:row-start-1">
         @if (selectedTeam(); as team) {
-        <section class="sc-card" aria-labelledby="rosterHeading">
-            <div class="sc-card-header">
-                <div class="min-w-0">
-                    <h2 id="rosterHeading" class="sc-card-title truncate">{{ team.name }}</h2>
-                    <p class="mt-0.5 text-xs text-ink-subtle">
-                        {{ roster().length }} {{ roster().length === 1 ? 'member' : 'members' }}
-                        · created {{ team.createdAt | date:'MMM d, y' }}
-                    </p>
+        <section class="sc-card overflow-hidden" aria-labelledby="rosterHeading">
+            <div class="tr-detail-head">
+                <span class="sc-icon-chip sc-icon-chip-solid sc-icon-chip-lg" aria-hidden="true">
+                    <sc-icon name="groups" />
+                </span>
+                <div class="min-w-0 flex-1">
+                    <p class="sc-eyebrow">Team</p>
+                    <h2 id="rosterHeading"
+                        class="mt-0.5 line-clamp-2 break-words text-[18px] font-semibold leading-snug tracking-[-0.02em] text-ink">
+                        {{ team.name }}
+                    </h2>
+                    <p class="mt-0.5 text-xs text-ink-subtle">Created {{ team.createdAt | date:'MMM d, y' }}</p>
                 </div>
                 @if (canAdministerTeams()) {
                 <div class="flex shrink-0 items-center gap-1">
-                    <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="onEditTeam(team)">
+                    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm"
+                        (click)="onEditTeam(team); focusTeamForm()">
                         <sc-icon name="edit" size="sm" />
                         <span class="hidden sm:inline">Edit</span>
+                        <span class="sc-sr-only sm:hidden">Edit team</span>
                     </button>
                     <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm text-danger-700"
                         (click)="onDeactivateTeam(team)">
                         <sc-icon name="do_not_disturb_on" size="sm" />
                         <span class="hidden sm:inline">Deactivate</span>
+                        <span class="sc-sr-only sm:hidden">Deactivate team</span>
                     </button>
                 </div>
                 }
             </div>
 
             @if (team.description) {
-            <p class="border-b border-line px-5 py-3 text-[13px] text-ink-muted">{{ team.description }}</p>
+            <p class="border-b border-line px-5 py-3 text-[13px] leading-relaxed text-ink-muted">{{ team.description }}
+            </p>
             }
 
+            <!-- Workload for this team, from the team report -->
+            <div class="border-b border-line px-5 py-4">
+                <dl class="tr-stats">
+                    <div>
+                        <dt>Members</dt>
+                        <dd>{{ roster().length }}</dd>
+                    </div>
+                    <div>
+                        <dt><span class="tr-dot" style="background-color: var(--sc-status-progress)"></span>Active</dt>
+                        <dd>
+                            @if (selectedStats(); as st) { <span [appCountUp]="st.activeTickets"></span> }
+                            @else if (statsState() === 'loading') { <span class="sc-skeleton tr-stat-skel"
+                                aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                            @else { <span aria-label="Not available">—</span> }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt><span class="tr-dot" style="background-color: var(--sc-status-resolved)"></span>Resolved
+                        </dt>
+                        <dd>
+                            @if (selectedStats(); as st) { <span [appCountUp]="st.resolvedTickets"></span> }
+                            @else if (statsState() === 'loading') { <span class="sc-skeleton tr-stat-skel"
+                                aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                            @else { <span aria-label="Not available">—</span> }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt><span class="tr-dot" style="background-color: var(--sc-status-closed)"></span>Closed</dt>
+                        <dd>
+                            @if (selectedStats(); as st) { <span [appCountUp]="st.closedTickets"></span> }
+                            @else if (statsState() === 'loading') { <span class="sc-skeleton tr-stat-skel"
+                                aria-hidden="true"></span><span class="sc-sr-only">Loading</span> }
+                            @else { <span aria-label="Not available">—</span> }
+                        </dd>
+                    </div>
+                </dl>
+                @if (selectedStats(); as st) {
+                @if (selectedHasTickets()) {
+                <div class="sc-split mt-3" role="img"
+                    [attr.aria-label]="st.activeTickets + ' active, ' + st.resolvedTickets + ' resolved, ' + st.closedTickets + ' closed'">
+                    @if (st.activeTickets) { <span [style.flex-grow]="st.activeTickets"
+                        style="background-color: var(--sc-status-progress)"></span> }
+                    @if (st.resolvedTickets) { <span [style.flex-grow]="st.resolvedTickets"
+                        style="background-color: var(--sc-status-resolved)"></span> }
+                    @if (st.closedTickets) { <span [style.flex-grow]="st.closedTickets"
+                        style="background-color: var(--sc-status-closed)"></span> }
+                </div>
+                } @else {
+                <p class="mt-3 text-xs text-ink-subtle">No tickets have been routed to this team yet.</p>
+                }
+                }
+            </div>
+
             <!-- Add member -->
-            <div class="border-b border-line p-4">
-                @if (!useManualUserId() && (isDirectoryAvailable() || (canAdministerTeams() && isManagerDirectoryAvailable()))) {
+            <div class="border-b border-line bg-surface-muted px-5 py-4">
+                @if (!useManualUserId() && (isDirectoryAvailable() || (canAdministerTeams() &&
+                isManagerDirectoryAvailable()))) {
                 <div class="flex flex-wrap items-center gap-2">
                     @if (isDirectoryAvailable()) {
                     <button type="button" class="sc-btn sc-btn-primary" [matMenuTriggerFor]="agentMenu"
@@ -170,14 +319,17 @@
                 </div>
                 <p class="sc-hint">
                     @if (canAdministerTeams()) {
-                    "Add agent" lists this organization's agents; "Add manager" lists managers not already on this
-                    team. Both add through the same team membership the ticket-assignment rules already rely on.
+                    Pick from this organization's agents, or from managers not already on this team.
                     } @else {
                     Lists agents in this organization. Managers can only add agents to their own teams.
                     }
                 </p>
-                @if (isDirectoryAvailable() && addableAgents().length === 0 && (!canAdministerTeams() || addableManagers().length === 0)) {
-                <p class="text-xs text-ink-subtle">Everyone eligible for this team is already on it.</p>
+                @if (isDirectoryAvailable() && addableAgents().length === 0 && (!canAdministerTeams() ||
+                addableManagers().length === 0)) {
+                <p class="mt-1 flex items-center gap-1 text-xs text-ink-subtle">
+                    <sc-icon name="check_circle" size="xs" />
+                    Everyone eligible for this team is already on it.
+                </p>
                 }
                 } @else {
                 <form class="flex flex-wrap items-start gap-2" [formGroup]="memberForm"
@@ -204,25 +356,68 @@
             </div>
 
             <!-- Roster -->
+            @if (roster().length > 5) {
+            <div class="border-b border-line px-5 py-3">
+                <div class="sc-search">
+                    <sc-icon name="search" size="sm" class="sc-search-icon" />
+                    <label for="rosterSearch" class="sc-sr-only">Search members of {{ team.name }}</label>
+                    <input id="rosterSearch" type="search" class="sc-input" placeholder="Search members"
+                        [ngModel]="rosterSearch()" (ngModelChange)="rosterSearch.set($event)" />
+                </div>
+            </div>
+            }
+
             @if (isMemberLoading()) {
-            <div class="p-3">
-                <sc-loading-state label="Loading members" [count]="4" />
+            <div role="status" aria-label="Loading members" class="divide-y divide-line">
+                <span class="sc-sr-only">Loading members</span>
+                @for (i of [1, 2, 3]; track i) {
+                <div class="flex items-center gap-3 px-5 py-4" aria-hidden="true">
+                    <span class="sc-skeleton h-8 w-8 shrink-0 rounded-full"></span>
+                    <div class="min-w-0 flex-1">
+                        <span class="sc-skeleton block h-3 w-40 max-w-full rounded-sc-sm"></span>
+                        <span class="sc-skeleton mt-2 block h-2.5 w-24 rounded-sc-sm"></span>
+                    </div>
+                </div>
+                }
             </div>
             } @else if (roster().length === 0) {
             <sc-empty-state icon="person_off" title="No members on this team"
                 description="Tickets routed here can't be assigned to anyone until someone joins." />
+            } @else if (rosterView().length === 0) {
+            <sc-empty-state icon="search_off" title="No members match" description="Try a different name."
+                actionLabel="Clear search" (action)="rosterSearch.set('')" />
             } @else {
             <ul class="divide-y divide-line">
-                @for (entry of roster(); track entry.userId) {
-                <li class="flex items-center gap-3 p-4">
+                @for (entry of rosterView(); track entry.userId) {
+                <li class="sc-list-row flex items-center gap-3 px-5 py-3.5">
                     <sc-avatar [name]="entry.isNamed ? entry.name : entry.userId" size="sm" />
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-[13px] font-semibold text-ink"
-                            [class.text-ink-subtle]="!entry.isNamed">
-                            {{ entry.name }}
+                        <p class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span class="truncate text-[13px] font-semibold"
+                                [class]="entry.isNamed ? 'text-ink' : 'text-ink-subtle'">{{ entry.name }}</span>
+                            @if (entry.role) {
+                            <span class="sc-badge" [class]="roleBadge(entry.role)">{{ entry.role }}</span>
+                            }
                         </p>
-                        <p class="text-xs text-ink-subtle">Joined {{ entry.joinedAt | date:'MMM d, y' }}</p>
+                        <p class="text-xs text-ink-subtle">
+                            Joined {{ entry.joinedAt | date:'MMM d, y' }}
+                            @if (entry.activeTickets !== null) {
+                            <span class="sm:hidden"> · {{ entry.activeTickets }} active</span>
+                            }
+                        </p>
                     </div>
+                    @if (entry.activeTickets !== null) {
+                    <div class="tr-load hidden sm:block">
+                        <p class="text-xs text-ink-subtle">
+                            <strong class="font-semibold tabular-nums text-ink">{{ entry.activeTickets }}</strong>
+                            active
+                            · <span class="tabular-nums">{{ entry.resolvedTickets }}</span> resolved
+                        </p>
+                        <span class="sc-meter mt-1.5" aria-hidden="true">
+                            <span class="sc-meter-fill" [style.width.%]="loadPercent(entry)"></span>
+                        </span>
+                    </div>
+                    }
                     <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon sc-btn-sm text-danger-700"
                         (click)="onRemoveMember(entry)" [attr.aria-label]="'Remove ' + entry.name">
                         <sc-icon name="person_remove" size="sm" />
@@ -239,9 +434,197 @@
         </section>
         }
     </div>
-</div>
 
-<mat-menu #agentMenu="matMenu">
+    <!-- Create / edit team. Owner only: CanManageTeams (create, update,
+         deactivate) is Owner-only on the backend; a Manager only manages
+         membership within teams they already belong to. -->
+    <div class="min-w-0 xl:col-start-1 xl:row-start-2">
+        @if (canAdministerTeams()) {
+        <section class="sc-card" aria-labelledby="teamFormHeading">
+            <div class="sc-card-header">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm" aria-hidden="true">
+                        <sc-icon [name]="isEditingTeam() ? 'edit' : 'add'" size="sm" />
+                    </span>
+                    <h2 id="teamFormHeading" class="sc-card-title">
+                        {{ isEditingTeam() ? 'Edit team' : 'New team' }}
+                    </h2>
+                </div>
+                @if (isEditingTeam()) {
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="cancelTeamEdit()">Cancel</button>
+                }
+            </div>
+
+            <form class="sc-card-body flex flex-col gap-4" [formGroup]="teamForm" (ngSubmit)="onSubmitTeam()"
+                (keydown.escape)="isEditingTeam() && cancelTeamEdit()">
+                <div>
+                    <label for="teamName" class="sc-label">Name</label>
+                    <input #teamNameInput id="teamName" type="text" class="sc-input" formControlName="name"
+                        placeholder="Tier 2 Support"
+                        [class.sc-input-invalid]="teamForm.controls.name.touched && teamForm.controls.name.invalid" />
+                    @if (teamForm.controls.name.touched && teamForm.controls.name.invalid) {
+                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use between 3 and 60 characters.</p>
+                    }
+                </div>
+
+                <div>
+                    <label for="teamDescription" class="sc-label">
+                        Description <span class="font-normal text-ink-subtle">(optional)</span>
+                    </label>
+                    <textarea id="teamDescription" class="sc-textarea" formControlName="description" rows="2"
+                        placeholder="What this team handles."></textarea>
+                </div>
+
+                <button type="submit" class="sc-btn sc-btn-primary" [disabled]="teamForm.invalid || isSavingTeam()">
+                    @if (isSavingTeam()) {
+                    <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                    Saving
+                    } @else {
+                    <sc-icon [name]="isEditingTeam() ? 'save' : 'add'" size="sm" />
+                    {{ isEditingTeam() ? 'Save changes' : 'Create team' }}
+                    }
+                </button>
+            </form>
+        </section>
+        } @else {
+        <section class="sc-card flex items-start gap-3 p-4">
+            <span class="sc-icon-chip sc-icon-chip-sm sc-icon-chip-neutral" aria-hidden="true">
+                <sc-icon name="lock" size="sm" />
+            </span>
+            <p class="text-xs leading-relaxed text-ink-muted">
+                Creating, renaming and deactivating teams is an organization owner action. You can manage
+                agent membership for the teams you belong to.
+            </p>
+        </section>
+        }
+    </div>
+</div>
+} @else {
+<!-- ======================================================================
+     People view: every member of the organization and the teams they are on
+     ====================================================================== -->
+<section class="sc-card min-w-0" aria-label="People in this organization">
+    <div class="sc-toolbar">
+        <div class="sc-search">
+            <sc-icon name="search" size="sm" class="sc-search-icon" />
+            <label for="peopleSearch" class="sc-sr-only">Search people</label>
+            <input id="peopleSearch" type="search" class="sc-input" placeholder="Search people"
+                [ngModel]="peopleSearch()" (ngModelChange)="peopleSearch.set($event)" />
+        </div>
+
+        <div class="sc-segmented" role="group" aria-label="Filter by role">
+            <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="peopleRole() === 'all'"
+                (click)="peopleRole.set('all')">All <span class="sc-segmented-count">{{ roleCounts().all
+                    }}</span></button>
+            <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="peopleRole() === 'manager'"
+                (click)="peopleRole.set('manager')">Managers <span class="sc-segmented-count">{{ roleCounts().manager
+                    }}</span></button>
+            <button type="button" class="sc-segmented-btn" [attr.aria-pressed]="peopleRole() === 'agent'"
+                (click)="peopleRole.set('agent')">Agents <span class="sc-segmented-count">{{ roleCounts().agent
+                    }}</span></button>
+        </div>
+
+        <button type="button" class="sc-btn sc-btn-secondary" [attr.aria-pressed]="onlyUnassigned()"
+            [class.sc-btn-soft]="onlyUnassigned()" [disabled]="membershipState() !== 'ready'"
+            (click)="onlyUnassigned.set(!onlyUnassigned())">
+            <sc-icon name="person_off" size="sm" />
+            <span>Not on a team</span>
+            @if (membershipState() === 'ready') {
+            <span class="sc-segmented-count">{{ unassignedPeople() }}</span>
+            }
+        </button>
+
+        @if (hasPeopleFilters()) {
+        <button type="button" class="sc-btn sc-btn-ghost" (click)="clearPeopleFilters()">
+            <sc-icon name="close" size="sm" />
+            Clear
+        </button>
+        }
+    </div>
+
+    @if (membersState() === 'loading') {
+    <div role="status" aria-label="Loading people" class="divide-y divide-line">
+        <span class="sc-sr-only">Loading people</span>
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="flex items-center gap-3 px-5 py-3.5" aria-hidden="true">
+            <span class="sc-skeleton h-8 w-8 shrink-0 rounded-full"></span>
+            <div class="min-w-0 flex-1">
+                <span class="sc-skeleton block h-3 w-36 max-w-full rounded-sc-sm"></span>
+                <span class="sc-skeleton mt-2 block h-2.5 w-24 rounded-sc-sm"></span>
+            </div>
+        </div>
+        }
+    </div>
+    } @else if (membersState() === 'unavailable') {
+    <sc-empty-state icon="cloud_off" title="Couldn't load people"
+        description="The member list is unavailable right now." actionLabel="Try again" (action)="loadOrgMembers()" />
+    } @else if (visiblePeople().length === 0) {
+    @if (hasPeopleFilters()) {
+    <sc-empty-state icon="search_off" title="No one matches" description="Try a different name, or widen the filters."
+        actionLabel="Clear filters" (action)="clearPeopleFilters()" />
+    } @else {
+    <sc-empty-state icon="badge" title="No members yet"
+        description="Invite staff from the Invitations page and they will appear here." />
+    }
+    } @else {
+    @if (membershipState() === 'failed') {
+    <div class="border-b border-line px-4 py-3">
+        <sc-alert tone="warn" title="Team membership is unavailable">
+            Names and roles are shown, but which teams each person is on couldn't be loaded.
+            <button type="button" class="sc-kbd-link ml-1" (click)="loadMemberships()">Try again</button>
+        </sc-alert>
+    </div>
+    }
+    <ul class="divide-y divide-line">
+        @for (person of visiblePeople(); track person.userId) {
+        <li class="sc-list-row tr-person">
+            <div class="flex min-w-0 items-center gap-3">
+                <sc-avatar [name]="person.name" size="sm" />
+                <div class="min-w-0">
+                    <p class="truncate text-[13px] font-semibold text-ink">{{ person.name }}</p>
+                    <span class="sc-badge mt-0.5" [class]="roleBadge(person.role)">{{ person.role }}</span>
+                </div>
+            </div>
+
+            <div class="tr-person-teams min-w-0">
+                @if (membershipState() === 'loading') {
+                <span class="sc-skeleton h-5 w-24 rounded-full" aria-hidden="true"></span>
+                <span class="sc-sr-only">Loading teams</span>
+                } @else if (person.teams === null) {
+                <span class="text-xs text-ink-subtle">Teams unavailable</span>
+                } @else if (person.teams.length === 0) {
+                @if (person.role === 'Owner') {
+                <span class="text-xs text-ink-subtle">Organization-wide</span>
+                } @else {
+                <span class="sc-badge sc-badge-warn"><sc-icon name="person_off" size="xs" /> Not on a team</span>
+                }
+                } @else {
+                @for (team of person.teams; track team.id) {
+                @if (team.manageable) {
+                <button type="button" class="tr-chip" (click)="openTeam(team.id)"
+                    [attr.aria-label]="'Open team ' + team.name">
+                    <span class="truncate">{{ team.name }}</span>
+                </button>
+                } @else {
+                <span class="tr-chip tr-chip-static"><span class="truncate">{{ team.name }}</span></span>
+                }
+                }
+                }
+            </div>
+
+            <div class="tr-person-load text-xs text-ink-subtle">
+                @if (person.activeTickets !== null) {
+                <strong class="font-semibold tabular-nums text-ink">{{ person.activeTickets }}</strong> active
+                }
+            </div>
+        </li>
+        }
+    </ul>
+    }
+</section>
+}
+
+<mat-menu #agentMenu="matMenu" class="sc-menu">
     @for (agent of addableAgents(); track agent.userId) {
     <button type="button" mat-menu-item (click)="onPickMember(agent.userId)">
         <span class="text-[13px]">{{ agent.name }}</span>
@@ -249,7 +632,7 @@
     }
 </mat-menu>
 
-<mat-menu #managerMenu="matMenu">
+<mat-menu #managerMenu="matMenu" class="sc-menu">
     @for (manager of addableManagers(); track manager.userId) {
     <button type="button" mat-menu-item (click)="onPickMember(manager.userId)">
         <span class="text-[13px]">{{ manager.name }}</span>

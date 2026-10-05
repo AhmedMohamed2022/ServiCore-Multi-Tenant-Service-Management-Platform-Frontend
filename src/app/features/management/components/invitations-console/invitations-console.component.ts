@@ -1,6 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { InvitationService } from '../../../../core/services/invitation.service';
@@ -12,29 +17,33 @@ import {
   OrganizationInvitationDto,
 } from '../../models/invitation.model';
 
+import { CountUpDirective } from '../../../dashboard/widgets/directives/count-up.directive';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import { ConfirmService } from '../../../../shared/ui/confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../../../../shared/ui/toast/toast.service';
 
 type InvitationStatus = 'Pending' | 'Accepted' | 'Revoked' | 'Expired';
+type StatusFilter = 'all' | 'pending' | 'accepted' | 'closed';
+
+const SOON_MS = 48 * 60 * 60 * 1000;
 
 @Component({
   selector: 'app-invitations-console',
   standalone: true,
   imports: [
     DatePipe,
+    FormsModule,
     ReactiveFormsModule,
     PageHeaderComponent,
     IconComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
+    CountUpDirective,
   ],
   templateUrl: './invitations-console.component.html',
   styleUrls: ['./invitations-console.component.css'],
@@ -60,6 +69,66 @@ export class InvitationsConsoleComponent implements OnInit {
   readonly staffInvitations = signal<OrganizationInvitationDto[]>([]);
   readonly isInvitationsLoading = signal<boolean>(false);
   readonly revokingInvitationId = signal<string | null>(null);
+
+  // ---- Presentation state for the staff invitations list ----------------
+  readonly statusFilter = signal<StatusFilter>('all');
+  readonly searchTerm = signal<string>('');
+  /** Which invite form is shown on narrow screens, where both would stack. */
+  readonly inviteTab = signal<'staff' | 'customer'>('staff');
+
+  readonly counts = computed(() => {
+    const list = this.staffInvitations();
+    const label = (i: OrganizationInvitationDto) =>
+      this.invitationStatusLabel(i);
+    const pending = list.filter((i) => label(i) === 'Pending');
+    return {
+      all: list.length,
+      pending: pending.length,
+      soon: pending.filter(
+        (i) => new Date(i.expiresAt).getTime() - Date.now() <= SOON_MS,
+      ).length,
+      accepted: list.filter((i) => label(i) === 'Accepted').length,
+      closed: list.filter((i) => ['Revoked', 'Expired'].includes(label(i)))
+        .length,
+    };
+  });
+
+  readonly visibleInvitations = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    const filter = this.statusFilter();
+    const rank: Record<InvitationStatus, number> = {
+      Pending: 0,
+      Accepted: 1,
+      Expired: 2,
+      Revoked: 3,
+    };
+
+    return this.staffInvitations()
+      .filter((i) => {
+        const status = this.invitationStatusLabel(i);
+        if (filter === 'pending') return status === 'Pending';
+        if (filter === 'accepted') return status === 'Accepted';
+        if (filter === 'closed')
+          return status === 'Revoked' || status === 'Expired';
+        return true;
+      })
+      .filter(
+        (i) =>
+          !term ||
+          i.email.toLowerCase().includes(term) ||
+          i.role.toLowerCase().includes(term),
+      )
+      .sort(
+        (a, b) =>
+          rank[this.invitationStatusLabel(a)] -
+            rank[this.invitationStatusLabel(b)] ||
+          Date.parse(b.createdAt) - Date.parse(a.createdAt),
+      );
+  });
+
+  readonly hasFilters = computed(
+    () => this.statusFilter() !== 'all' || this.searchTerm().trim().length > 0,
+  );
 
   readonly staffForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -246,6 +315,32 @@ export class InvitationsConsoleComponent implements OnInit {
     return InvitationsConsoleComponent.STATUS_ICON[
       this.invitationStatusLabel(invitation)
     ];
+  }
+
+  clearFilters(): void {
+    this.statusFilter.set('all');
+    this.searchTerm.set('');
+  }
+
+  /** "Expires in 5 h", "Expires in 3 days", or when it ended, for the row. */
+  expiryLabel(invitation: OrganizationInvitationDto): string {
+    const status = this.invitationStatusLabel(invitation);
+    if (status === 'Accepted' || status === 'Revoked') return '';
+    const delta = new Date(invitation.expiresAt).getTime() - Date.now();
+    const abs = Math.abs(delta);
+    const hours = Math.max(1, Math.round(abs / 3_600_000));
+    const amount =
+      hours < 48
+        ? `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+        : `${Math.round(hours / 24)} days`;
+    return delta > 0 ? `Expires in ${amount}` : `Expired ${amount} ago`;
+  }
+
+  isExpiringSoon(invitation: OrganizationInvitationDto): boolean {
+    return (
+      this.isPending(invitation) &&
+      new Date(invitation.expiresAt).getTime() - Date.now() <= SOON_MS
+    );
   }
 
   goToCustomers(): void {
