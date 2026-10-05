@@ -1,0 +1,163 @@
+<!-- Insights: each line is a sum or ratio of the endpoint's own counts. -->
+<ul class="eb-insights" aria-label="Highlights">
+    @if (concentration(); as c) {
+    <li class="eb-insight">
+        <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="donut_small" size="sm" /></span>
+        <span>The top 3 {{ nounPlural() }} hold <strong>{{ c.percent }}%</strong> of all tickets.</span>
+    </li>
+    }
+    @if (heaviest(); as h) {
+    <li class="eb-insight">
+        <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="bolt" size="sm" /></span>
+        <span>Heaviest live load: <strong class="eb-ellipsis" [attr.title]="h.name">{{ h.name }}</strong>
+            with {{ h.active }} active.</span>
+    </li>
+    }
+    <li class="eb-insight">
+        <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="task_alt" size="sm" /></span>
+        <span><strong>{{ clearCount() }}</strong> of {{ rows().length }} {{ rows().length === 1 ? noun() : nounPlural()
+            }} have no active tickets.</span>
+    </li>
+</ul>
+
+<div class="mt-4 grid grid-cols-1 gap-4">
+
+    <sc-chart-card [title]="'Ticket volume'"
+        [description]="'Top ' + (chartItems().length || 10) + ' ' + nounPlural() + ' by ' + metricLabel().toLowerCase() + ' tickets.'">
+        <div slot="actions" class="eb-segment" role="group" [attr.aria-label]="'Rank ' + nounPlural() + ' by'">
+            @for (m of metrics; track m.key) {
+            <button type="button" class="eb-segment-btn" [attr.aria-pressed]="metric() === m.key"
+                (click)="selectMetric(m.key)">{{ m.label }}</button>
+            }
+        </div>
+
+        @if (chartItems().length) {
+        <sc-bar-list [items]="chartItems()" [total]="chartTotal()" unit="tickets"
+            [label]="metricLabel() + ' tickets per ' + noun()" />
+        } @else {
+        <sc-empty-state icon="bar_chart" [title]="'No ' + metricLabel().toLowerCase() + ' tickets'"
+            [description]="'None of these ' + nounPlural() + ' have any in this period.'" />
+        }
+    </sc-chart-card>
+
+    <section class="sc-card sc-enter min-w-0">
+        <div class="sc-card-header flex-wrap">
+            <div class="min-w-0">
+                <h2 class="sc-card-title">Breakdown</h2>
+                <p class="mt-0.5 text-xs text-ink-subtle" aria-live="polite">
+                    @if (query().trim()) {
+                    {{ tableRows().length }} of {{ rows().length }} {{ nounPlural() }}
+                    } @else {
+                    {{ rows().length }} {{ rows().length === 1 ? noun() : nounPlural() }}
+                    }
+                </p>
+            </div>
+
+            @if (showFilter()) {
+            <div class="eb-filter">
+                <label [attr.for]="'eb-filter-' + noun()" class="sc-sr-only">Filter {{ nounPlural() }} by name</label>
+                <sc-icon name="search" size="sm" class="eb-filter-icon" />
+                <input [attr.id]="'eb-filter-' + noun()" type="search" class="sc-input eb-filter-input"
+                    [placeholder]="'Filter ' + nounPlural()" autocomplete="off" [ngModel]="query()"
+                    (ngModelChange)="setQuery($event)" />
+            </div>
+            }
+        </div>
+
+        @if (tableRows().length === 0) {
+        <sc-empty-state icon="search_off" [title]="'No matching ' + nounPlural()"
+            description="Try a different name, or clear the filter." />
+        } @else {
+        <div class="eb-scroll" tabindex="0" role="region" [attr.aria-label]="nounPlural() + ' table'">
+            <table class="sc-table eb-table">
+                <caption class="sc-sr-only">Ticket totals per {{ noun() }}. Column headings are buttons that sort the
+                    table.</caption>
+                <thead>
+                    <tr>
+                        <th scope="col" class="eb-rank">#</th>
+                        <th scope="col" class="eb-name-col" [attr.aria-sort]="ariaSort('name')">
+                            <button type="button" class="eb-sort" (click)="sortBy('name')">
+                                {{ nameHeading() }}<sc-icon [name]="sortIcon('name')" size="xs" />
+                            </button>
+                        </th>
+                        @if (secondaryHeading()) {
+                        <th scope="col" class="text-right" [attr.aria-sort]="ariaSort('secondary')">
+                            <button type="button" class="eb-sort eb-sort-end" (click)="sortBy('secondary')">
+                                {{ secondaryHeading() }}<sc-icon [name]="sortIcon('secondary')" size="xs" />
+                            </button>
+                        </th>
+                        }
+                        <th scope="col" class="text-right" [attr.aria-sort]="ariaSort('total')">
+                            <button type="button" class="eb-sort eb-sort-end" (click)="sortBy('total')">
+                                Total<sc-icon [name]="sortIcon('total')" size="xs" />
+                            </button>
+                        </th>
+                        <th scope="col" class="text-right" [attr.aria-sort]="ariaSort('active')">
+                            <button type="button" class="eb-sort eb-sort-end" (click)="sortBy('active')">
+                                Active<sc-icon [name]="sortIcon('active')" size="xs" />
+                            </button>
+                        </th>
+                        <th scope="col" class="text-right" [attr.aria-sort]="ariaSort('resolved')">
+                            <button type="button" class="eb-sort eb-sort-end" (click)="sortBy('resolved')">
+                                Resolved<sc-icon [name]="sortIcon('resolved')" size="xs" />
+                            </button>
+                        </th>
+                        <th scope="col" class="text-right" [attr.aria-sort]="ariaSort('closed')">
+                            <button type="button" class="eb-sort eb-sort-end" (click)="sortBy('closed')">
+                                Closed<sc-icon [name]="sortIcon('closed')" size="xs" />
+                            </button>
+                        </th>
+                        <th scope="col" class="eb-done-col" [attr.aria-sort]="ariaSort('done')">
+                            <button type="button" class="eb-sort" (click)="sortBy('done')">
+                                Finished<sc-icon [name]="sortIcon('done')" size="xs" />
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of tableRows(); track row.id; let i = $index) {
+                    <tr>
+                        <td class="eb-rank tabular-nums">{{ i + 1 }}</td>
+                        <td class="eb-name-col">
+                            <span class="flex items-center gap-2.5">
+                                @if (showAvatar()) {
+                                <sc-avatar [name]="row.name" size="xs" />
+                                }
+                                <span class="eb-ellipsis font-medium text-ink" [attr.title]="row.name">{{ row.name
+                                    }}</span>
+                            </span>
+                        </td>
+                        @if (secondaryHeading()) {
+                        <td class="text-right tabular-nums text-ink-subtle">{{ row.secondary ?? 0 }}</td>
+                        }
+                        <td class="text-right font-semibold tabular-nums text-ink">{{ row.total }}</td>
+                        <td class="text-right tabular-nums">
+                            @if (row.active > 0) {
+                            <span class="sc-badge sc-badge-info">{{ row.active }}</span>
+                            } @else {
+                            <span class="text-ink-subtle">0</span>
+                            }
+                        </td>
+                        <td class="text-right font-semibold tabular-nums text-success-700">{{ row.resolved }}</td>
+                        <td class="text-right tabular-nums text-ink-subtle">{{ row.closed }}</td>
+                        <td class="eb-done-col">
+                            <!-- Three-part bar: the number beside it carries the same reading. -->
+                            <span class="flex items-center gap-2">
+                                <span class="eb-mix" aria-hidden="true">
+                                    <span class="eb-mix-seg eb-mix-active" [style.flex-grow]="row.active"></span>
+                                    <span class="eb-mix-seg eb-mix-resolved" [style.flex-grow]="row.resolved"></span>
+                                    <span class="eb-mix-seg eb-mix-closed" [style.flex-grow]="row.closed"></span>
+                                </span>
+                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-ink-subtle">
+                                    {{ doneOf(row) }}%
+                                </span>
+                            </span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </section>
+</div>

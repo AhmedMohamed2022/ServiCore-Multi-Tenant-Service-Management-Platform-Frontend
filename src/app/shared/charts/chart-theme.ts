@@ -1,92 +1,68 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { Color, ScaleType } from '@swimlane/ngx-charts';
 import {
   TicketPriority,
   TicketStatus,
 } from '../../features/tickets/models/ticket-enums.model';
 
 /**
- * Chart colours are derived from the same semantic system as the status and
- * priority badges (§18), so a slice of the status chart and the badge for that
- * status are always the same colour. Hex values are needed here because
- * ngx-charts renders SVG fills it computes in JS and cannot read CSS custom
- * properties.
+ * Chart colours are the same design tokens the status and priority badges use,
+ * so a slice of the status ring and the badge for that status are always the
+ * same colour. Every value is a CSS custom property reference: the charts are
+ * HTML and SVG that the browser paints, so they read tokens directly and
+ * there is no hex in TypeScript any more.
  */
-const SC = {
-  neutral: '#94a3b8',
-  info: '#60a5fa',
-  primary: '#4f46e5',
-  warn: '#d97706',
-  success: '#059669',
-  closed: '#64748b',
-  danger: '#dc2626',
-} as const;
-
-const scale = (domain: string[]): Color => ({
-  name: 'servicore',
-  selectable: true,
-  group: ScaleType.Ordinal,
-  domain,
-});
-
-/** Ordered New → Open → In Progress → Waiting → Resolved → Closed. */
-export const STATUS_COLOR_SCHEME: Color = scale([
-  SC.neutral,
-  SC.info,
-  SC.primary,
-  SC.warn,
-  SC.success,
-  SC.closed,
-]);
-
-/** Ordered Low → Medium → High → Critical. */
-export const PRIORITY_COLOR_SCHEME: Color = scale([
-  SC.neutral,
-  SC.info,
-  SC.warn,
-  SC.danger,
-]);
-
-/** Generic categorical scheme for category/team/agent breakdowns. */
-export const CATEGORICAL_COLOR_SCHEME: Color = scale([
-  '#4f46e5',
-  '#0891b2',
-  '#059669',
-  '#d97706',
-  '#db2777',
-  '#7c3aed',
-  '#0284c7',
-  '#65a30d',
-]);
-
-export const STATUS_HEX: Record<number, string> = {
-  [TicketStatus.New]: SC.neutral,
-  [TicketStatus.Open]: SC.info,
-  [TicketStatus.InProgress]: SC.primary,
-  [TicketStatus.WaitingForCustomer]: SC.warn,
-  [TicketStatus.Resolved]: SC.success,
-  [TicketStatus.Closed]: SC.closed,
+export const STATUS_COLOR: Record<number, string> = {
+  [TicketStatus.New]: 'var(--sc-status-new)',
+  [TicketStatus.Open]: 'var(--sc-status-open)',
+  [TicketStatus.InProgress]: 'var(--sc-status-progress)',
+  [TicketStatus.WaitingForCustomer]: 'var(--sc-status-waiting)',
+  [TicketStatus.Resolved]: 'var(--sc-status-resolved)',
+  [TicketStatus.Closed]: 'var(--sc-status-closed)',
 };
 
-export const PRIORITY_HEX: Record<number, string> = {
-  [TicketPriority.Low]: SC.neutral,
-  [TicketPriority.Medium]: SC.info,
-  [TicketPriority.High]: SC.warn,
-  [TicketPriority.Critical]: SC.danger,
+export const PRIORITY_COLOR: Record<number, string> = {
+  [TicketPriority.Low]: 'var(--sc-priority-low)',
+  [TicketPriority.Medium]: 'var(--sc-priority-medium)',
+  [TicketPriority.High]: 'var(--sc-priority-high)',
+  [TicketPriority.Critical]: 'var(--sc-priority-critical)',
 };
 
 /**
- * Card chrome around a chart. Keeps every chart on the dashboard and reports
- * pages at a consistent height and heading weight.
+ * The three states a ticket can be summarised into on the per-entity reports.
+ * Active is the brand colour (live work), Resolved the success green and
+ * Closed the same slate as the Closed status.
+ */
+export const COMPOSITION_COLOR = {
+  active: 'var(--sc-brand-600)',
+  resolved: 'var(--sc-success-600)',
+  closed: 'var(--sc-status-closed)',
+} as const;
+
+/** @deprecated Kept so older imports keep compiling; use STATUS_COLOR. */
+export const STATUS_HEX = STATUS_COLOR;
+/** @deprecated Kept so older imports keep compiling; use PRIORITY_COLOR. */
+export const PRIORITY_HEX = PRIORITY_COLOR;
+
+/**
+ * Card chrome around a chart. Keeps every chart on the reports pages at a
+ * consistent heading weight and padding.
+ *
+ *   <sc-chart-card title="Volume" description="Per day" eyebrow="Trend">
+ *     <button slot="actions">…</button>
+ *     …chart…
+ *   </sc-chart-card>
  */
 @Component({
   selector: 'sc-chart-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="sc-card flex h-full flex-col">
-      <div class="sc-card-header">
+    <section class="sc-card sc-enter flex h-full min-w-0 flex-col">
+      <div class="sc-card-header flex-wrap">
         <div class="min-w-0">
+          @if (eyebrow()) {
+            <p class="sc-eyebrow mb-1 !text-2xs">{{ eyebrow() }}</p>
+          }
           <h2 class="sc-card-title">{{ title() }}</h2>
           @if (description()) {
             <p class="mt-0.5 text-xs text-ink-subtle">{{ description() }}</p>
@@ -94,13 +70,16 @@ export const PRIORITY_HEX: Record<number, string> = {
         </div>
         <ng-content select="[slot=actions]" />
       </div>
-      <div class="flex-1 p-3">
+      <div class="min-w-0 flex-1 p-4 sm:p-5">
         <ng-content />
       </div>
     </section>
   `,
+  styles: [':host { display: block; min-width: 0; }'],
 })
 export class ChartCardComponent {
   readonly title = input.required<string>();
   readonly description = input<string>('');
+  /** Optional small uppercase label above the title. */
+  readonly eyebrow = input<string>('');
 }

@@ -1,106 +1,131 @@
 <sc-page-header title="Ticket trends" description="Daily volume raised against volume finished."
     [breadcrumbs]="[{ label: 'Reports' }, { label: 'Trends' }]">
-    <sc-report-range slot="actions" (rangeChange)="onRangeChange($event)" />
+    <sc-report-range slot="actions" variant="segmented" (rangeChange)="onRangeChange($event)" />
 </sc-page-header>
 
-@if (errorMessage()) {
-<sc-alert tone="error" title="Report unavailable" class="mb-4 block">{{ errorMessage() }}</sc-alert>
-}
+<div [attr.aria-busy]="isLoading()">
+    @if (isLoading() && !hasData()) {
+    <sc-report-skeleton label="Loading ticket trends" layout="wide" [bodyHeight]="300" />
+    } @else if (errorMessage() && !hasData()) {
+    <!-- Nothing to show yet and the request failed: say so, and offer a retry. -->
+    <div class="sc-card" role="alert">
+        <sc-empty-state icon="cloud_off" title="Report unavailable" [description]="errorMessage()!"
+            actionLabel="Try again" (action)="fetchData()" />
+    </div>
+    } @else if (!hasData()) {
+    <div class="sc-card">
+        <sc-empty-state icon="show_chart" title="No activity in this period"
+            description="Widen the date range to see how ticket volume moved over time." />
+    </div>
+    } @else {
 
-@if (isLoading()) {
-<div class="sc-card p-5">
-    <sc-loading-state label="Loading ticket trends" [count]="5" />
-</div>
-} @else if (!hasData()) {
-<div class="sc-card">
-    <sc-empty-state icon="show_chart" title="No activity in this period"
-        description="Widen the date range to see how ticket volume moved over time." />
-</div>
-} @else {
+    @if (errorMessage()) {
+    <!-- A refresh failed: keep the last good data on screen and flag it. -->
+    <sc-alert tone="error" title="Couldn't refresh this report" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+    }
 
-<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <sc-stat-card label="Raised" [value]="totals().raised" icon="add_circle" tone="info"
-        [hint]="points().length + ' days'" />
-    <sc-stat-card label="Resolved" [value]="totals().resolved" icon="task_alt" tone="success" />
-    <sc-stat-card label="Closed" [value]="totals().closed" icon="lock" tone="neutral" />
-    <sc-stat-card label="Net backlog change"
-        [value]="(netChange() > 0 ? '−' : netChange() < 0 ? '+' : '') + (netChange() < 0 ? -netChange() : netChange())"
-        icon="trending_down" [tone]="netChange() >= 0 ? 'success' : 'warn'"
-        [hint]="netChange() >= 0 ? 'Finishing faster than arriving' : 'Arriving faster than finishing'" />
-</div>
+    <div class="transition-opacity duration-sc ease-sc" [class.opacity-60]="isLoading()">
 
-<div class="mt-4">
-    <sc-chart-card title="Volume over time" description="Raised, resolved and closed per day.">
-        <div class="h-[380px]">
-            <ngx-charts-line-chart [results]="chartSeries()" [scheme]="trendColors" [xAxis]="true" [yAxis]="true"
-                [legend]="true" [legendPosition]="legendBelow" [roundDomains]="true" [showGridLines]="true" />
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <sc-stat-card label="Raised" [value]="totals().raised" icon="add_circle" tone="info"
+                [hint]="points().length + ' days'">
+                <p class="mt-1.5"><sc-delta [current]="totals().raised" [previous]="previousTotals()?.raised"
+                        goodWhen="neutral" /></p>
+            </sc-stat-card>
+            <sc-stat-card label="Resolved" [value]="totals().resolved" icon="task_alt" tone="success">
+                <p class="mt-1.5"><sc-delta [current]="totals().resolved" [previous]="previousTotals()?.resolved"
+                        goodWhen="up" /></p>
+            </sc-stat-card>
+            <sc-stat-card label="Closed" [value]="totals().closed" icon="lock" tone="neutral">
+                <p class="mt-1.5"><sc-delta [current]="totals().closed" [previous]="previousTotals()?.closed"
+                        goodWhen="up" /></p>
+            </sc-stat-card>
+            <sc-stat-card label="Net backlog change"
+                [value]="(netChange() > 0 ? '−' : netChange() < 0 ? '+' : '') + (netChange() < 0 ? -netChange() : netChange())"
+                icon="trending_down" [tone]="netChange() >= 0 ? 'success' : 'warn'"
+                [hint]="netChange() >= 0 ? 'Finishing faster than arriving' : 'Arriving faster than finishing'" />
         </div>
-    </sc-chart-card>
-</div>
 
-<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-    <section class="sc-card min-w-0">
-        <div class="sc-card-header">
-            <h2 class="sc-card-title">Daily detail</h2>
-            <p class="text-xs text-ink-subtle">{{ points().length }} days</p>
+        <div class="mt-4">
+            <sc-chart-card eyebrow="Flow" title="Volume over time" description="Raised, resolved and closed per day.">
+                <app-trend-chart [points]="points()" />
+            </sc-chart-card>
         </div>
 
-        <div class="max-h-[420px] overflow-auto">
-            <table class="sc-table">
-                <caption class="sc-sr-only">Ticket volume per day</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col" class="text-right">Raised</th>
-                        <th scope="col" class="text-right">In progress</th>
-                        <th scope="col" class="text-right">Waiting</th>
-                        <th scope="col" class="text-right">Resolved</th>
-                        <th scope="col" class="text-right">Closed</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (point of points(); track point.date) {
-                    <tr>
-                        <td class="whitespace-nowrap font-medium text-ink">{{ formatDay(point.date) }}</td>
-                        <td class="text-right tabular-nums">{{ point.newTickets }}</td>
-                        <td class="text-right tabular-nums text-ink-subtle">{{ point.inProgressTickets }}</td>
-                        <td class="text-right tabular-nums text-ink-subtle">{{ point.waitingForCustomerTickets }}</td>
-                        <td class="text-right font-semibold tabular-nums text-success-700">
-                            {{ point.resolvedTickets }}
-                        </td>
-                        <td class="text-right tabular-nums text-ink-subtle">{{ point.closedTickets }}</td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <aside class="min-w-0">
-        <section class="sc-card">
-            <div class="sc-card-header">
-                <h2 class="sc-card-title">Highlights</h2>
-            </div>
-            <div class="sc-card-body flex flex-col gap-3.5 text-[13px]">
-                @if (busiestDay(); as busiest) {
-                <div>
-                    <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Busiest day</p>
-                    <p class="mt-1 font-medium text-ink">{{ formatDay(busiest.date) }}</p>
-                    <p class="text-ink-subtle">{{ busiest.newTickets }} tickets raised</p>
+        <div class="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <section class="sc-card sc-enter min-w-0">
+                <div class="sc-card-header">
+                    <h2 class="sc-card-title">Daily detail</h2>
+                    <p class="text-xs text-ink-subtle">{{ points().length }} days</p>
                 </div>
+
+                <div class="max-h-[420px] overflow-auto" tabindex="0" role="region" aria-label="Daily detail table">
+                    <table class="sc-table">
+                        <caption class="sc-sr-only">Ticket volume per day</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="sticky top-0 z-[1]">Date</th>
+                                <th scope="col" class="sticky top-0 z-[1] text-right">Raised</th>
+                                <th scope="col" class="sticky top-0 z-[1] text-right">In progress</th>
+                                <th scope="col" class="sticky top-0 z-[1] text-right">Waiting</th>
+                                <th scope="col" class="sticky top-0 z-[1] text-right">Resolved</th>
+                                <th scope="col" class="sticky top-0 z-[1] text-right">Closed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (point of points(); track point.date) {
+                            <tr>
+                                <td class="whitespace-nowrap font-medium text-ink">{{ formatDay(point.date) }}</td>
+                                <td class="text-right tabular-nums">{{ point.newTickets }}</td>
+                                <td class="text-right tabular-nums text-ink-subtle">{{ point.inProgressTickets }}</td>
+                                <td class="text-right tabular-nums text-ink-subtle">
+                                    {{ point.waitingForCustomerTickets }}</td>
+                                <td class="text-right font-semibold tabular-nums text-success-700">
+                                    {{ point.resolvedTickets }}
+                                </td>
+                                <td class="text-right tabular-nums text-ink-subtle">{{ point.closedTickets }}</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <aside class="flex min-w-0 flex-col gap-4">
+                <section class="sc-card sc-enter">
+                    <div class="sc-card-header">
+                        <h2 class="sc-card-title">Highlights</h2>
+                    </div>
+                    <div class="sc-card-body flex flex-col gap-3.5 text-[13px]">
+                        @if (busiestDay(); as busiest) {
+                        <div>
+                            <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Busiest day</p>
+                            <p class="mt-1 font-medium text-ink">{{ formatDay(busiest.date) }}</p>
+                            <p class="text-ink-subtle">{{ busiest.newTickets }} tickets raised</p>
+                        </div>
+                        }
+
+                        <div class="sc-divider"></div>
+
+                        <div>
+                            <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Throughput</p>
+                            <p class="mt-1 text-ink-muted">
+                                {{ totals().resolved + totals().closed }} finished against
+                                {{ totals().raised }} raised over {{ points().length }} days.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                @if (weekdayItems().length) {
+                <sc-chart-card eyebrow="Pattern" title="Raised by weekday"
+                    [description]="busiestWeekday() ? busiestWeekday()!.label + ' is the busiest day of the week.' : 'Tickets raised, summed by day of week.'">
+                    <sc-bar-list [items]="weekdayItems()" [total]="totals().raised" [showRank]="false" unit="tickets"
+                        label="Tickets raised per weekday" />
+                </sc-chart-card>
                 }
-
-                <div class="sc-divider"></div>
-
-                <div>
-                    <p class="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Throughput</p>
-                    <p class="mt-1 text-ink-muted">
-                        {{ totals().resolved + totals().closed }} finished against
-                        {{ totals().raised }} raised over {{ points().length }} days.
-                    </p>
-                </div>
-            </div>
-        </section>
-    </aside>
+            </aside>
+        </div>
+    </div>
+    }
 </div>
-}

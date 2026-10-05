@@ -40,6 +40,8 @@ import { IconComponent } from '../icon/icon.component';
         @if (hint()) {
           <p class="mt-0.5 truncate text-xs text-ink-subtle">{{ hint() }}</p>
         }
+        <!-- Optional extra line, e.g. a period-over-period delta. -->
+        <ng-content />
       </div>
     </div>
   `,

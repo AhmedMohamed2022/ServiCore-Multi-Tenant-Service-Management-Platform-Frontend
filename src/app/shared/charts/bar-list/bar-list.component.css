@@ -1,0 +1,175 @@
+:host {
+  display: block;
+  /* Lets the list reflow into two columns when the card around it is wide. */
+  container-type: inline-size;
+}
+
+.bl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sc-text-muted);
+}
+
+.bl-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bl-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.bl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  margin: 0 -10px;
+  border-radius: var(--sc-radius-md);
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+@media (hover: hover) {
+  .bl-row:hover {
+    background-color: var(--sc-brand-tint);
+  }
+}
+
+.bl-rank {
+  width: 18px;
+  padding-top: 1px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--sc-text-subtle);
+}
+
+.bl-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.bl-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.bl-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--sc-text);
+}
+
+.bl-value {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text-muted);
+}
+
+.bl-value strong {
+  font-weight: 700;
+  color: var(--sc-text);
+}
+
+.bl-pct {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--sc-text-subtle);
+}
+
+.bl-track {
+  height: 8px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--sc-surface-sunken);
+}
+
+.bl-fill {
+  display: flex;
+  height: 100%;
+  min-width: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  /* The bar draws in from the left once, staggered by row. The durations are
+     motion tokens, so this is instant under prefers-reduced-motion. */
+  animation: bl-grow calc(var(--sc-dur-slow) * 2) var(--sc-ease) both;
+  animation-delay: calc(var(--bl-i, 0) * 28ms);
+}
+
+.bl-seg {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  /* A hairline of surface colour separates stacked segments. */
+  box-shadow: inset -1px 0 0 0 var(--sc-surface);
+}
+
+.bl-seg:last-child {
+  box-shadow: none;
+}
+
+.bl-seg-brand {
+  background-image: linear-gradient(
+    90deg,
+    var(--sc-brand-500),
+    var(--sc-violet-500)
+  );
+}
+
+@keyframes bl-grow {
+  from {
+    clip-path: inset(0 100% 0 0 round 999px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 999px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-fill {
+    animation: none;
+  }
+}
+
+/* In a wide card a short ranking reads better as two balanced columns than
+   as one long strip of very long bars. Rank still runs down each column. */
+@container (min-width: 760px) {
+  .bl-list {
+    display: block;
+    column-count: 2;
+    column-gap: 48px;
+  }
+
+  .bl-row {
+    break-inside: avoid;
+    margin-bottom: 4px;
+  }
+}

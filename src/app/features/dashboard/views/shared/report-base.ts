@@ -25,9 +25,10 @@ export abstract class ReportViewBase<TRow> {
   abstract fetchData(): void;
 
   /** Shared plumbing for the subscribe blocks, so error handling is uniform. */
-  protected handle(
-    onNext: (rows: TRow[]) => void,
-  ): { next: (rows: TRow[]) => void; error: (err: Error) => void } {
+  protected handle(onNext: (rows: TRow[]) => void): {
+    next: (rows: TRow[]) => void;
+    error: (err: Error) => void;
+  } {
     return {
       next: (rows) => {
         onNext(rows);
@@ -83,4 +84,28 @@ export function sumEntityTotals(
  */
 export function share(value: number, total: number): number {
   return total > 0 ? Math.round((value / total) * 100) : 0;
+}
+
+/**
+ * The window of equal length immediately before `range`, for period-over-
+ * period comparison. Returns null when the range is open-ended ("All time"),
+ * because there is no "previous" to compare against.
+ *
+ * The previous window ends one millisecond before the current one starts, so
+ * the boundary instant is never counted in both.
+ */
+export function previousPeriod(
+  range: ReportDateRangeRequest,
+): ReportDateRangeRequest | null {
+  if (!range.from || !range.to) return null;
+
+  const from = new Date(range.from).getTime();
+  const to = new Date(range.to).getTime();
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return null;
+
+  const span = to - from;
+  return {
+    from: new Date(from - span).toISOString(),
+    to: new Date(from - 1).toISOString(),
+  };
 }

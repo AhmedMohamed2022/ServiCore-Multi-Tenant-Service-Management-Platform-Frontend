@@ -1,0 +1,17 @@
+<div class="dn-wrap">
+    <svg class="dn-svg" viewBox="0 0 42 42" role="img" [attr.aria-labelledby]="titleId" focusable="false">
+        <title [attr.id]="titleId">{{ summary() }}</title>
+        <circle class="dn-track" cx="21" cy="21" [attr.r]="r" />
+        @for (arc of arcs(); track arc.slice.key) {
+        <circle class="dn-arc" cx="21" cy="21" [attr.r]="r" pathLength="100" [attr.stroke-dasharray]="arc.dash"
+            [attr.stroke-dashoffset]="arc.offset" [style.stroke]="arc.slice.color"
+            [class.dn-dim]="active() !== null && active() !== arc.slice.key" (mouseenter)="active.set(arc.slice.key)"
+            (mouseleave)="active.set(null)" />
+        }
+    </svg>
+
+    <div class="dn-center" aria-hidden="true">
+        <span class="dn-value">{{ centerValue() }}</span>
+        <span class="dn-label">{{ centerText() }}</span>
+    </div>
+</div>

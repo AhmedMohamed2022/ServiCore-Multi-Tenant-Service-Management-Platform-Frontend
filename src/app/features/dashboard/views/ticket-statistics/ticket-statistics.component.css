@@ -1,3 +1,17 @@
 :host {
   display: block;
 }
+
+/* Legend rows that are linked to the ring beside them. */
+.ts-legend-row {
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: var(--sc-radius-md);
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+@media (hover: hover) {
+  .ts-legend-row:hover {
+    background-color: var(--sc-brand-tint);
+  }
+}

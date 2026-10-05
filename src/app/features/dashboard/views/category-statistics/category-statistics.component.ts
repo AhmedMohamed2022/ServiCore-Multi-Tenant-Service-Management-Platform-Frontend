@@ -1,35 +1,33 @@
 import { Component, computed, inject, OnInit } from '@angular/core';
-import { NgxChartsModule } from '@swimlane/ngx-charts';
 
 import { ReportingService } from '../../../../core/services/reporting.service';
 import { CategoryStatisticsData } from '../../models/reporting.model';
 import { ReportViewBase, share, sumEntityTotals } from '../shared/report-base';
 import { ReportRangeComponent } from '../shared/report-range.component';
 
+import { ReportSkeletonComponent } from '../shared/report-skeleton/report-skeleton.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { StatCardComponent } from '../../../../shared/ui/stat-card/stat-card.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import {
-  CATEGORICAL_COLOR_SCHEME,
-  ChartCardComponent,
-} from '../../../../shared/charts/chart-theme';
+  EntityBreakdownComponent,
+  EntityRow,
+} from '../shared/entity-breakdown/entity-breakdown.component';
 
 @Component({
   selector: 'app-category-statistics',
   standalone: true,
   imports: [
-    NgxChartsModule,
     ReportRangeComponent,
     PageHeaderComponent,
     StatCardComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
-    ChartCardComponent,
+    EntityBreakdownComponent,
+    ReportSkeletonComponent,
   ],
   templateUrl: './category-statistics.component.html',
 })
@@ -38,8 +36,6 @@ export class CategoryStatisticsComponent
   implements OnInit
 {
   private readonly reportingService = inject(ReportingService);
-
-  readonly chartColors = CATEGORICAL_COLOR_SCHEME;
 
   readonly totals = computed(() => sumEntityTotals(this.rows()));
 
@@ -52,12 +48,16 @@ export class CategoryStatisticsComponent
     return share(t.resolved + t.closed, t.total);
   });
 
-  /** Top ten by volume; beyond that the bars stop being readable. */
-  readonly chartData = computed(() =>
-    [...this.rows()]
-      .sort((a, b) => b.totalTickets - a.totalTickets)
-      .slice(0, 10)
-      .map((row) => ({ name: row.categoryName, value: row.totalTickets })),
+  /** Rows normalised for the shared breakdown component. */
+  readonly entityRows = computed<EntityRow[]>(() =>
+    this.rows().map((r) => ({
+      id: r.categoryId,
+      name: r.categoryName,
+      total: r.totalTickets,
+      active: r.activeTickets,
+      resolved: r.resolvedTickets,
+      closed: r.closedTickets,
+    })),
   );
 
   ngOnInit(): void {
@@ -66,13 +66,15 @@ export class CategoryStatisticsComponent
 
   fetchData(): void {
     this.beginLoad();
-    this.reportingService.getCategoryStatistics(this.range()).subscribe(
-      this.handle((result) =>
-        this.rows.set(
-          [...result].sort((a, b) => b.totalTickets - a.totalTickets),
+    this.reportingService
+      .getCategoryStatistics(this.range())
+      .subscribe(
+        this.handle((result) =>
+          this.rows.set(
+            [...result].sort((a, b) => b.totalTickets - a.totalTickets),
+          ),
         ),
-      ),
-    );
+      );
   }
 
   shareOf(value: number, total: number): number {

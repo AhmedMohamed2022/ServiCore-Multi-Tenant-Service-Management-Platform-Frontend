@@ -1,0 +1,216 @@
+:host {
+  display: block;
+}
+
+/* --- Insight strip ----------------------------------------------------------- */
+.eb-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eb-insight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-lg);
+  background-color: var(--sc-surface);
+  box-shadow: var(--sc-shadow);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--sc-text-muted);
+  animation: sc-rise var(--sc-dur-slow) var(--sc-ease) both;
+}
+
+.eb-insight strong {
+  font-weight: 700;
+  color: var(--sc-text);
+}
+
+.eb-insight > span:last-child {
+  min-width: 0;
+}
+
+.eb-ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+td .eb-ellipsis {
+  max-width: 200px;
+}
+
+/* --- Metric segmented control ----------------------------------------------- */
+.eb-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  background-color: var(--sc-surface-sunken);
+}
+
+.eb-segment-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--sc-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sc-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.eb-segment-btn:hover {
+  color: var(--sc-text);
+}
+
+.eb-segment-btn[aria-pressed="true"] {
+  background-color: var(--sc-surface);
+  color: var(--sc-brand-700);
+  box-shadow: var(--sc-shadow);
+}
+
+/* --- Filter ------------------------------------------------------------------ */
+.eb-filter {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+}
+
+.eb-filter-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  color: var(--sc-text-subtle);
+  pointer-events: none;
+}
+
+.eb-filter-input {
+  padding-left: 32px;
+}
+
+/* --- Table ------------------------------------------------------------------- */
+.eb-scroll {
+  max-height: 560px;
+  overflow: auto;
+  border-radius: 0 0 var(--sc-radius-lg) var(--sc-radius-lg);
+}
+
+.eb-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.eb-rank {
+  width: 40px;
+  color: var(--sc-text-subtle);
+}
+
+.eb-name-col {
+  min-width: 160px;
+}
+
+/* On a narrow screen the table scrolls sideways; keep the name in view. */
+.eb-table th.eb-name-col,
+.eb-table td.eb-name-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.eb-table td.eb-name-col {
+  background-color: var(--sc-surface);
+}
+
+.eb-table th.eb-name-col {
+  z-index: 3;
+}
+
+.eb-done-col {
+  min-width: 140px;
+}
+
+.eb-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sc-radius-sm);
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.eb-sort-end {
+  flex-direction: row-reverse;
+}
+
+.eb-sort:hover {
+  color: var(--sc-text);
+}
+
+[aria-sort="ascending"] .eb-sort,
+[aria-sort="descending"] .eb-sort {
+  color: var(--sc-brand-700);
+}
+
+.eb-sort sc-icon {
+  opacity: 0.55;
+}
+
+[aria-sort="ascending"] .eb-sort sc-icon,
+[aria-sort="descending"] .eb-sort sc-icon {
+  opacity: 1;
+}
+
+/* --- Per-row mix bar --------------------------------------------------------- */
+.eb-mix {
+  display: flex;
+  flex: 1;
+  height: 6px;
+  min-width: 56px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--sc-surface-sunken);
+}
+
+.eb-mix-seg {
+  display: block;
+  height: 100%;
+  box-shadow: inset -1px 0 0 0 var(--sc-surface);
+}
+
+.eb-mix-active {
+  background-color: var(--sc-brand-600);
+}
+
+.eb-mix-resolved {
+  background-color: var(--sc-success-600);
+}
+
+.eb-mix-closed {
+  background-color: var(--sc-status-closed);
+}

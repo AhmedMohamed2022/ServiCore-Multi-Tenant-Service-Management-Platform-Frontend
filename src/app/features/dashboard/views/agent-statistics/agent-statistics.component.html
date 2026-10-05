@@ -1,94 +1,42 @@
 <sc-page-header title="Agent performance"
     description="Ticket load and resolutions per agent, ranked by tickets resolved."
     [breadcrumbs]="[{ label: 'Reports' }, { label: 'Agents' }]">
-    <sc-report-range slot="actions" (rangeChange)="onRangeChange($event)" />
+    <sc-report-range slot="actions" variant="segmented" (rangeChange)="onRangeChange($event)" />
 </sc-page-header>
 
-@if (errorMessage()) {
-<sc-alert tone="error" title="Report unavailable" class="mb-4 block">{{ errorMessage() }}</sc-alert>
-}
+<div [attr.aria-busy]="isLoading()">
+    @if (isLoading() && !hasRows()) {
+    <sc-report-skeleton label="Loading agent statistics" />
+    } @else if (errorMessage() && !hasRows()) {
+    <!-- Nothing to show yet and the request failed: say so, and offer a retry. -->
+    <div class="sc-card" role="alert">
+        <sc-empty-state icon="cloud_off" title="Report unavailable" [description]="errorMessage()!"
+            actionLabel="Try again" (action)="fetchData()" />
+    </div>
+    } @else if (!hasRows()) {
+    <div class="sc-card">
+        <sc-empty-state icon="support_agent" title="No agent activity in this period"
+            description="Widen the date range, or check that agents have been assigned tickets." />
+    </div>
+    } @else {
 
-@if (isLoading()) {
-<div class="sc-card p-5">
-    <sc-loading-state label="Loading agent statistics" [count]="6" />
-</div>
-} @else if (!hasRows()) {
-<div class="sc-card">
-    <sc-empty-state icon="support_agent" title="No agent activity in this period"
-        description="Widen the date range, or check that agents have been assigned tickets." />
-</div>
-} @else {
+    @if (errorMessage()) {
+    <!-- A refresh failed: keep the last good data on screen and flag it. -->
+    <sc-alert tone="error" title="Couldn't refresh this report" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+    }
 
-<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <sc-stat-card label="Agents" [value]="rows().length" icon="support_agent" tone="info" />
-    <sc-stat-card label="Assigned" [value]="totals().total" icon="assignment" tone="neutral" />
-    <sc-stat-card label="Active now" [value]="totals().active" icon="pending_actions" tone="warn"
-        hint="Open, in progress, or waiting" />
-    <sc-stat-card label="Resolution rate" [value]="resolutionRate() + '%'" icon="task_alt" tone="success"
-        hint="Resolved or closed, of assigned" />
-</div>
-
-<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-
-    <sc-chart-card title="Tickets resolved" description="Top ten agents by resolved volume.">
-        <div class="h-[320px]">
-            <ngx-charts-bar-horizontal [results]="chartData()" [scheme]="chartColors" [xAxis]="true" [yAxis]="true"
-                [roundEdges]="false" />
-        </div>
-    </sc-chart-card>
-
-    <section class="sc-card min-w-0">
-        <div class="sc-card-header">
-            <h2 class="sc-card-title">Leaderboard</h2>
-            @if (busiestAgent(); as busiest) {
-            <p class="text-xs text-ink-subtle">
-                Heaviest current load: {{ busiest.agentUserName }} ({{ busiest.activeTickets }} active)
-            </p>
-            }
+    <div class="transition-opacity duration-sc ease-sc" [class.opacity-60]="isLoading()">
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <sc-stat-card label="Agents" [value]="rows().length" icon="support_agent" tone="info" />
+            <sc-stat-card label="Assigned" [value]="totals().total" icon="assignment" tone="neutral" />
+            <sc-stat-card label="Active now" [value]="totals().active" icon="pending_actions" tone="info"
+                hint="Open, in progress, or waiting" />
+            <sc-stat-card label="Resolution rate" [value]="resolutionRate() + '%'" icon="task_alt" tone="success"
+                hint="Resolved or closed" />
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="sc-table">
-                <caption class="sc-sr-only">Per-agent ticket totals</caption>
-                <thead>
-                    <tr>
-                        <th scope="col" class="w-10">#</th>
-                        <th scope="col">Agent</th>
-                        <th scope="col" class="text-right">Assigned</th>
-                        <th scope="col" class="text-right">Active</th>
-                        <th scope="col" class="text-right">Resolved</th>
-                        <th scope="col" class="text-right">Closed</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (agent of rows(); track agent.agentId; let i = $index) {
-                    <tr>
-                        <td class="text-ink-subtle tabular-nums">{{ i + 1 }}</td>
-                        <td>
-                            <span class="flex items-center gap-2.5">
-                                <sc-avatar [name]="agent.agentUserName || agent.agentId" size="xs" />
-                                <span class="max-w-[200px] truncate font-medium text-ink">
-                                    {{ agent.agentUserName || 'Agent ' + agent.agentId.substring(0, 8) }}
-                                </span>
-                            </span>
-                        </td>
-                        <td class="text-right tabular-nums">{{ agent.assignedTickets }}</td>
-                        <td class="text-right tabular-nums">
-                            @if (agent.activeTickets > 0) {
-                            <span class="sc-badge sc-badge-warn">{{ agent.activeTickets }}</span>
-                            } @else {
-                            <span class="text-ink-subtle">0</span>
-                            }
-                        </td>
-                        <td class="text-right font-semibold tabular-nums text-success-700">
-                            {{ agent.resolvedTickets }}
-                        </td>
-                        <td class="text-right tabular-nums text-ink-subtle">{{ agent.closedTickets }}</td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
+        <sc-entity-breakdown [rows]="entityRows()" noun="agent" nounPlural="agents" nameHeading="Agent"
+            defaultSort="resolved" [showAvatar]="true" />
+    </div>
+    }
 </div>
-}

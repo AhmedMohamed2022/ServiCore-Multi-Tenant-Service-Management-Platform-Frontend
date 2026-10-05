@@ -1,5 +1,4 @@
 import { Component, computed, inject, OnInit } from '@angular/core';
-import { NgxChartsModule } from '@swimlane/ngx-charts';
 
 import { ReportingService } from '../../../../core/services/reporting.service';
 import { TeamStatisticsData } from '../../models/reporting.model';
@@ -11,25 +10,24 @@ import { StatCardComponent } from '../../../../shared/ui/stat-card/stat-card.com
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import {
-  CATEGORICAL_COLOR_SCHEME,
-  ChartCardComponent,
-} from '../../../../shared/charts/chart-theme';
+  EntityBreakdownComponent,
+  EntityRow,
+} from '../shared/entity-breakdown/entity-breakdown.component';
+import { ReportSkeletonComponent } from '../shared/report-skeleton/report-skeleton.component';
 
 @Component({
   selector: 'app-team-statistics',
   standalone: true,
   imports: [
-    NgxChartsModule,
     ReportRangeComponent,
     PageHeaderComponent,
     StatCardComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
-    ChartCardComponent,
+    EntityBreakdownComponent,
+    ReportSkeletonComponent,
   ],
   templateUrl: './team-statistics.component.html',
 })
@@ -38,8 +36,6 @@ export class TeamStatisticsComponent
   implements OnInit
 {
   private readonly reportingService = inject(ReportingService);
-
-  readonly chartColors = CATEGORICAL_COLOR_SCHEME;
 
   readonly totals = computed(() => sumEntityTotals(this.rows()));
 
@@ -52,12 +48,17 @@ export class TeamStatisticsComponent
     return share(t.resolved + t.closed, t.total);
   });
 
-  /** Top ten by volume; beyond that the bars stop being readable. */
-  readonly chartData = computed(() =>
-    [...this.rows()]
-      .sort((a, b) => b.totalTickets - a.totalTickets)
-      .slice(0, 10)
-      .map((row) => ({ name: row.teamName, value: row.totalTickets })),
+  /** Rows normalised for the shared breakdown component. */
+  readonly entityRows = computed<EntityRow[]>(() =>
+    this.rows().map((r) => ({
+      id: r.teamId,
+      name: r.teamName,
+      secondary: r.memberCount,
+      total: r.totalTickets,
+      active: r.activeTickets,
+      resolved: r.resolvedTickets,
+      closed: r.closedTickets,
+    })),
   );
 
   ngOnInit(): void {
@@ -66,13 +67,15 @@ export class TeamStatisticsComponent
 
   fetchData(): void {
     this.beginLoad();
-    this.reportingService.getTeamStatistics(this.range()).subscribe(
-      this.handle((result) =>
-        this.rows.set(
-          [...result].sort((a, b) => b.totalTickets - a.totalTickets),
+    this.reportingService
+      .getTeamStatistics(this.range())
+      .subscribe(
+        this.handle((result) =>
+          this.rows.set(
+            [...result].sort((a, b) => b.totalTickets - a.totalTickets),
+          ),
         ),
-      ),
-    );
+      );
   }
 
   shareOf(value: number, total: number): number {

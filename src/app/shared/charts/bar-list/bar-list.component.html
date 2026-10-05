@@ -1,0 +1,45 @@
+@if (legend().length) {
+<ul class="bl-legend" aria-hidden="true">
+    @for (seg of legend(); track seg.key) {
+    <li><span class="bl-swatch" [style.background-color]="seg.color"></span>{{ seg.label }}</li>
+    }
+</ul>
+}
+
+<ol class="bl-list" [attr.aria-label]="label()">
+    @for (item of items(); track item.key; let i = $index) {
+    <li class="bl-row" [style.--bl-i]="i">
+        @if (showRank()) {
+        <span class="bl-rank" aria-hidden="true">{{ i + 1 }}</span>
+        }
+        <div class="bl-main">
+            <div class="bl-head">
+                <span class="bl-label" [attr.title]="item.label">{{ item.label }}</span>
+                <span class="bl-value">
+                    <strong>{{ item.value }}</strong>
+                    @if (percentOf(item) !== null) {
+                    <span class="bl-pct">{{ percentOf(item) }}%</span>
+                    }
+                </span>
+            </div>
+            <div class="bl-track" aria-hidden="true" [attr.title]="item.segments ? segmentSummary(item) : null">
+                <div class="bl-fill" [style.width.%]="widthOf(item)">
+                    @if (item.segments?.length) {
+                    @for (seg of item.segments; track seg.key) {
+                    @if (seg.value > 0) {
+                    <span class="bl-seg" [style.flex-grow]="seg.value" [style.background-color]="seg.color"></span>
+                    }
+                    }
+                    } @else {
+                    <span class="bl-seg bl-seg-brand" [style.flex-grow]="1"
+                        [style.background]="item.color ?? null"></span>
+                    }
+                </div>
+            </div>
+            @if (item.segments?.length) {
+            <span class="sc-sr-only">{{ segmentSummary(item) }}</span>
+            }
+        </div>
+    </li>
+    }
+</ol>

@@ -1,12 +1,20 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { LegendPosition, NgxChartsModule } from '@swimlane/ngx-charts';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 
 import { ReportingService } from '../../../../core/services/reporting.service';
 import {
   ReportDateRangeRequest,
   TicketStatisticsResponse,
 } from '../../models/reporting.model';
-import { share } from '../shared/report-base';
+import { previousPeriod, share } from '../shared/report-base';
 import { ReportRangeComponent } from '../shared/report-range.component';
 
 import {
@@ -24,33 +32,42 @@ import { StatCardComponent } from '../../../../shared/ui/stat-card/stat-card.com
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import {
   TicketPriorityBadgeComponent,
   TicketStatusBadgeComponent,
 } from '../../../../shared/ticket/ticket-badges.component';
 import {
-  CATEGORICAL_COLOR_SCHEME,
   ChartCardComponent,
-  PRIORITY_COLOR_SCHEME,
-  PRIORITY_HEX,
-  STATUS_COLOR_SCHEME,
-  STATUS_HEX,
+  PRIORITY_COLOR,
+  STATUS_COLOR,
 } from '../../../../shared/charts/chart-theme';
+
 import { DurationPipe } from '../../../../shared/pipes/duration.pipe';
+import {
+  BarListComponent,
+  BarListItem,
+} from '../../../../shared/charts/bar-list/bar-list.component';
+import { DeltaChipComponent } from '../../../../shared/charts/delta-chip/delta-chip.component';
+import {
+  DonutComponent,
+  DonutSlice,
+} from '../../../../shared/charts/donut/donut.component';
+import { ReportSkeletonComponent } from '../shared/report-skeleton/report-skeleton.component';
 
 @Component({
   selector: 'app-ticket-statistics',
   standalone: true,
   imports: [
-    NgxChartsModule,
     ReportRangeComponent,
+    ReportSkeletonComponent,
+    BarListComponent,
+    DonutComponent,
+    DeltaChipComponent,
     PageHeaderComponent,
     StatCardComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
     TicketStatusBadgeComponent,
     TicketPriorityBadgeComponent,
     ChartCardComponent,
@@ -67,10 +84,16 @@ export class TicketStatisticsComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly range = signal<ReportDateRangeRequest>({});
 
-  readonly statusColors = STATUS_COLOR_SCHEME;
-  readonly priorityColors = PRIORITY_COLOR_SCHEME;
-  readonly categoryColors = CATEGORICAL_COLOR_SCHEME;
-  readonly legendBelow = LegendPosition.Below;
+  private readonly destroyRef = inject(DestroyRef);
+  private mainSub?: Subscription;
+  private previousSub?: Subscription;
+
+  /** Total tickets in the window before this one, for the delta chip. */
+  readonly previousTotal = signal<number | null>(null);
+
+  /** Linked hover between each ring and its legend rows. */
+  readonly statusActive = signal<string | null>(null);
+  readonly priorityActive = signal<string | null>(null);
 
   readonly totalTickets = computed(() =>
     (this.stats()?.statusDistribution ?? []).reduce(
@@ -101,7 +124,7 @@ export class TicketStatisticsComponent implements OnInit {
       label: TicketStatusLabels[status],
       count: counts.get(status) ?? 0,
       percent: share(counts.get(status) ?? 0, total),
-      color: STATUS_HEX[status],
+      color: STATUS_COLOR[status],
     }));
   });
 
@@ -119,7 +142,7 @@ export class TicketStatisticsComponent implements OnInit {
       label: TicketPriorityLabels[priority],
       count: counts.get(priority) ?? 0,
       percent: share(counts.get(priority) ?? 0, total),
-      color: PRIORITY_HEX[priority],
+      color: PRIORITY_COLOR[priority],
     }));
   });
 
@@ -137,23 +160,34 @@ export class TicketStatisticsComponent implements OnInit {
       )?.count ?? 0,
   );
 
-  readonly statusChartData = computed(() =>
-    this.statusBreakdown()
-      .filter((row) => row.count > 0)
-      .map((row) => ({ name: row.label, value: row.count })),
+  readonly statusSlices = computed<DonutSlice[]>(() =>
+    this.statusBreakdown().map((row) => ({
+      key: String(row.status),
+      label: row.label,
+      value: row.count,
+      color: row.color,
+    })),
   );
 
-  readonly priorityChartData = computed(() =>
-    this.priorityBreakdown()
-      .filter((row) => row.count > 0)
-      .map((row) => ({ name: row.label, value: row.count })),
+  readonly prioritySlices = computed<DonutSlice[]>(() =>
+    this.priorityBreakdown().map((row) => ({
+      key: String(row.priority),
+      label: row.label,
+      value: row.count,
+      color: row.color,
+    })),
   );
 
-  readonly categoryChartData = computed(() =>
+  /** Top ten categories by volume, as ranked bars. */
+  readonly categoryItems = computed<BarListItem[]>(() =>
     [...(this.stats()?.categoryDistribution ?? [])]
       .sort((a, b) => b.ticketCount - a.ticketCount)
       .slice(0, 10)
-      .map((row) => ({ name: row.categoryName, value: row.ticketCount })),
+      .map((row) => ({
+        key: row.categoryId,
+        label: row.categoryName,
+        value: row.ticketCount,
+      })),
   );
 
   readonly categoryRows = computed(() =>
@@ -177,16 +211,47 @@ export class TicketStatisticsComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.reportingService.getTicketStatistics(this.range()).subscribe({
-      next: (result) => {
-        this.stats.set(result);
-        this.isLoading.set(false);
-      },
-      error: (err: Error) => {
-        this.errorMessage.set(err.message);
-        this.isLoading.set(false);
-      },
-    });
+    // A newer request supersedes an older one, so a slow response to an old
+    // range can never overwrite a newer answer.
+    this.mainSub?.unsubscribe();
+    this.mainSub = this.reportingService
+      .getTicketStatistics(this.range())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.stats.set(result);
+          this.isLoading.set(false);
+        },
+        error: (err: Error) => {
+          this.errorMessage.set(err.message);
+          this.isLoading.set(false);
+        },
+      });
+
+    this.fetchPrevious();
+  }
+
+  /**
+   * The same endpoint over the window just before this one. It is its own
+   * request: if it fails the page simply shows no comparison.
+   */
+  private fetchPrevious(): void {
+    this.previousSub?.unsubscribe();
+    this.previousTotal.set(null);
+
+    const prior = previousPeriod(this.range());
+    if (!prior) return;
+
+    this.previousSub = this.reportingService
+      .getTicketStatistics(prior)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) =>
+          this.previousTotal.set(
+            result.statusDistribution.reduce((sum, r) => sum + r.count, 0),
+          ),
+        error: () => this.previousTotal.set(null),
+      });
   }
 
   shareOf(value: number, total: number): number {

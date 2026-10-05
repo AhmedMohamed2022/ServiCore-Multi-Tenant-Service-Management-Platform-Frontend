@@ -1,92 +1,40 @@
 <sc-page-header title="Category breakdown" description="What kind of work is coming in, and how much of it is finished."
     [breadcrumbs]="[{ label: 'Reports' }, { label: 'Categories' }]">
-    <sc-report-range slot="actions" (rangeChange)="onRangeChange($event)" />
+    <sc-report-range slot="actions" variant="segmented" (rangeChange)="onRangeChange($event)" />
 </sc-page-header>
 
-@if (errorMessage()) {
-<sc-alert tone="error" title="Report unavailable" class="mb-4 block">{{ errorMessage() }}</sc-alert>
-}
+<div [attr.aria-busy]="isLoading()">
+    @if (isLoading() && !hasRows()) {
+    <sc-report-skeleton label="Loading category statistics" />
+    } @else if (errorMessage() && !hasRows()) {
+    <!-- Nothing to show yet and the request failed: say so, and offer a retry. -->
+    <div class="sc-card" role="alert">
+        <sc-empty-state icon="cloud_off" title="Report unavailable" [description]="errorMessage()!"
+            actionLabel="Try again" (action)="fetchData()" />
+    </div>
+    } @else if (!hasRows()) {
+    <div class="sc-card">
+        <sc-empty-state icon="sell" title="No category activity in this period"
+            description="Widen the date range, or check that tickets have been categorised." />
+    </div>
+    } @else {
 
-@if (isLoading()) {
-<div class="sc-card p-5">
-    <sc-loading-state label="Loading category statistics" [count]="6" />
-</div>
-} @else if (!hasRows()) {
-<div class="sc-card">
-    <sc-empty-state icon="sell" title="No category activity in this period"
-        description="Widen the date range, or check that tickets have been raised in this period." />
-</div>
-} @else {
+    @if (errorMessage()) {
+    <!-- A refresh failed: keep the last good data on screen and flag it. -->
+    <sc-alert tone="error" title="Couldn't refresh this report" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+    }
 
-<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <sc-stat-card label="Categories" [value]="rows().length" icon="sell" tone="info" />
-    <sc-stat-card label="Total tickets" [value]="totals().total" icon="confirmation_number" tone="neutral" />
-    <sc-stat-card label="Active now" [value]="totals().active" icon="pending_actions" tone="warn"
-        hint="Open, in progress, or waiting" />
-    <sc-stat-card label="Completion rate" [value]="completionRate() + '%'" icon="task_alt" tone="success"
-        hint="Resolved or closed, of total" />
-</div>
-
-<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-
-    <sc-chart-card title="Ticket volume" description="Top ten categories by total tickets.">
-        <div class="h-[320px]">
-            <ngx-charts-bar-horizontal [results]="chartData()" [scheme]="chartColors" [xAxis]="true" [yAxis]="true"
-                [roundEdges]="false" />
-        </div>
-    </sc-chart-card>
-
-    <section class="sc-card min-w-0">
-        <div class="sc-card-header">
-            <h2 class="sc-card-title">Breakdown</h2>
-            <p class="text-xs text-ink-subtle">{{ rows().length }} {{ rows().length === 1 ? 'category' : 'categories' }}</p>
+    <div class="transition-opacity duration-sc ease-sc" [class.opacity-60]="isLoading()">
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <sc-stat-card label="Categories" [value]="rows().length" icon="sell" tone="info" />
+            <sc-stat-card label="Total tickets" [value]="totals().total" icon="confirmation_number" tone="neutral" />
+            <sc-stat-card label="Active now" [value]="totals().active" icon="pending_actions" tone="info"
+                hint="Open, in progress, or waiting" />
+            <sc-stat-card label="Completion rate" [value]="completionRate() + '%'" icon="task_alt" tone="success"
+                hint="Resolved or closed" />
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="sc-table">
-                <caption class="sc-sr-only">Per-category ticket totals</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">Category</th>
-                        <th scope="col" class="text-right">Total</th>
-                        <th scope="col" class="text-right">Active</th>
-                        <th scope="col" class="text-right">Resolved</th>
-                        <th scope="col" class="text-right">Closed</th>
-                        <th scope="col" class="w-28">Mix</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (row of rows(); track row.categoryId) {
-                    <tr>
-                        <td class="max-w-[220px] truncate font-medium text-ink">{{ row.categoryName }}</td>
-                        <td class="text-right tabular-nums">{{ row.totalTickets }}</td>
-                        <td class="text-right tabular-nums">
-                            @if (row.activeTickets > 0) {
-                            <span class="sc-badge sc-badge-warn">{{ row.activeTickets }}</span>
-                            } @else {
-                            <span class="text-ink-subtle">0</span>
-                            }
-                        </td>
-                        <td class="text-right font-semibold tabular-nums text-success-700">{{ row.resolvedTickets }}</td>
-                        <td class="text-right tabular-nums text-ink-subtle">{{ row.closedTickets }}</td>
-                        <td>
-                            <!-- Proportion of this row that is finished. The number is
-                                 printed alongside, so the bar is never the only signal. -->
-                            <span class="flex items-center gap-2">
-                                <span class="sc-meter" [attr.aria-hidden]="true">
-                                    <span class="sc-meter-fill"
-                                        [style.width.%]="shareOf(row.resolvedTickets + row.closedTickets, row.totalTickets)"></span>
-                                </span>
-                                <span class="w-9 shrink-0 text-right text-xs tabular-nums text-ink-subtle">
-                                    {{ shareOf(row.resolvedTickets + row.closedTickets, row.totalTickets) }}%
-                                </span>
-                            </span>
-                        </td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
+        <sc-entity-breakdown [rows]="entityRows()" noun="category" nounPlural="categories" nameHeading="Category" />
+    </div>
+    }
 </div>
-}

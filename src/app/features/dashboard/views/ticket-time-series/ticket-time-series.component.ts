@@ -1,101 +1,91 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { LegendPosition, NgxChartsModule } from '@swimlane/ngx-charts';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 
 import { ReportingService } from '../../../../core/services/reporting.service';
 import {
   ReportDateRangeRequest,
   TicketTimeSeriesPointData,
 } from '../../models/reporting.model';
+import { previousPeriod } from '../shared/report-base';
 import { ReportRangeComponent } from '../shared/report-range.component';
+import { TrendChartComponent } from '../../widgets/trend-chart/trend-chart.component';
 
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { StatCardComponent } from '../../../../shared/ui/stat-card/stat-card.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import { ChartCardComponent } from '../../../../shared/charts/chart-theme';
+import {
+  BarListItem,
+  BarListComponent,
+} from '../../../../shared/charts/bar-list/bar-list.component';
+import { DeltaChipComponent } from '../../../../shared/charts/delta-chip/delta-chip.component';
+import { ReportSkeletonComponent } from '../shared/report-skeleton/report-skeleton.component';
 
-/** ngx-charts multi-series shape. */
-interface ChartSeries {
-  name: string;
-  series: { name: string; value: number }[];
+interface PeriodTotals {
+  readonly raised: number;
+  readonly resolved: number;
+  readonly closed: number;
 }
 
-/**
- * Colours for the three plotted series. Raised is neutral-blue, resolved is
- * the same green as the Resolved badge, closed the same slate as Closed — so
- * the trend lines and the status badges agree.
- */
-const TREND_SCHEME = {
-  name: 'servicore-trend',
-  selectable: true,
-  group: 'Ordinal',
-  domain: ['#60a5fa', '#059669', '#64748b'],
-} as any;
+const WEEKDAYS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const;
+
+/** Fewer days than this and a weekday pattern is just noise. */
+const WEEKDAY_MIN_DAYS = 14;
 
 @Component({
   selector: 'app-ticket-time-series',
   standalone: true,
   imports: [
-    NgxChartsModule,
     ReportRangeComponent,
+    ReportSkeletonComponent,
+    TrendChartComponent,
     PageHeaderComponent,
     StatCardComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
     ChartCardComponent,
+    AlertComponent,
+    DeltaChipComponent,
+    BarListComponent,
   ],
   templateUrl: './ticket-time-series.component.html',
 })
 export class TicketTimeSeriesComponent implements OnInit {
   private readonly reportingService = inject(ReportingService);
+  private readonly destroyRef = inject(DestroyRef);
+  private mainSub?: Subscription;
+  private previousSub?: Subscription;
 
   readonly points = signal<TicketTimeSeriesPointData[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly range = signal<ReportDateRangeRequest>({});
 
-  readonly trendColors = TREND_SCHEME;
-  readonly legendBelow = LegendPosition.Below;
+  /** Totals for the window before this one, for the delta chips. */
+  readonly previousTotals = signal<PeriodTotals | null>(null);
 
   readonly hasData = computed(() => this.points().length > 0);
 
-  /**
-   * Replaces roughly 170 lines of hand-computed SVG path maths — viewBox
-   * constants, manual axis ticks, label thinning — with the charting library
-   * the rest of the reporting surface already uses. Same three series, same
-   * source fields.
-   */
-  readonly chartSeries = computed<ChartSeries[]>(() => {
-    const data = this.points();
-    if (data.length === 0) return [];
-
-    const label = (point: TicketTimeSeriesPointData) =>
-      new Date(point.date).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-      });
-
-    return [
-      {
-        name: 'Raised',
-        series: data.map((p) => ({ name: label(p), value: p.newTickets })),
-      },
-      {
-        name: 'Resolved',
-        series: data.map((p) => ({ name: label(p), value: p.resolvedTickets })),
-      },
-      {
-        name: 'Closed',
-        series: data.map((p) => ({ name: label(p), value: p.closedTickets })),
-      },
-    ];
-  });
-
-  readonly totals = computed(() =>
+  readonly totals = computed<PeriodTotals>(() =>
     this.points().reduce(
       (acc, p) => ({
         raised: acc.raised + p.newTickets,
@@ -122,6 +112,37 @@ export class TicketTimeSeriesComponent implements OnInit {
     return ranked[0] ?? null;
   });
 
+  /**
+   * Tickets raised per day of the week, summed over the period. Only offered
+   * once there are two full weeks of data to speak of a pattern.
+   */
+  readonly weekdayItems = computed<BarListItem[]>(() => {
+    const points = this.points();
+    if (points.length < WEEKDAY_MIN_DAYS) return [];
+
+    const sums = new Array<number>(7).fill(0);
+    for (const p of points) {
+      // Read the calendar date as written, so a UTC midnight does not slip
+      // into the previous day in negative-offset time zones.
+      const [y, m, d] = p.date.slice(0, 10).split('-').map(Number);
+      const jsDay = new Date(y, m - 1, d).getDay();
+      sums[(jsDay + 6) % 7] += p.newTickets;
+    }
+
+    return WEEKDAYS.map((label, i) => ({
+      key: label,
+      label,
+      value: sums[i],
+    }));
+  });
+
+  readonly busiestWeekday = computed(() => {
+    const items = this.weekdayItems();
+    if (items.length === 0) return null;
+    const top = items.reduce((a, b) => (b.value > a.value ? b : a));
+    return top.value > 0 ? top : null;
+  });
+
   ngOnInit(): void {
     this.fetchData();
   }
@@ -135,22 +156,63 @@ export class TicketTimeSeriesComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.reportingService.getTicketTimeSeries(this.range()).subscribe({
-      next: (result) => {
-        // Chronological order isn't guaranteed by the endpoint — sort
-        // defensively, otherwise the line doubles back on itself.
-        this.points.set(
-          [...result].sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    // A newer request supersedes an older one.
+    this.mainSub?.unsubscribe();
+    this.mainSub = this.reportingService
+      .getTicketTimeSeries(this.range())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          // Chronological order isn't guaranteed by the endpoint — sort
+          // defensively, otherwise the line doubles back on itself.
+          this.points.set(this.sorted(result));
+          this.isLoading.set(false);
+        },
+        error: (err: Error) => {
+          this.errorMessage.set(err.message);
+          this.isLoading.set(false);
+        },
+      });
+
+    this.fetchPrevious();
+  }
+
+  /**
+   * The same endpoint over the window just before this one. It is its own
+   * request: if it fails the page simply shows no comparison.
+   */
+  private fetchPrevious(): void {
+    this.previousSub?.unsubscribe();
+    this.previousTotals.set(null);
+
+    const prior = previousPeriod(this.range());
+    if (!prior) return;
+
+    this.previousSub = this.reportingService
+      .getTicketTimeSeries(prior)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) =>
+          this.previousTotals.set(
+            result.reduce<PeriodTotals>(
+              (acc, p) => ({
+                raised: acc.raised + p.newTickets,
+                resolved: acc.resolved + p.resolvedTickets,
+                closed: acc.closed + p.closedTickets,
+              }),
+              { raised: 0, resolved: 0, closed: 0 },
+            ),
           ),
-        );
-        this.isLoading.set(false);
-      },
-      error: (err: Error) => {
-        this.errorMessage.set(err.message);
-        this.isLoading.set(false);
-      },
-    });
+        error: () => this.previousTotals.set(null),
+      });
+  }
+
+  private sorted(
+    result: TicketTimeSeriesPointData[],
+  ): TicketTimeSeriesPointData[] {
+    return [...result].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
   }
 
   formatDay(date: string): string {

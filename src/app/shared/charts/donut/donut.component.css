@@ -1,0 +1,98 @@
+:host {
+  display: block;
+}
+
+.dn-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  animation: dn-in calc(var(--sc-dur-slow) * 2) var(--sc-ease) both;
+}
+
+.dn-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* Start the first slice at 12 o'clock. */
+  transform: rotate(-90deg);
+}
+
+.dn-track,
+.dn-arc {
+  fill: none;
+  stroke-width: 5;
+}
+
+.dn-track {
+  stroke: var(--sc-surface-sunken);
+}
+
+.dn-arc {
+  stroke-linecap: butt;
+  transition:
+    opacity var(--sc-dur) var(--sc-ease),
+    stroke-width var(--sc-dur) var(--sc-ease);
+}
+
+@media (hover: hover) {
+  .dn-arc:hover {
+    stroke-width: 5.8;
+  }
+}
+
+.dn-dim {
+  opacity: 0.35;
+}
+
+.dn-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22%;
+  text-align: center;
+  pointer-events: none;
+}
+
+.dn-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-text);
+}
+
+.dn-label {
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--sc-text-subtle);
+}
+
+@keyframes dn-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dn-wrap {
+    animation: none;
+  }
+}
