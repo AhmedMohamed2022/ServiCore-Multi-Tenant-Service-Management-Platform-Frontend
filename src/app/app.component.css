@@ -6,3 +6,16 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/* Full-screen "couldn't load this page" view (see AppComponent). */
+.sc-chunk-error {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1rem;
+  background-color: var(--sc-surface-muted);
+}

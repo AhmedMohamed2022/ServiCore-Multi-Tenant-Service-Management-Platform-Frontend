@@ -119,7 +119,7 @@
 
     @if (filteredRows().length === 0) {
     <section class="sc-card">
-        <sc-empty-state icon="search_off" title="No tickets match"
+        <sc-empty-state icon="search_off" tone="neutral" title="No tickets match these filters"
             description="Try a different search, or clear the filters to see everything." />
         <div class="-mt-4 flex justify-center pb-8">
             <button type="button" class="sc-btn sc-btn-secondary" (click)="clearFilters()">

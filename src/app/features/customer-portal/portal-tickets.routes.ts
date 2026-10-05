@@ -11,6 +11,7 @@ export const PORTAL_ROUTES: Routes = [
     children: [
       {
         path: 'tickets',
+        title: 'My tickets · ServiCore',
         canActivate: [portalTenantGuard],
         loadComponent: () =>
           import('./components/portal-ticket-list/portal-ticket-list.component').then(
@@ -19,6 +20,7 @@ export const PORTAL_ROUTES: Routes = [
       },
       {
         path: 'tickets/create',
+        title: 'New request · ServiCore',
         canActivate: [portalTenantGuard],
         loadComponent: () =>
           import('./components/portal-ticket-create/portal-ticket-create.component').then(
@@ -27,6 +29,7 @@ export const PORTAL_ROUTES: Routes = [
       },
       {
         path: 'tickets/:id',
+        title: 'Ticket · ServiCore',
         canActivate: [portalTenantGuard],
         loadComponent: () =>
           import('./components/portal-ticket-detail/portal-ticket-detail.component').then(
@@ -35,6 +38,7 @@ export const PORTAL_ROUTES: Routes = [
       },
       {
         path: 'activate-device',
+        title: 'Open your portal · ServiCore',
         // Deliberately no portalTenantGuard here — this is the one route a
         // tenant-less customer must always be able to reach.
         loadComponent: () =>

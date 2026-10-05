@@ -1,1 +1,20 @@
-<router-outlet></router-outlet>
+<!-- display: contents keeps this wrapper out of the layout. `inert` takes the
+     page behind the error view out of the tab order and the accessibility
+     tree while that view is open. -->
+<div class="contents" [attr.inert]="chunkError() ? '' : null">
+    <router-outlet></router-outlet>
+</div>
+
+@if (chunkError()) {
+<div class="sc-chunk-error" role="alertdialog" aria-modal="true" aria-labelledby="chunkErrorTitle">
+    <sc-error-view icon="cloud_off" tone="danger" headingId="chunkErrorTitle" title="Couldn't load this page"
+        message="Part of ServiCore didn't download, usually because of a weak connection or a recent update. Reloading the page normally fixes it.">
+        <button #reloadButton type="button" class="sc-btn sc-btn-primary" (click)="reload()">
+            Reload page
+        </button>
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="dismissChunkError()">
+            Stay here
+        </button>
+    </sc-error-view>
+</div>
+}

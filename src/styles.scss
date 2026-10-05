@@ -30,7 +30,8 @@
   /* Text ------------------------------------------------------------------- */
   --sc-text: #0f172a;
   --sc-text-muted: #475569;
-  --sc-text-subtle: #64748b;
+  /* 4.85:1 on brand-50, 4.95:1 on surface-sunken, 5.43:1 on white. */
+  --sc-text-subtle: #5b6b82;
   --sc-text-inverse: #f8fafc;
   /* Text and icons on a solid brand or dark fill. */
   --sc-on-brand: #ffffff;
@@ -359,6 +360,22 @@ input[type="range"] {
   line-height: 1;
   user-select: none;
   flex-shrink: 0;
+  /* Clamp to a 1em square. The glyph is a ligature, so until the icon font
+     arrives (or if it is blocked) the raw name, e.g. "confirmation_number",
+     would render as visible text, shift layout and overflow narrow screens.
+     With the clamp the box is the same size either way and the unrendered
+     name is cut off. Once the font loads the glyph fills the same box. */
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+  word-wrap: normal;
+  direction: ltr;
+  font-style: normal;
 }
 
 .material-symbols-rounded.icon-sm {
@@ -1118,6 +1135,29 @@ input[type="range"] {
     line-height: 1;
     color: var(--sc-text-muted);
   }
+  /* --- Status fills ------------------------------------------------------
+     Flat fill in the colour of a ticket status. Used for legend keys, dots
+     and the segments of proportion bars, so those no longer need an inline
+     style. A segment's size is still bound per row; only the colour is static. */
+  .sc-bg-new {
+    background-color: var(--sc-status-new);
+  }
+  .sc-bg-open {
+    background-color: var(--sc-status-open);
+  }
+  .sc-bg-progress {
+    background-color: var(--sc-status-progress);
+  }
+  .sc-bg-waiting {
+    background-color: var(--sc-status-waiting);
+  }
+  .sc-bg-resolved {
+    background-color: var(--sc-status-resolved);
+  }
+  .sc-bg-closed {
+    background-color: var(--sc-status-closed);
+  }
+
   /* Screen-reader-only text, for icon-only controls and live regions. */
   .sc-sr-only {
     position: absolute;
@@ -1261,7 +1301,9 @@ html {
   background-color: var(--sc-brand-50);
 }
 
-/* Snackbar tones used by ToastService. */
+/* Snackbar tones used by ToastService. The action button sits on a solid dark
+   or saturated fill, so it keeps the inverse text colour (all three tones
+   clear 4.5:1 with white). */
 .sc-toast-success .mdc-snackbar__surface {
   background-color: var(--sc-success-700) !important;
 }
@@ -1309,4 +1351,63 @@ html {
   .sc-spin {
     animation: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Toasts and dialogs: small-screen width and reduced motion
+   -------------------------------------------------------------------------*/
+
+/* Material pins a snackbar to a 344px minimum, which overflows a 320px
+   viewport once the 16px host margin is added. Let it shrink and wrap. */
+.sc-toast-success,
+.sc-toast-error,
+.sc-toast-info {
+  max-width: 100vw;
+}
+
+.sc-toast-success .mat-mdc-snackbar-surface,
+.sc-toast-error .mat-mdc-snackbar-surface,
+.sc-toast-info .mat-mdc-snackbar-surface,
+.sc-toast-success .mdc-snackbar__surface,
+.sc-toast-error .mdc-snackbar__surface,
+.sc-toast-info .mdc-snackbar__surface {
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+}
+
+.sc-toast-success .mdc-snackbar__label,
+.sc-toast-error .mdc-snackbar__label,
+.sc-toast-info .mdc-snackbar__label {
+  overflow-wrap: anywhere;
+}
+
+/* Confirm dialog panel: never wider than the viewport, whatever the content. */
+.sc-dialog-panel.mat-mdc-dialog-panel,
+.sc-dialog-panel .mat-mdc-dialog-container {
+  max-width: calc(100vw - 32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-toast-success,
+  .sc-toast-error,
+  .sc-toast-info,
+  .sc-toast-success .mdc-snackbar__surface,
+  .sc-toast-error .mdc-snackbar__surface,
+  .sc-toast-info .mdc-snackbar__surface,
+  .sc-dialog-panel .mdc-dialog__container,
+  .sc-dialog-panel .mdc-dialog__surface,
+  .cdk-overlay-backdrop,
+  .mat-mdc-menu-panel {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Keyboard focus on menu items. Material marks the focused item with a faint
+   state layer only (12% indigo), which is easy to lose. Add a solid inset ring,
+   shown for keyboard focus only so mouse hover is unchanged. */
+.sc-menu .mat-mdc-menu-item.cdk-keyboard-focused,
+.mat-mdc-menu-panel .mat-mdc-menu-item.cdk-keyboard-focused {
+  box-shadow: inset 0 0 0 2px var(--sc-brand-600);
+  border-radius: var(--sc-radius);
 }

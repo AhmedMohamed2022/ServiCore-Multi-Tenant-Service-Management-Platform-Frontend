@@ -227,10 +227,10 @@
     </div>
     } @else if (filteredTickets().length === 0) {
     @if (errorMessage() && allTickets().length === 0) {
-    <sc-empty-state icon="cloud_off" title="Tickets are unavailable"
+    <sc-empty-state icon="cloud_off" tone="error" title="Couldn't load tickets"
         description="Check your connection, then try again." actionLabel="Try again" (action)="loadTicketWorkspace()" />
     } @else if (hasActiveFilters()) {
-    <sc-empty-state icon="search_off" title="No tickets match these filters"
+    <sc-empty-state icon="search_off" tone="neutral" title="No tickets match these filters"
         description="Try a different search term or clear the filters." actionLabel="Clear filters"
         (action)="clearFilters()" />
     } @else {

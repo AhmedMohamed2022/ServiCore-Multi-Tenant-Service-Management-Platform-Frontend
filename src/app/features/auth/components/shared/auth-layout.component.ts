@@ -48,12 +48,12 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
             Multi-tenant service management
           </span>
 
-          <h1
+          <p
             class="mt-5 text-balance text-[2rem] font-bold leading-[1.12] tracking-[-0.03em] text-ink xl:text-[2.25rem]"
           >
             Service management that keeps
             <span class="sc-grad-text">every ticket accounted for.</span>
-          </h1>
+          </p>
           <p class="mt-4 text-sm leading-relaxed text-ink-muted">
             Multi-tenant ticketing with team routing, agent assignment and
             reporting across your whole organization.
@@ -98,11 +98,11 @@ import { IconComponent } from '../../../../shared/ui/icon/icon.component';
           </div>
 
           <div class="mb-6">
-            <h2
+            <h1
               class="text-[1.375rem] font-bold leading-tight tracking-[-0.025em] text-ink"
             >
               {{ heading() }}
-            </h2>
+            </h1>
             @if (subheading()) {
               <p class="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
                 {{ subheading() }}

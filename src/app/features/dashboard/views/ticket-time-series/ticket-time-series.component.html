@@ -8,8 +8,8 @@
     <sc-report-skeleton label="Loading ticket trends" layout="wide" [bodyHeight]="300" />
     } @else if (errorMessage() && !hasData()) {
     <!-- Nothing to show yet and the request failed: say so, and offer a retry. -->
-    <div class="sc-card" role="alert">
-        <sc-empty-state icon="cloud_off" title="Report unavailable" [description]="errorMessage()!"
+    <div class="sc-card">
+        <sc-empty-state icon="cloud_off" tone="error" title="Couldn't load this report" [description]="errorMessage()!"
             actionLabel="Try again" (action)="fetchData()" />
     </div>
     } @else if (!hasData()) {

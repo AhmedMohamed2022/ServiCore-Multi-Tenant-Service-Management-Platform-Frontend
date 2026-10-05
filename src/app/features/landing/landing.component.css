@@ -366,7 +366,7 @@
     font-size: 13.5px;
     color: var(--sc-text-muted);
     sc-icon {
-      color: var(--sc-success-600);
+      color: var(--sc-success-700);
       margin-top: 2px;
     }
   }

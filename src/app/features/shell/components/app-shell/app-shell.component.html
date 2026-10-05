@@ -1,4 +1,4 @@
-<a href="#mainContent" class="sc-skip-link">Skip to main content</a>
+<a href="#mainContent" class="sc-skip-link" scSkipLink>Skip to main content</a>
 
 <mat-sidenav-container class="sc-shell" [hasBackdrop]="isHandset()">
 
@@ -7,9 +7,9 @@
          `over` mode below lg turns it into an overlay drawer, which also
          gives us focus trapping and Escape-to-close from the CDK.
          =================================================================== -->
-    <mat-sidenav #drawer class="sc-sidebar" [mode]="isHandset() ? 'over' : 'side'"
-        [opened]="isHandset() ? isDrawerOpen() : true" (closedStart)="isDrawerOpen.set(false)"
-        [fixedInViewport]="isHandset()">
+    <mat-sidenav #drawer class="sc-sidebar" role="complementary" aria-label="Sidebar"
+        [mode]="isHandset() ? 'over' : 'side'" [opened]="isHandset() ? isDrawerOpen() : true"
+        (closedStart)="isDrawerOpen.set(false)" [fixedInViewport]="isHandset()">
 
         <div class="flex h-full flex-col">
             <!-- Brand -->
@@ -81,7 +81,7 @@
     <!-- ===================================================================
          Content
          =================================================================== -->
-    <mat-sidenav-content class="sc-content">
+    <mat-sidenav-content>
         <header class="sc-topbar">
             @if (isHandset()) {
             <button type="button" class="sc-btn sc-btn-ghost sc-btn-icon" (click)="toggleDrawer()"

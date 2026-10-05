@@ -1,3 +1,4 @@
+import { SkipLinkDirective } from '../../../../shared/ui/skip-link/skip-link.directive';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -36,6 +37,7 @@ interface NavGroup {
   standalone: true,
   imports: [
     CommonModule,
+    SkipLinkDirective,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,

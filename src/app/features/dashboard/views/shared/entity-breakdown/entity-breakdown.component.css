@@ -178,7 +178,9 @@ td .eb-ellipsis {
 }
 
 .eb-sort sc-icon {
-  opacity: 0.55;
+  /* Full opacity: fading the glyph dropped it below 3:1. The unsorted state is
+     already distinguished by the muted label colour and aria-sort="none". */
+  opacity: 1;
 }
 
 [aria-sort="ascending"] .eb-sort sc-icon,

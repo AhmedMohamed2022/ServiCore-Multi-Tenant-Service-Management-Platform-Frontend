@@ -1,4 +1,5 @@
 <div class="lp">
+    <a href="#mainContent" class="sc-skip-link" scSkipLink>Skip to main content</a>
     <header class="lp-nav">
         <div class="lp-container lp-nav-inner">
             <a routerLink="/" class="lp-brand">
@@ -21,136 +22,140 @@
         </div>
     </header>
 
-    <!-- Hero -->
-    <section class="lp-hero">
-        <div class="lp-glow lp-glow-a"></div>
-        <div class="lp-glow lp-glow-b"></div>
-        <div class="lp-container lp-hero-inner">
-            <span class="sc-pill"><span class="sc-pill-dot"></span> Multi-tenant service management</span>
-            <h1 class="lp-title">Every ticket accounted for, <span class="sc-grad-text">across every
-                    organization.</span>
-            </h1>
-            <p class="lp-lead">
-                Route customer requests to the right team, move them through a strict workflow, and see
-                how your organization performs, with each tenant's data fully isolated.
-            </p>
-            <div class="lp-cta">
-                <a routerLink="/register" class="sc-btn sc-btn-primary sc-btn-lg">
-                    Create your organization <sc-icon name="arrow_forward" size="sm" />
-                </a>
-                <a routerLink="/login" class="sc-btn sc-btn-secondary sc-btn-lg">Sign in</a>
-            </div>
-            <p class="lp-note">Registering creates a private workspace where you are the Owner.</p>
+    <main id="mainContent">
+        <!-- Hero -->
+        <section class="lp-hero">
+            <div class="lp-glow lp-glow-a"></div>
+            <div class="lp-glow lp-glow-b"></div>
+            <div class="lp-container lp-hero-inner">
+                <span class="sc-pill"><span class="sc-pill-dot"></span> Multi-tenant service management</span>
+                <h1 class="lp-title">Every ticket accounted for, <span class="sc-grad-text">across every
+                        organization.</span>
+                </h1>
+                <p class="lp-lead">
+                    Route customer requests to the right team, move them through a strict workflow, and see
+                    how your organization performs, with each tenant's data fully isolated.
+                </p>
+                <div class="lp-cta">
+                    <a routerLink="/register" class="sc-btn sc-btn-primary sc-btn-lg">
+                        Create your organization <sc-icon name="arrow_forward" size="sm" />
+                    </a>
+                    <a routerLink="/login" class="sc-btn sc-btn-secondary sc-btn-lg">Sign in</a>
+                </div>
+                <p class="lp-note">Registering creates a private workspace where you are the Owner.</p>
 
-            <!-- App window mock -->
-            <div class="lp-window" aria-hidden="true">
-                <div class="lp-chrome"><i></i><i></i><i></i><span>servicore · Acme Support</span></div>
-                <div class="lp-app">
-                    <aside class="lp-side">
-                        @for (i of sidebar; track i; let first = $first) {
-                        <span class="lp-side-item" [class.on]="first"><sc-icon [name]="i" size="sm" /></span>
-                        }
-                    </aside>
-                    <div class="lp-main">
-                        <div class="lp-tiles">
-                            <div class="lp-tile"><small>Open tickets</small><b>128</b></div>
-                            <div class="lp-tile"><small>Avg. resolution</small><b>4.2h</b></div>
-                            <div class="lp-tile lp-tile-chart">
-                                <small>Last 7 days</small>
-                                <div class="lp-bars">
-                                    @for (h of bars; track $index) { <span [style.height.%]="h"></span> }
+                <!-- App window mock -->
+                <div class="lp-window" aria-hidden="true">
+                    <div class="lp-chrome"><i></i><i></i><i></i><span>servicore · Acme Support</span></div>
+                    <div class="lp-app">
+                        <aside class="lp-side">
+                            @for (i of sidebar; track i; let first = $first) {
+                            <span class="lp-side-item" [class.on]="first"><sc-icon [name]="i" size="sm" /></span>
+                            }
+                        </aside>
+                        <div class="lp-main">
+                            <div class="lp-tiles">
+                                <div class="lp-tile"><small>Open tickets</small><b>128</b></div>
+                                <div class="lp-tile"><small>Avg. resolution</small><b>4.2h</b></div>
+                                <div class="lp-tile lp-tile-chart">
+                                    <small>Last 7 days</small>
+                                    <div class="lp-bars">
+                                        @for (h of bars; track $index) { <span [style.height.%]="h"></span> }
+                                    </div>
                                 </div>
                             </div>
+                            <table class="lp-rows">
+                                <tbody>
+                                    @for (t of preview; track t.title) {
+                                    <tr>
+                                        <td><b>{{ t.title }}</b><small>{{ t.team }}</small></td>
+                                        <td><span class="sc-badge" [class]="'sc-badge ' + t.pc">{{ t.priority }}</span>
+                                        </td>
+                                        <td><span class="sc-badge" [class]="'sc-badge ' + t.sc">{{ t.status }}</span>
+                                        </td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
-                        <table class="lp-rows">
-                            <tbody>
-                                @for (t of preview; track t.title) {
-                                <tr>
-                                    <td><b>{{ t.title }}</b><small>{{ t.team }}</small></td>
-                                    <td><span class="sc-badge" [class]="'sc-badge ' + t.pc">{{ t.priority }}</span></td>
-                                    <td><span class="sc-badge" [class]="'sc-badge ' + t.sc">{{ t.status }}</span></td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
                     </div>
-                </div>
-                <div class="lp-toast">
-                    <span class="lp-toast-icon"><sc-icon name="chat" size="sm" /></span>
-                    <div><b>New comment</b><small>Invoice mismatch #4021 · just now</small></div>
+                    <div class="lp-toast">
+                        <span class="lp-toast-icon"><sc-icon name="chat" size="sm" /></span>
+                        <div><b>New comment</b><small>Invoice mismatch #4021 · just now</small></div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Stats -->
-    <section class="lp-container lp-stats">
-        @for (s of stats; track s.label) {
-        <div><b>{{ s.value }}</b><span>{{ s.label }}</span></div>
-        }
-    </section>
-
-    <!-- Features -->
-    <section id="features" class="lp-container lp-section">
-        <p class="sc-eyebrow">Features</p>
-        <h2 class="lp-h2">Built for how support teams actually work</h2>
-        <p class="lp-sub">The pieces a service desk needs, designed to work together.</p>
-        <div class="lp-bento">
-            @for (f of features; track f.title) {
-            <article class="sc-card sc-card-interactive lp-card" [class.wide]="f.wide">
-                <span class="sc-icon-chip sc-icon-chip-lg"><sc-icon [name]="f.icon" /></span>
-                <h3>{{ f.title }}</h3>
-                <p>{{ f.body }}</p>
-            </article>
+        <!-- Stats -->
+        <section class="lp-container lp-stats">
+            @for (s of stats; track s.label) {
+            <div><b>{{ s.value }}</b><span>{{ s.label }}</span></div>
             }
-        </div>
-    </section>
+        </section>
 
-    <!-- Roles -->
-    <section id="roles" class="lp-band">
-        <div class="lp-container lp-section">
-            <p class="sc-eyebrow">Workspaces</p>
-            <h2 class="lp-h2">One platform, three experiences</h2>
-            <div class="lp-roles">
-                @for (r of roles; track r.name) {
-                <article class="sc-card lp-role">
-                    <div class="lp-role-head">
-                        <span class="sc-icon-chip sc-icon-chip-lg"><sc-icon [name]="r.icon" /></span>
-                        <div>
-                            <h3>{{ r.name }}</h3><small>{{ r.tag }}</small>
-                        </div>
-                    </div>
-                    <ul>
-                        @for (p of r.points; track p) {
-                        <li><sc-icon name="check_circle" size="sm" /> {{ p }}</li>
-                        }
-                    </ul>
+        <!-- Features -->
+        <section id="features" class="lp-container lp-section">
+            <p class="sc-eyebrow">Features</p>
+            <h2 class="lp-h2">Built for how support teams actually work</h2>
+            <p class="lp-sub">The pieces a service desk needs, designed to work together.</p>
+            <div class="lp-bento">
+                @for (f of features; track f.title) {
+                <article class="sc-card sc-card-interactive lp-card" [class.wide]="f.wide">
+                    <span class="sc-icon-chip sc-icon-chip-lg"><sc-icon [name]="f.icon" /></span>
+                    <h3>{{ f.title }}</h3>
+                    <p>{{ f.body }}</p>
                 </article>
                 }
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Workflow -->
-    <section id="workflow" class="lp-container lp-section">
-        <p class="sc-eyebrow">Workflow</p>
-        <h2 class="lp-h2">A ticket lifecycle that can't be skipped</h2>
-        <p class="lp-sub">Transitions are enforced by the API and offered only to people allowed to make them.</p>
-        <ol class="lp-steps">
-            @for (s of lifecycle; track s; let i = $index) {
-            <li><span class="lp-step-n">{{ i + 1 }}</span>{{ s }}</li>
-            }
-        </ol>
-    </section>
+        <!-- Roles -->
+        <section id="roles" class="lp-band">
+            <div class="lp-container lp-section">
+                <p class="sc-eyebrow">Workspaces</p>
+                <h2 class="lp-h2">One platform, three experiences</h2>
+                <div class="lp-roles">
+                    @for (r of roles; track r.name) {
+                    <article class="sc-card lp-role">
+                        <div class="lp-role-head">
+                            <span class="sc-icon-chip sc-icon-chip-lg"><sc-icon [name]="r.icon" /></span>
+                            <div>
+                                <h3>{{ r.name }}</h3><small>{{ r.tag }}</small>
+                            </div>
+                        </div>
+                        <ul>
+                            @for (p of r.points; track p) {
+                            <li><sc-icon name="check_circle" size="sm" /> {{ p }}</li>
+                            }
+                        </ul>
+                    </article>
+                    }
+                </div>
+            </div>
+        </section>
 
-    <!-- CTA -->
-    <section class="lp-container">
-        <div class="lp-final">
-            <h2>See it with your own data</h2>
-            <p>Create an organization in under a minute. It's yours alone.</p>
-            <a routerLink="/register" class="sc-btn sc-btn-lg lp-btn-light">Get started free</a>
-        </div>
-    </section>
+        <!-- Workflow -->
+        <section id="workflow" class="lp-container lp-section">
+            <p class="sc-eyebrow">Workflow</p>
+            <h2 class="lp-h2">A ticket lifecycle that can't be skipped</h2>
+            <p class="lp-sub">Transitions are enforced by the API and offered only to people allowed to make them.</p>
+            <ol class="lp-steps">
+                @for (s of lifecycle; track s; let i = $index) {
+                <li><span class="lp-step-n">{{ i + 1 }}</span>{{ s }}</li>
+                }
+            </ol>
+        </section>
+
+        <!-- CTA -->
+        <section class="lp-container">
+            <div class="lp-final">
+                <h2>See it with your own data</h2>
+                <p>Create an organization in under a minute. It's yours alone.</p>
+                <a routerLink="/register" class="sc-btn sc-btn-lg lp-btn-light">Get started free</a>
+            </div>
+        </section>
+    </main>
 
     <footer class="lp-container lp-footer">
         <span>&copy; {{ year }} ServiCore · Angular 19 · ASP.NET Core 8</span>

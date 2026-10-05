@@ -129,7 +129,7 @@
         </div>
         } @else if (visibleCustomers().length === 0) {
         @if (hasFilters()) {
-        <sc-empty-state icon="search_off" title="No customers match"
+        <sc-empty-state icon="search_off" tone="neutral" title="No customers match"
             description="Try a different search term, or include inactive records." actionLabel="Clear filters"
             (action)="clearFilters()" />
         } @else {

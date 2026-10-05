@@ -141,7 +141,7 @@
         </div>
         } @else if (visibleCategories().length === 0) {
         @if (hasFilters()) {
-        <sc-empty-state icon="search_off" title="No categories match"
+        <sc-empty-state icon="search_off" tone="neutral" title="No categories match"
             description="Try a different search term, or include inactive categories." actionLabel="Clear filters"
             (action)="clearFilters()" />
         } @else {

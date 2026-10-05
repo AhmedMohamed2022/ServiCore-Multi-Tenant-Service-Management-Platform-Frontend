@@ -157,8 +157,8 @@
         </div>
         } @else if (visibleTeams().length === 0) {
         @if (searchTerm().trim()) {
-        <sc-empty-state icon="search_off" title="No teams match" description="Try a different search term."
-            actionLabel="Clear search" (action)="searchTerm.set('')" />
+        <sc-empty-state icon="search_off" tone="neutral" title="No teams match"
+            description="Try a different search term." actionLabel="Clear search" (action)="searchTerm.set('')" />
         } @else {
         <sc-empty-state icon="groups" title="No teams yet"
             description="Create a team so tickets have somewhere to be routed." />
@@ -249,7 +249,7 @@
                         <dd>{{ roster().length }}</dd>
                     </div>
                     <div>
-                        <dt><span class="tr-dot" style="background-color: var(--sc-status-progress)"></span>Active</dt>
+                        <dt><span class="tr-dot sc-bg-progress"></span>Active</dt>
                         <dd>
                             @if (selectedStats(); as st) { <span [appCountUp]="st.activeTickets"></span> }
                             @else if (statsState() === 'loading') { <span class="sc-skeleton tr-stat-skel"
@@ -258,7 +258,7 @@
                         </dd>
                     </div>
                     <div>
-                        <dt><span class="tr-dot" style="background-color: var(--sc-status-resolved)"></span>Resolved
+                        <dt><span class="tr-dot sc-bg-resolved"></span>Resolved
                         </dt>
                         <dd>
                             @if (selectedStats(); as st) { <span [appCountUp]="st.resolvedTickets"></span> }
@@ -268,7 +268,7 @@
                         </dd>
                     </div>
                     <div>
-                        <dt><span class="tr-dot" style="background-color: var(--sc-status-closed)"></span>Closed</dt>
+                        <dt><span class="tr-dot sc-bg-closed"></span>Closed</dt>
                         <dd>
                             @if (selectedStats(); as st) { <span [appCountUp]="st.closedTickets"></span> }
                             @else if (statsState() === 'loading') { <span class="sc-skeleton tr-stat-skel"
@@ -281,12 +281,10 @@
                 @if (selectedHasTickets()) {
                 <div class="sc-split mt-3" role="img"
                     [attr.aria-label]="st.activeTickets + ' active, ' + st.resolvedTickets + ' resolved, ' + st.closedTickets + ' closed'">
-                    @if (st.activeTickets) { <span [style.flex-grow]="st.activeTickets"
-                        style="background-color: var(--sc-status-progress)"></span> }
-                    @if (st.resolvedTickets) { <span [style.flex-grow]="st.resolvedTickets"
-                        style="background-color: var(--sc-status-resolved)"></span> }
-                    @if (st.closedTickets) { <span [style.flex-grow]="st.closedTickets"
-                        style="background-color: var(--sc-status-closed)"></span> }
+                    @if (st.activeTickets) { <span class="sc-bg-progress" [style.flex-grow]="st.activeTickets"></span> }
+                    @if (st.resolvedTickets) { <span class="sc-bg-resolved"
+                        [style.flex-grow]="st.resolvedTickets"></span> }
+                    @if (st.closedTickets) { <span class="sc-bg-closed" [style.flex-grow]="st.closedTickets"></span> }
                 </div>
                 } @else {
                 <p class="mt-3 text-xs text-ink-subtle">No tickets have been routed to this team yet.</p>
@@ -384,8 +382,8 @@
             <sc-empty-state icon="person_off" title="No members on this team"
                 description="Tickets routed here can't be assigned to anyone until someone joins." />
             } @else if (rosterView().length === 0) {
-            <sc-empty-state icon="search_off" title="No members match" description="Try a different name."
-                actionLabel="Clear search" (action)="rosterSearch.set('')" />
+            <sc-empty-state icon="search_off" tone="neutral" title="No members match"
+                description="Try a different name." actionLabel="Clear search" (action)="rosterSearch.set('')" />
             } @else {
             <ul class="divide-y divide-line">
                 @for (entry of rosterView(); track entry.userId) {
@@ -556,12 +554,13 @@
         }
     </div>
     } @else if (membersState() === 'unavailable') {
-    <sc-empty-state icon="cloud_off" title="Couldn't load people"
-        description="The member list is unavailable right now." actionLabel="Try again" (action)="loadOrgMembers()" />
+    <sc-empty-state icon="cloud_off" tone="error" title="Couldn't load people"
+        description="Check your connection, then try again." actionLabel="Try again" (action)="loadOrgMembers()" />
     } @else if (visiblePeople().length === 0) {
     @if (hasPeopleFilters()) {
-    <sc-empty-state icon="search_off" title="No one matches" description="Try a different name, or widen the filters."
-        actionLabel="Clear filters" (action)="clearPeopleFilters()" />
+    <sc-empty-state icon="search_off" tone="neutral" title="No one matches"
+        description="Try a different name, or widen the filters." actionLabel="Clear filters"
+        (action)="clearPeopleFilters()" />
     } @else {
     <sc-empty-state icon="badge" title="No members yet"
         description="Invite staff from the Invitations page and they will appear here." />

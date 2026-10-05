@@ -65,7 +65,7 @@
         </div>
 
         @if (tableRows().length === 0) {
-        <sc-empty-state icon="search_off" [title]="'No matching ' + nounPlural()"
+        <sc-empty-state icon="search_off" tone="neutral" [title]="'No matching ' + nounPlural()"
             description="Try a different name, or clear the filter." />
         } @else {
         <div class="eb-scroll" tabindex="0" role="region" [attr.aria-label]="nounPlural() + ' table'">

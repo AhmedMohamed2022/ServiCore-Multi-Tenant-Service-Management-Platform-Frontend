@@ -3,13 +3,33 @@
 
 <head>
   <meta charset="utf-8">
-  <title>ServiCore — Service Management</title>
+  <title>ServiCore · Service management</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description"
+    content="Route customer requests to the right team, move them through a strict workflow, and see how your organization performs, with each tenant's data fully isolated.">
+
+  <!-- The interface is light only; this keeps native controls and scrollbars
+       consistent with it on dark-mode devices. -->
+  <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#4f46e5">
+
+  <!-- Link previews. Each route sets its own <title>; the description and
+       preview card stay the same site-wide. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ServiCore">
+  <meta property="og:title" content="ServiCore · Service management">
+  <meta property="og:description"
+    content="Route customer requests to the right team, move them through a strict workflow, and see how your organization performs, with each tenant's data fully isolated.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="ServiCore · Service management">
+  <meta name="twitter:description"
+    content="Route customer requests to the right team, move them through a strict workflow, and see how your organization performs, with each tenant's data fully isolated.">
+
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/svg+xml" href="logo/logo-mark.svg">
   <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
 
   <!-- Typeface and the single icon system used across the whole application. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,6 +42,15 @@
 
 <body class="mat-typography">
   <app-root></app-root>
+
+  <noscript>
+    <main
+      style="max-width: 32rem; margin: 4rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif; line-height: 1.6;">
+      <h1 style="font-size: 1.5rem; margin: 0 0 0.5rem;">ServiCore needs JavaScript</h1>
+      <p style="margin: 0;">This application runs in your browser and can't load without JavaScript. Turn it on for this
+        site, or try a different browser, then reload the page.</p>
+    </main>
+  </noscript>
 </body>
 
 </html>

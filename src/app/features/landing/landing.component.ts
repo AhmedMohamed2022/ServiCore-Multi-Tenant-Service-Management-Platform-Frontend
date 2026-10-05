@@ -1,3 +1,4 @@
+import { SkipLinkDirective } from '../../shared/ui/skip-link/skip-link.directive';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/services/auth.service';
@@ -7,7 +8,7 @@ import { IconComponent } from '../../shared/ui/icon/icon.component';
 @Component({
   selector: 'sc-landing',
   standalone: true,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, SkipLinkDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css',

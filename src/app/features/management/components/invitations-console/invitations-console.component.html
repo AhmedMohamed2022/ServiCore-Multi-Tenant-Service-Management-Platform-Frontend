@@ -247,7 +247,7 @@
     <sc-empty-state icon="mail" title="No staff invitations yet"
         description="Invitations you send will show up here." />
     } @else if (visibleInvitations().length === 0) {
-    <sc-empty-state icon="search_off" title="No invitations match"
+    <sc-empty-state icon="search_off" tone="neutral" title="No invitations match"
         description="Try a different email, or another status." actionLabel="Clear filters" (action)="clearFilters()" />
     } @else {
 

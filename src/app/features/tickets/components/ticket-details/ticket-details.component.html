@@ -313,34 +313,37 @@
                 <h2 id="contextHeading" class="sc-card-title">Details</h2>
             </div>
             <div class="sc-card-body">
-                <dl class="flex flex-col gap-3.5">
-                    <div>
-                        <dt class="sc-meta-label">Customer</dt>
-                        <dd class="mt-1.5">
-                            @if (customer(); as c) {
-                            <div class="flex items-center gap-2">
-                                <sc-avatar [name]="c.name" size="sm" />
-                                <div class="min-w-0">
-                                    <p class="truncate text-[13px] font-medium text-ink">{{ c.name }}</p>
-                                    <p class="truncate text-xs text-ink-subtle">{{ c.email }}</p>
+                <div class="flex flex-col gap-3.5">
+                    <dl class="flex flex-col gap-3.5">
+                        <div>
+                            <dt class="sc-meta-label">Customer</dt>
+                            <dd class="mt-1.5">
+                                @if (customer(); as c) {
+                                <div class="flex items-center gap-2">
+                                    <sc-avatar [name]="c.name" size="sm" />
+                                    <div class="min-w-0">
+                                        <p class="truncate text-[13px] font-medium text-ink">{{ c.name }}</p>
+                                        <p class="truncate text-xs text-ink-subtle">{{ c.email }}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            } @else {
-                            <span class="text-[13px] text-ink-subtle">Not available</span>
-                            }
-                        </dd>
-                    </div>
+                                } @else {
+                                <span class="text-[13px] text-ink-subtle">Not available</span>
+                                }
+                            </dd>
+                        </div>
 
-                    <div>
-                        <dt class="sc-meta-label">Category</dt>
-                        <dd class="mt-1.5 text-[13px] text-ink-muted">
-                            {{ categoryName() ?? 'Not available' }}
-                        </dd>
-                    </div>
+                        <div>
+                            <dt class="sc-meta-label">Category</dt>
+                            <dd class="mt-1.5 text-[13px] text-ink-muted">
+                                {{ categoryName() ?? 'Not available' }}
+                            </dd>
+                        </div>
+
+                    </dl>
 
                     <div class="sc-divider"></div>
 
-                    <div class="grid grid-cols-2 gap-x-3 gap-y-3.5">
+                    <dl class="grid grid-cols-2 gap-x-3 gap-y-3.5">
                         <div>
                             <dt class="sc-meta-label">Created</dt>
                             <dd class="mt-1.5 text-[13px] text-ink-muted">{{ t.createdAt | date:'MMM d, y' }}
@@ -372,8 +375,8 @@
                             </dd>
                         </div>
                         }
-                    </div>
-                </dl>
+                    </dl>
+                </div>
             </div>
         </section>
 

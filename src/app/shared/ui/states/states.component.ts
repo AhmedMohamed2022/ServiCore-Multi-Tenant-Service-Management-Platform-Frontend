@@ -20,8 +20,13 @@ import { IconComponent } from '../icon/icon.component';
   template: `
     <div
       class="sc-enter flex flex-col items-center justify-center text-center px-6 py-14"
+      [attr.role]="tone() === 'error' ? 'alert' : null"
     >
-      <div class="sc-icon-chip h-12 w-12 rounded-sc-lg shadow-sc mb-4">
+      <div
+        class="sc-icon-chip h-12 w-12 rounded-sc-lg shadow-sc mb-4"
+        [class.sc-icon-chip-neutral]="tone() === 'neutral'"
+        [class.sc-icon-chip-danger]="tone() === 'error'"
+      >
         <sc-icon [name]="icon()" />
       </div>
       <p class="text-sm font-semibold tracking-[-0.011em] text-ink">
@@ -46,6 +51,13 @@ import { IconComponent } from '../icon/icon.component';
 })
 export class EmptyStateComponent {
   readonly icon = input<string>('inbox');
+  /**
+   * Chip colour, so the three kinds of empty read differently at a glance:
+   *   brand   (default) nothing here yet, or a prompt to pick something
+   *   neutral           a search or filter matched nothing (use `search_off`)
+   *   error             the data could not be loaded (use `cloud_off`)
+   */
+  readonly tone = input<'brand' | 'neutral' | 'error'>('brand');
   readonly title = input.required<string>();
   readonly description = input<string>('');
   readonly actionLabel = input<string>('');

@@ -40,11 +40,11 @@
             role="list" aria-label="At a glance">
             @if (metrics(); as data) {
             <li class="db-chip">
-                <span class="db-chip-dot" style="background-color: var(--sc-status-progress)" aria-hidden="true"></span>
+                <span class="db-chip-dot sc-bg-progress" aria-hidden="true"></span>
                 <strong>{{ activeTickets() }}</strong> active
             </li>
             <li class="db-chip">
-                <span class="db-chip-dot" style="background-color: var(--sc-status-waiting)" aria-hidden="true"></span>
+                <span class="db-chip-dot sc-bg-waiting" aria-hidden="true"></span>
                 <strong>{{ data.ticketOverview.waitingForCustomerTickets }}</strong> waiting on customer
             </li>
             @if (ticketsLoaded()) {
@@ -123,20 +123,17 @@
                 <div class="db-split" role="img"
                     [attr.aria-label]="data.ticketOverview.newTickets + ' new, ' + data.ticketOverview.openTickets + ' open, ' + data.ticketOverview.inProgressTickets + ' in progress, ' + data.ticketOverview.waitingForCustomerTickets + ' waiting'">
                     @if (data.ticketOverview.newTickets) {
-                    <span [style.flex-grow]="data.ticketOverview.newTickets"
-                        style="background-color: var(--sc-status-new)"></span>
+                    <span class="sc-bg-new" [style.flex-grow]="data.ticketOverview.newTickets"></span>
                     }
                     @if (data.ticketOverview.openTickets) {
-                    <span [style.flex-grow]="data.ticketOverview.openTickets"
-                        style="background-color: var(--sc-status-open)"></span>
+                    <span class="sc-bg-open" [style.flex-grow]="data.ticketOverview.openTickets"></span>
                     }
                     @if (data.ticketOverview.inProgressTickets) {
-                    <span [style.flex-grow]="data.ticketOverview.inProgressTickets"
-                        style="background-color: var(--sc-status-progress)"></span>
+                    <span class="sc-bg-progress" [style.flex-grow]="data.ticketOverview.inProgressTickets"></span>
                     }
                     @if (data.ticketOverview.waitingForCustomerTickets) {
-                    <span [style.flex-grow]="data.ticketOverview.waitingForCustomerTickets"
-                        style="background-color: var(--sc-status-waiting)"></span>
+                    <span class="sc-bg-waiting"
+                        [style.flex-grow]="data.ticketOverview.waitingForCustomerTickets"></span>
                     }
                 </div>
             </div>
@@ -409,12 +406,9 @@
                     }
                 </div>
                 <ul class="flex items-center gap-3 text-xs text-ink-muted" role="list" aria-label="Legend">
-                    <li class="flex items-center gap-1.5"><span class="db-key"
-                            style="background-color: var(--sc-status-progress)"></span>Active</li>
-                    <li class="flex items-center gap-1.5"><span class="db-key"
-                            style="background-color: var(--sc-status-resolved)"></span>Resolved</li>
-                    <li class="flex items-center gap-1.5"><span class="db-key"
-                            style="background-color: var(--sc-status-closed)"></span>Closed</li>
+                    <li class="flex items-center gap-1.5"><span class="db-key sc-bg-progress"></span>Active</li>
+                    <li class="flex items-center gap-1.5"><span class="db-key sc-bg-resolved"></span>Resolved</li>
+                    <li class="flex items-center gap-1.5"><span class="db-key sc-bg-closed"></span>Closed</li>
                 </ul>
             </div>
 
@@ -455,12 +449,9 @@
                         </div>
                         <div class="db-stack" role="img"
                             [attr.aria-label]="row.active + ' active, ' + row.resolved + ' resolved, ' + row.closed + ' closed'">
-                            <span [style.width.%]="row.activePct"
-                                style="background-color: var(--sc-status-progress)"></span>
-                            <span [style.width.%]="row.resolvedPct"
-                                style="background-color: var(--sc-status-resolved)"></span>
-                            <span [style.width.%]="row.closedPct"
-                                style="background-color: var(--sc-status-closed)"></span>
+                            <span class="sc-bg-progress" [style.width.%]="row.activePct"></span>
+                            <span class="sc-bg-resolved" [style.width.%]="row.resolvedPct"></span>
+                            <span class="sc-bg-closed" [style.width.%]="row.closedPct"></span>
                         </div>
                         <p class="db-bd-total">{{ row.total }}</p>
                     </li>
@@ -485,7 +476,7 @@
             @if (isLoadingRecent() && !ticketsLoaded()) {
             <div class="p-3"><sc-loading-state label="Loading recent tickets" [count]="4" /></div>
             } @else if (recentTickets().length === 0) {
-            <sc-empty-state icon="inbox" title="Nothing yet" description="New tickets will appear here." />
+            <sc-empty-state icon="inbox" title="No recent tickets" description="New tickets will appear here." />
             } @else {
             <ul class="flex flex-1 flex-col divide-y divide-line" role="list">
                 @for (ticket of recentTickets(); track ticket.id) {

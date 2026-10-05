@@ -9,6 +9,7 @@ export const routes: Routes = [
   // =========================================================================
   {
     path: 'login',
+    title: 'Sign in · ServiCore',
     loadComponent: () =>
       import('./features/auth/components/login/login.component').then(
         (m) => m.LoginComponent,
@@ -16,6 +17,7 @@ export const routes: Routes = [
   },
   {
     path: 'register',
+    title: 'Create your organization · ServiCore',
     loadComponent: () =>
       import('./features/auth/components/register/register.component').then(
         (m) => m.RegisterComponent,
@@ -23,6 +25,7 @@ export const routes: Routes = [
   },
   {
     path: 'accept-invitation',
+    title: 'Accept staff invitation · ServiCore',
     loadComponent: () =>
       import('./features/auth/components/accept-staff-invitation/accept-staff-invitation.component').then(
         (m) => m.AcceptStaffInvitationComponent,
@@ -30,6 +33,7 @@ export const routes: Routes = [
   },
   {
     path: 'accept-customer-invitation',
+    title: 'Accept invitation · ServiCore',
     loadComponent: () =>
       import('./features/auth/components/accept-customer-invitation/accept-customer-invitation.component').then(
         (m) => m.AcceptCustomerInvitationComponent,
@@ -37,6 +41,7 @@ export const routes: Routes = [
   },
   {
     path: 'select-organization',
+    title: 'Choose an organization · ServiCore',
     loadComponent: () =>
       import('./features/auth/components/select-organization/select-organization.component').then(
         (m) => m.SelectOrganizationComponent,
@@ -57,6 +62,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        title: 'Dashboard · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then(
@@ -65,6 +71,7 @@ export const routes: Routes = [
       },
       {
         path: 'tickets',
+        title: 'Tickets · ServiCore',
         loadChildren: () =>
           import('./features/tickets/tickets.routes').then(
             (m) => m.TICKET_ROUTES,
@@ -72,6 +79,7 @@ export const routes: Routes = [
       },
       {
         path: 'management/teams',
+        title: 'Teams · ServiCore',
         loadComponent: () =>
           import('./features/management/components/team-roster/team-roster.component').then(
             (m) => m.TeamRosterComponent,
@@ -80,6 +88,7 @@ export const routes: Routes = [
       },
       {
         path: 'management/customers',
+        title: 'Customers · ServiCore',
         loadComponent: () =>
           import('./features/management/components/client-directory/client-directory.component').then(
             (m) => m.ClientDirectoryComponent,
@@ -88,6 +97,7 @@ export const routes: Routes = [
       },
       {
         path: 'management/categories',
+        title: 'Categories · ServiCore',
         loadComponent: () =>
           import('./features/management/components/taxonomy-specs/taxonomy-specs.component').then(
             (m) => m.TaxonomySpecsComponent,
@@ -96,6 +106,7 @@ export const routes: Routes = [
       },
       {
         path: 'management/invitations',
+        title: 'Invitations · ServiCore',
         loadComponent: () =>
           import('./features/management/components/invitations-console/invitations-console.component').then(
             (m) => m.InvitationsConsoleComponent,
@@ -104,6 +115,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/tickets',
+        title: 'Ticket report · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/views/ticket-statistics/ticket-statistics.component').then(
@@ -112,6 +124,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/teams',
+        title: 'Team report · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/views/team-statistics/team-statistics.component').then(
@@ -120,6 +133,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/agents',
+        title: 'Agent report · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/views/agent-statistics/agent-statistics.component').then(
@@ -128,6 +142,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/customers',
+        title: 'Customer report · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/views/customer-statistics/customer-statistics.component').then(
@@ -136,6 +151,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/categories',
+        title: 'Category report · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/views/category-statistics/category-statistics.component').then(
@@ -144,6 +160,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/time-series',
+        title: 'Ticket trends · ServiCore',
         canActivate: [reportsGuard],
         loadComponent: () =>
           import('./features/dashboard/views/ticket-time-series/ticket-time-series.component').then(
@@ -173,10 +190,18 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
+    title: 'ServiCore · Service management',
     loadComponent: () =>
       import('./features/landing/landing.component').then(
         (m) => m.LandingComponent,
       ),
   },
-  { path: '**', redirectTo: 'login' },
+  {
+    path: '**',
+    title: 'Page not found · ServiCore',
+    loadComponent: () =>
+      import('./shared/pages/not-found/not-found.component').then(
+        (m) => m.NotFoundComponent,
+      ),
+  },
 ];
