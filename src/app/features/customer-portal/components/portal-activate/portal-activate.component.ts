@@ -1,28 +1,25 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { TenantContextService } from '../../../../core/services/tenant-context.service';
 import { CustomerAccessService } from '../../../../core/services/customer-access.service';
 import { CustomerMembership } from '../../../../core/auth/models/auth.models';
-import { AuthLayoutComponent } from '../../../auth/components/shared/auth-layout.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
-import {
-  AlertComponent,
-  LoadingStateComponent,
-} from '../../../../shared/ui/states/states.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
 type ActivationState = 'loading' | 'choose' | 'empty' | 'failed';
 
 @Component({
   selector: 'app-portal-activate',
   standalone: true,
-  imports: [
-    AuthLayoutComponent,
-    IconComponent,
-    AvatarComponent,
-    AlertComponent,
-    LoadingStateComponent,
-  ],
+  imports: [IconComponent, AvatarComponent, AlertComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './portal-activate.component.html',
 })
 export class PortalActivateComponent implements OnInit {

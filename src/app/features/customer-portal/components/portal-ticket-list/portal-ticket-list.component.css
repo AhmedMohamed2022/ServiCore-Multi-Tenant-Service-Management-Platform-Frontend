@@ -1,0 +1,293 @@
+/* Portal ticket list. Prefix: cp- (customer portal). */
+
+/* --- Toolbar ------------------------------------------------------------ */
+
+.cp-filters {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.cp-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.cp-filter {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--sc-border);
+  border-radius: 999px;
+  background-color: var(--sc-surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sc-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    border-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.cp-filter:hover {
+  border-color: var(--sc-border-strong);
+  color: var(--sc-text);
+}
+
+.cp-filter:focus-visible {
+  outline: 2px solid var(--sc-brand-600);
+  outline-offset: 2px;
+}
+
+.cp-filter.cp-filter-on {
+  border-color: var(--sc-brand-200);
+  background-color: var(--sc-brand-50);
+  color: var(--sc-brand-700);
+  font-weight: 600;
+}
+
+.cp-filter-count {
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background-color: var(--sc-surface-sunken);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+  color: var(--sc-text-muted);
+}
+
+.cp-filter-on .cp-filter-count {
+  background-color: var(--sc-surface);
+  color: var(--sc-brand-700);
+}
+
+.cp-search {
+  position: relative;
+  flex: 1 1 14rem;
+  max-width: 22rem;
+}
+
+.cp-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--sc-text-subtle);
+}
+
+.cp-search-input {
+  padding-left: 2.25rem;
+}
+
+.cp-sort {
+  width: auto;
+  min-width: 9.5rem;
+}
+
+/* --- "Waiting for your reply" callout ----------------------------------- */
+
+.cp-reply-callout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--sc-warn-200);
+  border-radius: var(--sc-radius-lg);
+  background-color: var(--sc-warn-50);
+}
+
+/* --- List --------------------------------------------------------------- */
+
+.cp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cp-list > li + li {
+  border-top: 1px solid var(--sc-border);
+}
+
+.cp-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.875rem;
+  row-gap: 0.625rem;
+  min-height: 76px;
+  padding: 0.875rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.cp-row:hover {
+  background-color: var(--sc-surface-muted);
+}
+
+.cp-row:focus-visible {
+  outline: 2px solid var(--sc-brand-600);
+  outline-offset: -2px;
+}
+
+/* A thin warm rail marks the rows that are waiting on the customer. */
+.cp-row.cp-row-reply::before {
+  content: "";
+  position: absolute;
+  top: 0.625rem;
+  bottom: 0.625rem;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background-color: var(--sc-warn-600);
+}
+
+.cp-row-chip {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--sc-radius-md);
+}
+
+.cp-tone-neutral {
+  background-color: var(--sc-surface-sunken);
+  border-color: var(--sc-border);
+  color: var(--sc-text-muted);
+}
+.cp-tone-info {
+  background-color: var(--sc-tint-blue-bg);
+  color: var(--sc-tint-blue-fg);
+}
+.cp-tone-primary {
+  background-color: var(--sc-brand-50);
+  border-color: var(--sc-brand-100);
+  color: var(--sc-brand-600);
+}
+.cp-tone-success {
+  background-color: var(--sc-success-50);
+  border-color: var(--sc-success-200);
+  color: var(--sc-success-700);
+}
+.cp-tone-warn {
+  background-color: var(--sc-warn-50);
+  border-color: var(--sc-warn-200);
+  color: var(--sc-warn-700);
+}
+.cp-tone-danger {
+  background-color: var(--sc-danger-50);
+  border-color: var(--sc-danger-200);
+  color: var(--sc-danger-700);
+}
+
+.cp-row-side {
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+}
+
+.cp-row-chevron {
+  color: var(--sc-text-subtle);
+  transition: transform var(--sc-dur) var(--sc-ease);
+}
+
+@media (hover: hover) {
+  .cp-row:hover .cp-row-chevron {
+    transform: translateX(2px);
+  }
+}
+
+/* Progress track: received → in progress → resolved. Decorative; the status
+   badge carries the same information in text. */
+.cp-track {
+  display: none;
+  grid-column: 2 / 3;
+  gap: 4px;
+  max-width: 11rem;
+}
+
+.cp-track-seg {
+  height: 4px;
+  flex: 1;
+  border-radius: 999px;
+  background-color: var(--sc-surface-sunken);
+}
+
+.cp-track-seg.cp-track-on {
+  background-image: var(--sc-grad-brand);
+}
+
+/* Small screens: status goes under the title, as a one-line row. */
+@media (max-width: 639px) {
+  .cp-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .cp-row-side {
+    display: flex;
+    grid-column: 2 / 3;
+    grid-row: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+  .cp-row-chevron {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+@media (min-width: 640px) {
+  .cp-row {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    padding: 1rem 1.25rem;
+  }
+  .cp-row-side {
+    display: flex;
+    min-width: 10.5rem;
+  }
+  .cp-track {
+    display: flex;
+    grid-row: 2;
+  }
+  .cp-row-chevron {
+    grid-row: 1;
+  }
+}
+
+/* --- Skeleton ----------------------------------------------------------- */
+
+.cp-skel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 76px;
+  padding: 0.875rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .cp-skel-row {
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-row,
+  .cp-filter,
+  .cp-row-chevron {
+    transition: none;
+  }
+}

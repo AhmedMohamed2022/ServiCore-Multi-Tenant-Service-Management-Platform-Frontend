@@ -1,0 +1,323 @@
+<a routerLink="/portal/tickets" class="cp-back">
+    <sc-icon name="arrow_back" size="sm" />
+    My tickets
+</a>
+
+@if (isLoading() && !ticket()) {
+
+<!-- Skeleton mirrors the header, the progress track and the two columns. -->
+<div role="status" aria-label="Loading ticket" class="mt-3">
+    <span class="sc-sr-only">Loading ticket</span>
+    <div aria-hidden="true">
+        <div class="sc-skeleton h-7 w-2/3 rounded-sc-sm"></div>
+        <div class="mt-3 flex gap-2">
+            <div class="sc-skeleton h-6 w-28 rounded-full"></div>
+            <div class="sc-skeleton h-6 w-20 rounded-full"></div>
+        </div>
+        <div class="sc-skeleton mt-5 h-[88px] w-full rounded-sc-lg"></div>
+        <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
+            <div class="flex flex-col gap-5">
+                <div class="sc-skeleton h-36 rounded-sc-lg"></div>
+                <div class="sc-skeleton h-56 rounded-sc-lg"></div>
+            </div>
+            <div class="sc-skeleton h-64 rounded-sc-lg"></div>
+        </div>
+    </div>
+</div>
+
+} @else {
+@if (ticket(); as t) {
+
+<div class="sc-enter mt-3">
+
+    <!-- Header ----------------------------------------------------------- -->
+    <header>
+        <h1 class="break-words text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink">
+            {{ t.title }}
+        </h1>
+        <div class="mt-2.5 flex flex-wrap items-center gap-2">
+            @if (status(); as s) {
+            <span class="sc-badge" [class]="'sc-badge-' + s.tone">
+                <sc-icon [name]="s.icon" size="xs" />
+                {{ s.label }}
+            </span>
+            }
+            @if (priority(); as p) {
+            <span class="sc-badge" [class]="'sc-badge-' + p.tone">
+                <sc-icon [name]="p.icon" size="xs" />
+                {{ p.label }} priority
+            </span>
+            }
+            <span class="font-mono text-xs text-ink-subtle">#{{ t.id.substring(0, 8) }}</span>
+            <span class="text-xs text-ink-subtle" aria-hidden="true">/</span>
+            <span class="text-xs text-ink-subtle">
+                Raised <time [attr.datetime]="t.createdAt">{{ t.createdAt | date:'MMM d, y' }}</time>
+            </span>
+        </div>
+    </header>
+
+    <!-- What it needs from the customer, if anything --------------------- -->
+    @if (status(); as s) {
+    @if (s.needsReply) {
+    <div class="cp-banner cp-banner-warn mt-4" role="status">
+        <span class="sc-icon-chip sc-icon-chip-warn sc-icon-chip-sm">
+            <sc-icon name="schedule" size="sm" />
+        </span>
+        <p class="min-w-0 flex-1 text-[13px] text-ink-muted">
+            <strong class="font-semibold text-ink">The team is waiting for your reply.</strong>
+            {{ s.hint }}
+        </p>
+        <button type="button" class="sc-btn sc-btn-primary sc-btn-sm shrink-0" (click)="focusComposer()">
+            <sc-icon name="reply" size="sm" />
+            Reply
+        </button>
+    </div>
+    } @else if (t.status === TicketStatus.Resolved) {
+    <div class="cp-banner cp-banner-ok mt-4" role="status">
+        <span class="sc-icon-chip sc-icon-chip-success sc-icon-chip-sm">
+            <sc-icon name="task_alt" size="sm" />
+        </span>
+        <p class="min-w-0 flex-1 text-[13px] text-ink-muted">
+            <strong class="font-semibold text-ink">Marked as resolved.</strong>
+            If something still isn't right, add a reply below so the team can see it.
+        </p>
+    </div>
+    }
+    }
+
+    <!-- Progress ---------------------------------------------------------- -->
+    <section class="sc-card mt-4" aria-labelledby="cpProgressHeading">
+        <div class="sc-card-body">
+            <h2 id="cpProgressHeading" class="sc-sr-only">Progress</h2>
+            <ol class="cp-steps">
+                @for (step of steps(); track step.label) {
+                <li class="cp-step" [class]="'cp-step-' + step.state"
+                    [attr.aria-current]="step.state === 'current' ? 'step' : null">
+                    <span class="cp-step-dot" aria-hidden="true">
+                        @if (step.state === 'done') {
+                        <sc-icon name="check" size="xs" />
+                        }
+                    </span>
+                    <span class="cp-step-label">{{ step.label }}</span>
+                    <span class="cp-step-date">
+                        @if (step.date) { {{ step.date | date:'MMM d' }} } @else { &nbsp; }
+                    </span>
+                    <span class="sc-sr-only">
+                        {{ step.state === 'done' ? 'completed' : step.state === 'current' ? 'current step' : 'not
+                        reached yet' }}
+                    </span>
+                </li>
+                }
+            </ol>
+        </div>
+    </section>
+
+    <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
+
+        <!-- Primary column ------------------------------------------------ -->
+        <div class="flex min-w-0 flex-col gap-5">
+
+            <section class="sc-card" aria-labelledby="cpRequestHeading">
+                <div class="sc-card-header">
+                    <div class="flex items-center gap-2">
+                        <sc-icon name="description" size="sm" class="text-ink-subtle" />
+                        <h2 id="cpRequestHeading" class="sc-card-title">Your request</h2>
+                    </div>
+                </div>
+                <div class="sc-card-body">
+                    <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-muted">{{
+                        t.description }}</p>
+                </div>
+            </section>
+
+            <!-- Conversation ----------------------------------------------- -->
+            <section class="sc-card" aria-labelledby="cpConversationHeading">
+                <div class="sc-card-header">
+                    <div class="flex items-center gap-2">
+                        <sc-icon name="forum" size="sm" class="text-ink-subtle" />
+                        <h2 id="cpConversationHeading" class="sc-card-title">Conversation</h2>
+                    </div>
+                    @if (!commentsLoading() && !commentsError()) {
+                    <span class="text-xs text-ink-subtle">
+                        {{ messages().length }} {{ messages().length === 1 ? 'message' : 'messages' }}
+                    </span>
+                    }
+                </div>
+
+                <div class="sc-card-body">
+                    @if (commentsLoading()) {
+                    <div role="status" aria-label="Loading conversation" class="flex flex-col gap-4">
+                        <span class="sc-sr-only">Loading conversation</span>
+                        <div class="flex gap-3" aria-hidden="true">
+                            <div class="sc-skeleton h-8 w-8 shrink-0 rounded-full"></div>
+                            <div class="sc-skeleton h-16 w-3/4 rounded-sc-lg"></div>
+                        </div>
+                        <div class="flex flex-row-reverse gap-3" aria-hidden="true">
+                            <div class="sc-skeleton h-8 w-8 shrink-0 rounded-full"></div>
+                            <div class="sc-skeleton h-12 w-2/3 rounded-sc-lg"></div>
+                        </div>
+                    </div>
+                    } @else if (commentsError()) {
+                    <sc-alert tone="error" title="Couldn't load the conversation">
+                        <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            {{ commentsError() }}
+                            <button type="button" class="font-semibold underline underline-offset-2 hover:no-underline"
+                                (click)="loadComments()">Try again</button>
+                        </span>
+                    </sc-alert>
+                    } @else {
+                    @if (messages().length === 0) {
+                    <p class="cp-quiet">
+                        <sc-icon name="chat_bubble" size="sm" />
+                        No messages yet. Replies from the team will appear here.
+                    </p>
+                    } @else {
+                    <div role="log" aria-live="polite" aria-label="Conversation messages">
+                        <ol class="cp-thread">
+                            @for (m of messages(); track m.id) {
+                            <li class="cp-msg" [class.cp-msg-mine]="m.isMine">
+                                <sc-avatar [name]="m.isMine ? customerEmail() : 'Support team'" size="sm" />
+                                <div class="cp-msg-body">
+                                    <p class="cp-msg-meta">
+                                        <span class="font-semibold text-ink">{{ m.authorName }}</span>
+                                        <time [attr.datetime]="m.createdAt">{{ m.createdAt | date:'MMM d, HH:mm'
+                                            }}</time>
+                                    </p>
+                                    <p class="cp-bubble">{{ m.content }}</p>
+                                </div>
+                            </li>
+                            }
+                        </ol>
+                    </div>
+                    }
+                    <div #threadEnd></div>
+                    }
+
+                    <!-- Composer ------------------------------------------- -->
+                    <div class="mt-5 border-t border-line pt-5">
+                        @if (isClosed()) {
+                        <div class="cp-banner">
+                            <span class="sc-icon-chip sc-icon-chip-neutral sc-icon-chip-sm">
+                                <sc-icon name="lock" size="sm" />
+                            </span>
+                            <p class="min-w-0 flex-1 text-[13px] text-ink-muted">
+                                This request is closed, so replies are turned off. Need more help?
+                            </p>
+                            <a routerLink="/portal/tickets/create" class="sc-btn sc-btn-secondary sc-btn-sm shrink-0">
+                                New request
+                            </a>
+                        </div>
+                        } @else {
+                        <form [formGroup]="replyForm" (ngSubmit)="onSubmitReply()">
+                            @if (sendError()) {
+                            <sc-alert tone="error" title="Your reply wasn't sent" class="mb-3 block">{{ sendError()
+                                }}</sc-alert>
+                            }
+                            <label for="portalReply" class="sc-label">Your reply</label>
+                            <textarea #composer id="portalReply" class="sc-textarea" formControlName="content" rows="3"
+                                placeholder="Write a message to the support team"
+                                [class.sc-input-invalid]="replyForm.controls.content.touched && replyForm.controls.content.invalid"
+                                (keydown)="onComposerKeydown($event)"></textarea>
+
+                            <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-xs text-ink-subtle" [class.cp-over]="replyLength() > maxReply">
+                                    @if (replyForm.controls.content.touched &&
+                                    replyForm.controls.content.errors?.['minlength']) {
+                                    <span class="sc-field-error m-0"><sc-icon name="error" size="xs" /> Write at least 2
+                                        characters.</span>
+                                    } @else {
+                                    {{ replyLength() }}/{{ maxReply }}
+                                    <span class="hidden sm:inline"> · Ctrl + Enter to send</span>
+                                    }
+                                </p>
+                                <button type="submit" class="sc-btn sc-btn-primary"
+                                    [disabled]="replyForm.invalid || isSending()">
+                                    @if (isSending()) {
+                                    <sc-icon name="progress_activity" size="sm" class="sc-spin" />
+                                    Sending
+                                    } @else {
+                                    <sc-icon name="send" size="sm" />
+                                    Send reply
+                                    }
+                                </button>
+                            </div>
+                        </form>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Side column ----------------------------------------------------- -->
+        <aside class="flex min-w-0 flex-col gap-5" aria-label="Ticket summary">
+            <section class="sc-card" aria-labelledby="cpDetailsHeading">
+                <div class="sc-card-header">
+                    <h2 id="cpDetailsHeading" class="sc-card-title">Details</h2>
+                </div>
+                <dl class="cp-facts">
+                    <div>
+                        <dt>Status</dt>
+                        <dd>{{ status()?.label }}</dd>
+                    </div>
+                    <div>
+                        <dt>Priority</dt>
+                        <dd>{{ priority()?.label }}</dd>
+                    </div>
+                    <div>
+                        <dt>Category</dt>
+                        <dd>{{ categoryName() || '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt>Raised</dt>
+                        <dd>{{ t.createdAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+                    <div>
+                        <dt>Last update</dt>
+                        <dd>{{ t.updatedAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+                    @if (t.resolvedAt) {
+                    <div>
+                        <dt>Resolved</dt>
+                        <dd>{{ t.resolvedAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+                    }
+                    @if (t.closedAt) {
+                    <div>
+                        <dt>Closed</dt>
+                        <dd>{{ t.closedAt | date:'MMM d, y · HH:mm' }}</dd>
+                    </div>
+                    }
+                </dl>
+            </section>
+
+            @if (handling(); as h) {
+            <section class="sc-card" aria-label="Who is handling this">
+                <div class="sc-card-body flex items-start gap-3">
+                    <span class="sc-icon-chip sc-icon-chip-sm">
+                        <sc-icon [name]="h.icon" size="sm" />
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-[13px] font-semibold text-ink">Who has this</p>
+                        <p class="mt-0.5 text-xs leading-relaxed text-ink-subtle">{{ h.text }}</p>
+                    </div>
+                </div>
+            </section>
+            }
+        </aside>
+    </div>
+</div>
+
+} @else {
+
+<div class="mt-4">
+    <sc-alert tone="error" title="Couldn't load this ticket">
+        <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {{ errorMessage() || 'It may have been removed, or you may not have access to it.' }}
+            <button type="button" class="font-semibold underline underline-offset-2 hover:no-underline"
+                (click)="loadTicket()">Try again</button>
+        </span>
+    </sc-alert>
+    <a routerLink="/portal/tickets" class="sc-btn sc-btn-secondary mt-4">Back to my tickets</a>
+</div>
+}
+}

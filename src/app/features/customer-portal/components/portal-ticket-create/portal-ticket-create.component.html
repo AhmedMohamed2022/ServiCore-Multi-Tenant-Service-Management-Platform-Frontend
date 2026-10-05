@@ -1,76 +1,129 @@
 <sc-page-header title="New request"
-    description="Tell your support team what's happening — the more detail, the faster it moves."
+    description="Tell your support team what's happening. The more detail you give, the faster it moves."
     [breadcrumbs]="[{ label: 'My tickets', link: '/portal/tickets' }, { label: 'New request' }]" />
 
-<div class="mx-auto max-w-2xl">
-    <section class="sc-card">
+<div class="mx-auto grid max-w-4xl grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
+
+    <section class="sc-card" aria-label="Request details">
         @if (isLoadingOptions()) {
-        <div class="p-5">
-            <sc-loading-state label="Loading request options" [count]="3" />
+
+        <!-- Skeleton mirrors the form: subject, category, priority, details, actions -->
+        <div class="sc-card-body flex flex-col gap-5" role="status" aria-label="Loading request options">
+            <span class="sc-sr-only">Loading request options</span>
+            <div aria-hidden="true">
+                <div class="sc-skeleton h-3 w-16 rounded-sc-sm"></div>
+                <div class="sc-skeleton mt-2 h-10 w-full rounded-sc"></div>
+            </div>
+            <div aria-hidden="true">
+                <div class="sc-skeleton h-3 w-20 rounded-sc-sm"></div>
+                <div class="sc-skeleton mt-2 h-10 w-full rounded-sc"></div>
+            </div>
+            <div aria-hidden="true">
+                <div class="sc-skeleton h-3 w-14 rounded-sc-sm"></div>
+                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div class="sc-skeleton h-[72px] rounded-sc-md"></div>
+                    <div class="sc-skeleton h-[72px] rounded-sc-md"></div>
+                    <div class="sc-skeleton h-[72px] rounded-sc-md"></div>
+                    <div class="sc-skeleton h-[72px] rounded-sc-md"></div>
+                </div>
+            </div>
+            <div aria-hidden="true">
+                <div class="sc-skeleton h-3 w-14 rounded-sc-sm"></div>
+                <div class="sc-skeleton mt-2 h-36 w-full rounded-sc"></div>
+            </div>
         </div>
+
         } @else {
         <form class="sc-card-body flex flex-col gap-5" [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
 
             @if (errorMessage()) {
-            <sc-alert tone="error" title="Couldn't submit your request" class="block">{{ errorMessage() }}</sc-alert>
+            <sc-alert tone="error" title="Couldn't submit your request" class="block">
+                <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {{ errorMessage() }}
+                    @if (categories().length === 0) {
+                    <button type="button" class="font-semibold underline underline-offset-2 hover:no-underline"
+                        (click)="loadDropdownDataOptions()">
+                        Reload options
+                    </button>
+                    }
+                </span>
+            </sc-alert>
             }
 
             <div>
-                <label for="title" class="sc-label">Subject</label>
+                <div class="flex items-baseline justify-between gap-2">
+                    <label for="title" class="sc-label">Subject</label>
+                    <span class="cp-count" [class.cp-count-over]="titleLength().length > 100" aria-hidden="true">
+                        {{ titleLength().length }}/100
+                    </span>
+                </div>
                 <input id="title" type="text" class="sc-input" formControlName="title"
-                    placeholder="A short summary of the issue"
+                    placeholder="A short summary of the issue" autocomplete="off"
                     [class.sc-input-invalid]="ticketForm.controls.title.touched && ticketForm.controls.title.invalid" />
                 @if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['required']) {
                 <p class="sc-field-error"><sc-icon name="error" size="xs" /> Give your request a subject.</p>
                 } @else if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['minlength']) {
                 <p class="sc-field-error"><sc-icon name="error" size="xs" /> Use at least five characters.</p>
+                } @else if (ticketForm.controls.title.touched && ticketForm.controls.title.errors?.['maxlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Keep the subject under 100 characters.</p>
                 }
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label for="categoryId" class="sc-label">Category</label>
-                    <select id="categoryId" class="sc-select" formControlName="categoryId"
-                        [class.sc-input-invalid]="ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid">
-                        <option value="" disabled>Choose a category</option>
-                        @for (category of categories(); track category.id) {
-                        <option [value]="category.id">{{ category.name }}</option>
-                        }
-                    </select>
-                    @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid) {
-                    <p class="sc-field-error"><sc-icon name="error" size="xs" /> Pick the closest category.</p>
-                    }
-                    <p class="text-sm text-gray-300">
-                        We'll route your request to the appropriate support team.
-                    </p>
-                </div>
-
-
-            </div>
-
-            <div class="max-w-[220px]">
-                <label for="priority" class="sc-label">Priority</label>
-                <select id="priority" class="sc-select" formControlName="priority">
-                    @for (option of priorityOptions; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
+            <div>
+                <label for="categoryId" class="sc-label">Category</label>
+                <select id="categoryId" class="sc-select" formControlName="categoryId"
+                    [class.sc-input-invalid]="ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid">
+                    <option value="" disabled>Choose a category</option>
+                    @for (category of categories(); track category.id) {
+                    <option [value]="category.id">{{ category.name }}</option>
                     }
                 </select>
-                <p class="sc-hint">Reserve Critical for something blocking your work right now.</p>
+                @if (ticketForm.controls.categoryId.touched && ticketForm.controls.categoryId.invalid) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> Pick the closest category.</p>
+                } @else if (categories().length === 0 && !errorMessage()) {
+                <p class="sc-hint">No categories are available yet. Please contact your service provider.</p>
+                } @else {
+                <p class="sc-hint">We'll route your request to the right support team.</p>
+                }
             </div>
 
+            <fieldset id="priority" class="cp-fieldset">
+                <legend class="sc-label">Priority</legend>
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    @for (choice of priorityChoices; track choice.value) {
+                    <label class="cp-choice-wrap">
+                        <input type="radio" class="cp-choice-input" formControlName="priority" [value]="choice.value" />
+                        <span class="cp-choice">
+                            <span class="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+                                <sc-icon [name]="choice.icon" size="sm" />
+                                {{ choice.label }}
+                            </span>
+                            <span class="mt-1 block text-xs leading-snug text-ink-muted">{{ choice.hint }}</span>
+                        </span>
+                    </label>
+                    }
+                </div>
+                <p class="sc-hint">Reserve Critical for something blocking your work right now.</p>
+            </fieldset>
+
             <div>
-                <label for="description" class="sc-label">Details</label>
+                <div class="flex items-baseline justify-between gap-2">
+                    <label for="description" class="sc-label">Details</label>
+                    <span class="cp-count" aria-hidden="true">{{ descriptionLength().length }} characters</span>
+                </div>
                 <textarea id="description" class="sc-textarea" formControlName="description" rows="6"
                     placeholder="What happened, what you expected, and any steps to reproduce it."
                     [class.sc-input-invalid]="ticketForm.controls.description.touched && ticketForm.controls.description.invalid"></textarea>
                 @if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['required']) {
                 <p class="sc-field-error"><sc-icon name="error" size="xs" /> Describe the issue.</p>
-                } @else if (ticketForm.controls.description.touched && ticketForm.controls.description.errors?.['minlength']) {
-                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help — at least 10 characters.</p>
+                } @else if (ticketForm.controls.description.touched &&
+                ticketForm.controls.description.errors?.['minlength']) {
+                <p class="sc-field-error"><sc-icon name="error" size="xs" /> A few more details will help. Use at least
+                    10 characters.</p>
                 }
             </div>
 
-            <div class="flex justify-end gap-2 border-t border-line pt-5">
+            <div class="flex flex-col-reverse gap-2 border-t border-line pt-5 sm:flex-row sm:justify-end">
                 <a routerLink="/portal/tickets" class="sc-btn sc-btn-secondary" [attr.aria-disabled]="isSubmitting()">
                     Cancel
                 </a>
@@ -87,4 +140,53 @@
         </form>
         }
     </section>
+
+    <!-- What to expect: static guidance, no metrics. -->
+    <aside class="flex flex-col gap-4" aria-label="What happens next">
+        <section class="sc-card sc-card-tint">
+            <div class="sc-card-body">
+                <p class="sc-eyebrow">What happens next</p>
+                <ol class="cp-steps mt-3">
+                    <li>
+                        <span class="cp-step-dot">1</span>
+                        <span>
+                            <strong class="block text-[13px] font-semibold text-ink">We receive it</strong>
+                            <span class="text-xs text-ink-subtle">Your request appears under My tickets right
+                                away.</span>
+                        </span>
+                    </li>
+                    <li>
+                        <span class="cp-step-dot">2</span>
+                        <span>
+                            <strong class="block text-[13px] font-semibold text-ink">It's routed to a team</strong>
+                            <span class="text-xs text-ink-subtle">The category you pick decides who looks at it
+                                first.</span>
+                        </span>
+                    </li>
+                    <li>
+                        <span class="cp-step-dot">3</span>
+                        <span>
+                            <strong class="block text-[13px] font-semibold text-ink">You're kept in the loop</strong>
+                            <span class="text-xs text-ink-subtle">Replies and status changes show up in your
+                                notifications.</span>
+                        </span>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="sc-card">
+            <div class="sc-card-body">
+                <p class="text-[13px] font-semibold text-ink">A good request includes</p>
+                <ul class="mt-2 flex flex-col gap-1.5 text-xs text-ink-muted">
+                    <li class="flex gap-2"><sc-icon name="check" size="xs" class="mt-0.5 text-success-700" /> What you
+                        were trying to do</li>
+                    <li class="flex gap-2"><sc-icon name="check" size="xs" class="mt-0.5 text-success-700" /> What
+                        happened instead</li>
+                    <li class="flex gap-2"><sc-icon name="check" size="xs" class="mt-0.5 text-success-700" /> Any error
+                        message you saw</li>
+                </ul>
+            </div>
+        </section>
+    </aside>
 </div>

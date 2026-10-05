@@ -1,4 +1,4 @@
-<sc-page-header title="My tickets" description="Everything you've raised with support, newest first.">
+<sc-page-header title="My tickets" description="Track your requests and reply when the team needs something from you.">
     <a slot="actions" routerLink="/portal/tickets/create" class="sc-btn sc-btn-primary">
         <sc-icon name="add" size="sm" />
         New request
@@ -6,77 +6,188 @@
 </sc-page-header>
 
 @if (errorMessage()) {
-<sc-alert tone="error" title="Couldn't load your tickets" class="mb-4 block">{{ errorMessage() }}</sc-alert>
+<sc-alert tone="error" title="Couldn't load your tickets" class="mb-4 block">
+    <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {{ errorMessage() }}
+        <button type="button" class="font-semibold underline underline-offset-2 hover:no-underline"
+            (click)="loadCustomerTickets()">
+            Try again
+        </button>
+    </span>
+</sc-alert>
 }
 
-<section class="sc-card">
-    @if (isLoading()) {
-    <div class="p-5">
-        <sc-loading-state label="Loading your tickets" [count]="4" />
+@if (isLoading()) {
+
+<!-- Skeleton mirrors the toolbar and four rows, at the same heights. -->
+<div role="status" aria-label="Loading your tickets" class="sc-enter">
+    <span class="sc-sr-only">Loading your tickets</span>
+    <div class="mb-3 flex flex-col gap-2.5" aria-hidden="true">
+        <div class="flex gap-1.5 overflow-hidden">
+            <div class="sc-skeleton h-9 w-16 shrink-0 rounded-full"></div>
+            <div class="sc-skeleton h-9 w-24 shrink-0 rounded-full"></div>
+            <div class="sc-skeleton h-9 w-36 shrink-0 rounded-full"></div>
+            <div class="sc-skeleton h-9 w-40 shrink-0 rounded-full"></div>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="sc-skeleton h-9 w-full max-w-[22rem] rounded-sc"></div>
+            <div class="sc-skeleton ml-auto h-9 w-40 rounded-sc"></div>
+        </div>
     </div>
-    } @else if (sortedTickets().length === 0) {
+    <div class="sc-card" aria-hidden="true">
+        @for (n of skeletonRows; track n) {
+        <div class="cp-skel-row" [class.border-t]="n > 0" [class.border-line]="n > 0">
+            <div class="sc-skeleton h-9 w-9 shrink-0 rounded-sc-md"></div>
+            <div class="min-w-0 flex-1">
+                <div class="sc-skeleton h-3.5 w-3/5 rounded-sc-sm"></div>
+                <div class="sc-skeleton mt-2.5 h-3 w-2/5 rounded-sc-sm"></div>
+            </div>
+            <div class="sc-skeleton hidden h-6 w-24 rounded-full sm:block"></div>
+        </div>
+        }
+    </div>
+</div>
+
+} @else if (!errorMessage() && tickets().length === 0) {
+
+<section class="sc-card">
     <sc-empty-state icon="confirmation_number" title="No tickets yet"
         description="When you run into an issue, raise a request and your service team will pick it up." />
-    <div class="-mt-4 flex justify-center pb-6">
+    <div class="-mt-4 flex justify-center pb-8">
         <a routerLink="/portal/tickets/create" class="sc-btn sc-btn-primary">
             <sc-icon name="add" size="sm" />
             New request
         </a>
     </div>
-    } @else {
+</section>
 
-    <!-- Desktop table -->
-    <div class="hidden overflow-x-auto md:block">
-        <table class="sc-table">
-            <caption class="sc-sr-only">Your support tickets</caption>
-            <thead>
-                <tr>
-                    <th scope="col">Request</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Priority</th>
-                    <th scope="col">Raised</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (ticket of sortedTickets(); track ticket.id) {
-                <tr>
-                    <td class="max-w-[320px]">
-                        <a [routerLink]="['/portal/tickets', ticket.id]"
-                            class="block truncate font-medium text-ink hover:text-brand-700 hover:underline">
-                            {{ ticket.title }}
-                        </a>
-                        <span class="font-mono text-2xs text-ink-subtle">#{{ ticket.id.substring(0, 8) }}</span>
-                    </td>
-                    <td class="max-w-[160px] truncate text-ink-muted">{{ categoryNameFor(ticket) || '—' }}</td>
-                    <td><sc-ticket-status-badge [status]="ticket.status" /></td>
-                    <td><sc-ticket-priority-badge [priority]="ticket.priority" /></td>
-                    <td class="whitespace-nowrap text-ink-subtle">{{ ticket.createdAt | date:'MMM d, y' }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
+} @else if (tickets().length > 0) {
+
+<div class="sc-enter">
+
+    @if (counts().reply > 0 && filter() !== 'reply') {
+    <div class="cp-reply-callout mb-4" role="status">
+        <span class="sc-icon-chip sc-icon-chip-warn sc-icon-chip-sm">
+            <sc-icon name="schedule" size="sm" />
+        </span>
+        <p class="min-w-0 flex-1 text-[13px] text-ink-muted">
+            <strong class="font-semibold text-ink">
+                {{ counts().reply === 1 ? '1 request is' : counts().reply + ' requests are' }} waiting for your reply.
+            </strong>
+            The team can't continue until you respond.
+        </p>
+        <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm shrink-0" (click)="setFilter('reply')">
+            Show
+        </button>
+    </div>
+    }
+
+    <!-- Toolbar: filters, search, sort -->
+    <div class="mb-3 flex flex-col gap-2.5">
+        <div class="cp-filters" role="group" aria-label="Filter tickets by status">
+            @for (option of filterOptions(); track option.id) {
+            <button type="button" class="cp-filter" [class.cp-filter-on]="filter() === option.id"
+                [attr.aria-pressed]="filter() === option.id" (click)="setFilter(option.id)">
+                {{ option.label }}
+                <span class="cp-filter-count">{{ option.count }}</span>
+            </button>
+            }
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="cp-search">
+                <sc-icon name="search" size="sm" class="cp-search-icon" />
+                <label for="portalTicketSearch" class="sc-sr-only">Search your tickets</label>
+                <input id="portalTicketSearch" type="search" class="sc-input cp-search-input"
+                    placeholder="Search by subject, category or ID" autocomplete="off" [value]="query()"
+                    (input)="onSearch($event)" />
+            </div>
+
+            <div class="ml-auto flex items-center gap-2">
+                <label for="portalTicketSort" class="text-xs font-medium text-ink-subtle">Sort</label>
+                <select id="portalTicketSort" class="sc-select cp-sort" [value]="sort()" (change)="setSort($event)">
+                    <option value="activity">Latest activity</option>
+                    <option value="raised">Date raised</option>
+                </select>
+            </div>
+        </div>
     </div>
 
-    <!-- Mobile cards -->
-    <ul class="divide-y divide-line md:hidden">
-        @for (ticket of sortedTickets(); track ticket.id) {
-        <li class="p-4">
-            <a [routerLink]="['/portal/tickets', ticket.id]" class="flex flex-col gap-2">
-                <span class="flex items-start justify-between gap-2">
-                    <span class="min-w-0 truncate text-[13px] font-semibold text-ink">{{ ticket.title }}</span>
-                    <sc-icon name="chevron_right" size="sm" class="shrink-0 text-ink-subtle" />
+    <p class="sc-sr-only" aria-live="polite">
+        Showing {{ visibleRows().length }} of {{ filteredRows().length }} tickets.
+    </p>
+
+    @if (filteredRows().length === 0) {
+    <section class="sc-card">
+        <sc-empty-state icon="search_off" title="No tickets match"
+            description="Try a different search, or clear the filters to see everything." />
+        <div class="-mt-4 flex justify-center pb-8">
+            <button type="button" class="sc-btn sc-btn-secondary" (click)="clearFilters()">
+                Clear filters
+            </button>
+        </div>
+    </section>
+    } @else {
+
+    <ul class="sc-card cp-list" aria-label="Your support tickets">
+        @for (row of visibleRows(); track row.ticket.id) {
+        <li>
+            <a [routerLink]="['/portal/tickets', row.ticket.id]" class="cp-row"
+                [class.cp-row-reply]="row.status.needsReply">
+
+                <span class="cp-row-chip" [class]="'cp-tone-' + row.status.tone" aria-hidden="true">
+                    <sc-icon [name]="row.status.icon" size="sm" />
                 </span>
-                <span class="flex flex-wrap items-center gap-1.5">
-                    <sc-ticket-status-badge [status]="ticket.status" />
-                    <sc-ticket-priority-badge [priority]="ticket.priority" />
+
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate text-[14px] font-semibold tracking-[-0.011em] text-ink">
+                        {{ row.ticket.title }}
+                    </span>
+                    <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-subtle">
+                        <span class="font-mono">#{{ row.shortId }}</span>
+                        @if (row.categoryName) {
+                        <span aria-hidden="true">/</span>
+                        <span class="max-w-[180px] truncate">{{ row.categoryName }}</span>
+                        }
+                        <span aria-hidden="true">/</span>
+                        <span>
+                            Raised
+                            <time [attr.datetime]="row.ticket.createdAt">{{ row.ticket.createdAt | date:'MMM d, y'
+                                }}</time>
+                        </span>
+                    </span>
                 </span>
-                <span class="text-xs text-ink-subtle">
-                    {{ categoryNameFor(ticket) || 'Uncategorized' }} · Raised {{ ticket.createdAt | date:'MMM d, y' }}
+
+                <span class="cp-row-side">
+                    <span class="sc-badge" [class]="'sc-badge-' + row.status.tone">
+                        <sc-icon [name]="row.status.icon" size="xs" />
+                        {{ row.status.label }}
+                    </span>
+                    <span class="text-xs text-ink-subtle" [attr.title]="row.ticket.updatedAt | date:'MMM d, y · HH:mm'">
+                        Updated {{ row.updatedAgo }}
+                    </span>
                 </span>
+
+                <span class="cp-track" aria-hidden="true">
+                    <span class="cp-track-seg" [class.cp-track-on]="row.stage >= 0"></span>
+                    <span class="cp-track-seg" [class.cp-track-on]="row.stage >= 1"></span>
+                    <span class="cp-track-seg" [class.cp-track-on]="row.stage >= 2"></span>
+                </span>
+
+                <sc-icon name="chevron_right" size="sm" class="cp-row-chevron" />
             </a>
         </li>
         }
     </ul>
+
+    @if (hasMore()) {
+    <div class="mt-4 flex justify-center">
+        <button type="button" class="sc-btn sc-btn-secondary" (click)="showMore()">
+            Show more
+            <span class="text-ink-subtle">({{ filteredRows().length - visibleRows().length }} left)</span>
+        </button>
+    </div>
     }
-</section>
+    }
+</div>
+}

@@ -29,8 +29,8 @@ export const PORTAL_ROUTES: Routes = [
         path: 'tickets/:id',
         canActivate: [portalTenantGuard],
         loadComponent: () =>
-          import('../tickets/components/ticket-details/ticket-details.component').then(
-            (m) => m.TicketDetailsComponent,
+          import('./components/portal-ticket-detail/portal-ticket-detail.component').then(
+            (m) => m.PortalTicketDetailComponent,
           ),
       },
       {

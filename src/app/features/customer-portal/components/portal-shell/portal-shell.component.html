@@ -1,64 +1,76 @@
 <a href="#portalMainContent" class="sc-skip-link">Skip to main content</a>
 
-<div class="flex min-h-screen flex-col bg-surface-muted">
+<div class="cp-page">
 
-    <header class="sticky top-0 z-shell border-b border-line bg-surface/90 backdrop-blur">
-        <div class="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 sm:px-6">
-            <!-- Brand -->
-            <a routerLink="/portal/tickets" class="flex items-center gap-2.5">
-                <img src="logo/logo-mark.svg" alt="" class="h-8 w-8" width="32" height="32" />
-                <span class="text-[15px] font-bold tracking-tight text-ink">
-                    ServiCore
-                    <span class="ml-1 font-medium text-ink-subtle">Support</span>
+    <header class="cp-header">
+        <div class="cp-bar">
+            <!-- Brand + the provider the customer is writing to -->
+            <a routerLink="/portal/tickets" class="cp-brand" aria-label="ServiCore Support, my tickets">
+                <img src="logo/logo-mark.svg" alt="" class="h-8 w-8 shrink-0 rounded-[9px] shadow-sc" width="32"
+                    height="32" />
+                <span class="min-w-0 leading-tight">
+                    <span class="block text-[15px] font-bold tracking-[-0.02em] text-ink">ServiCore</span>
+                    @if (organizationName()) {
+                    <span class="hidden max-w-[220px] truncate text-2xs font-medium text-ink-subtle sm:block">
+                        Support for {{ organizationName() }}
+                    </span>
+                    }
                 </span>
             </a>
 
+            <nav class="hidden sm:block" aria-label="Portal navigation">
+                <a routerLink="/portal/tickets" routerLinkActive="cp-link-active" class="cp-link">
+                    <sc-icon name="confirmation_number" size="sm" />
+                    My tickets
+                </a>
+            </nav>
+
             <div class="flex-1"></div>
 
-            <div class="flex items-center gap-1">
-                <app-notification-tray />
+            <a routerLink="/portal/tickets/create" class="sc-btn sc-btn-primary sc-btn-sm cp-new">
+                <sc-icon name="add" size="sm" />
+                <span class="cp-new-label">New request</span>
+            </a>
 
-                <button type="button" class="sc-btn sc-btn-ghost h-9 gap-2 px-2" [matMenuTriggerFor]="portalMenu"
-                    aria-label="Account menu">
-                    <sc-avatar [name]="customerEmail()" size="xs" />
-                    <span class="hidden max-w-[180px] truncate text-[13px] font-medium text-ink-muted sm:inline">
-                        {{ customerEmail() }}
-                    </span>
-                    <sc-icon name="expand_more" size="sm" class="hidden text-ink-subtle sm:inline-flex" />
-                </button>
-            </div>
+            <app-notification-tray />
+
+            <button type="button" class="sc-btn sc-btn-ghost h-9 gap-2 px-1.5 sm:px-2" [matMenuTriggerFor]="portalMenu"
+                aria-label="Account menu">
+                <sc-avatar [name]="customerEmail()" size="xs" />
+                <span class="hidden max-w-[160px] truncate text-[13px] font-medium text-ink-muted lg:inline">
+                    {{ customerEmail() }}
+                </span>
+                <sc-icon name="expand_more" size="sm" class="hidden text-ink-subtle sm:inline-flex" />
+            </button>
         </div>
-
-        <!-- Horizontal navigation — two destinations, so tabs beat a drawer. -->
-        <nav class="mx-auto w-full max-w-5xl px-4 sm:px-6" aria-label="Portal navigation">
-            <ul class="-mb-px flex items-center gap-1">
-                <li>
-                    <a routerLink="/portal/tickets" routerLinkActive="sc-portal-tab-active" class="sc-portal-tab">
-                        <sc-icon name="confirmation_number" size="sm" />
-                        My tickets
-                    </a>
-                </li>
-                <li>
-                    <a routerLink="/portal/activate-device" routerLinkActive="sc-portal-tab-active"
-                        class="sc-portal-tab">
-                        <sc-icon name="apartment" size="sm" />
-                        Organization
-                    </a>
-                </li>
-            </ul>
-        </nav>
     </header>
 
-    <main id="portalMainContent" class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6" tabindex="-1">
+    <main id="portalMainContent" class="cp-main" tabindex="-1">
         <router-outlet />
     </main>
+
+    <footer class="cp-footer">
+        <span>&copy; {{ year }} ServiCore</span>
+        <span class="text-line-strong" aria-hidden="true">/</span>
+        <span>Customer portal</span>
+    </footer>
 </div>
 
-<mat-menu #portalMenu="matMenu" xPosition="before">
+<mat-menu #portalMenu="matMenu" xPosition="before" class="sc-menu">
     <div class="border-b border-line px-3.5 py-2.5">
         <p class="truncate text-[13px] font-semibold text-ink">{{ customerEmail() }}</p>
-        <p class="mt-0.5 text-2xs text-ink-subtle">Customer account</p>
+        <p class="mt-0.5 truncate text-2xs text-ink-subtle">
+            Customer account@if (organizationName()) { · {{ organizationName() }}}
+        </p>
     </div>
+    @if (canSwitchOrganization()) {
+    <a mat-menu-item routerLink="/portal/activate-device">
+        <span class="flex items-center gap-2.5 text-[13px] text-ink-muted">
+            <sc-icon name="swap_horiz" size="sm" />
+            Switch organization
+        </span>
+    </a>
+    }
     <button type="button" mat-menu-item (click)="onLogout()">
         <span class="flex items-center gap-2.5 text-[13px] text-danger-700">
             <sc-icon name="logout" size="sm" />

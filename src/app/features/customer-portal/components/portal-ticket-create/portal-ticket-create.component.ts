@@ -1,4 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -10,12 +17,11 @@ import {
   TicketPriorityLabels,
 } from '../../../tickets/models/ticket-enums.model';
 
+import { ToastService } from '../../../../shared/ui/toast/toast.service';
+import { PRIORITY_CHOICES } from '../../utils/portal-view';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
-import {
-  AlertComponent,
-  LoadingStateComponent,
-} from '../../../../shared/ui/states/states.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 
 @Component({
   selector: 'app-portal-ticket-create',
@@ -26,15 +32,17 @@ import {
     PageHeaderComponent,
     IconComponent,
     AlertComponent,
-    LoadingStateComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './portal-ticket-create.component.html',
+  styleUrls: ['./portal-ticket-create.component.css'],
 })
 export class PortalTicketCreateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly ticketService = inject(CustomerTicketService);
   private readonly categoryService = inject(CategoryService);
+  private readonly toast = inject(ToastService);
 
   readonly categories = signal<CategoryDto[]>([]);
   readonly isLoadingOptions = signal<boolean>(false);
@@ -49,6 +57,9 @@ export class PortalTicketCreateComponent implements OnInit {
       label: TicketPriorityLabels[value],
     }));
 
+  /** Plain-language guidance shown on each priority choice. */
+  protected readonly priorityChoices = PRIORITY_CHOICES;
+
   readonly ticketForm = this.fb.nonNullable.group({
     title: [
       '',
@@ -58,6 +69,17 @@ export class PortalTicketCreateComponent implements OnInit {
     categoryId: ['', [Validators.required]],
     priority: [TicketPriority.Medium, [Validators.required]],
   });
+
+  // Live lengths for the counters. Read-only views of the form: they do not
+  // touch validation.
+  protected readonly titleLength = toSignal(
+    this.ticketForm.controls.title.valueChanges,
+    { initialValue: '' },
+  );
+  protected readonly descriptionLength = toSignal(
+    this.ticketForm.controls.description.valueChanges,
+    { initialValue: '' },
+  );
 
   ngOnInit(): void {
     this.loadDropdownDataOptions();
@@ -99,6 +121,9 @@ export class PortalTicketCreateComponent implements OnInit {
       )
       .subscribe({
         next: () => {
+          this.toast.success(
+            "Request sent. We'll notify you when there's an update.",
+          );
           this.router.navigate(['/portal/tickets']);
         },
         error: (err: Error) => {

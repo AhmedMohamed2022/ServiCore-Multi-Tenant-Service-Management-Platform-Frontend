@@ -1,19 +1,42 @@
-<sc-auth-layout heading="Opening your portal" subheading="Connecting you to your service provider."
-    [wide]="state() === 'choose'">
+<!-- Rendered inside the portal shell, so it uses the portal's own column
+     rather than the full-page auth layout (which would nest a second page
+     frame inside the shell). -->
+<div class="mx-auto w-full max-w-lg">
+
+    <header class="sc-enter mb-5">
+        <p class="sc-eyebrow">Your organizations</p>
+        <h1 class="mt-1.5 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink">
+            @if (state() === 'choose') { Choose an organization } @else { Opening your portal }
+        </h1>
+        <p class="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
+            @if (state() === 'choose') {
+            You're linked to more than one service provider. Pick the one you want to open.
+            } @else {
+            Connecting you to your service provider.
+            }
+        </p>
+    </header>
 
     @switch (state()) {
 
     @case ('loading') {
-    <div class="sc-card p-6">
-        <sc-loading-state label="Finding your organizations" [count]="3" />
+    <!-- Mirrors the organization list: three rows of the same height. -->
+    <div class="sc-card divide-y divide-line" role="status" aria-label="Finding your organizations">
+        <span class="sc-sr-only">Finding your organizations</span>
+        @for (n of [0, 1, 2]; track n) {
+        <div class="flex items-center gap-3 px-4 py-3.5" aria-hidden="true">
+            <div class="sc-skeleton h-9 w-9 shrink-0 rounded-full"></div>
+            <div class="min-w-0 flex-1">
+                <div class="sc-skeleton h-3.5 w-1/2 rounded-sc-sm"></div>
+                <div class="sc-skeleton mt-2 h-3 w-1/4 rounded-sc-sm"></div>
+            </div>
+        </div>
+        }
     </div>
     }
 
     @case ('choose') {
-    <p class="mb-4 text-[13px] text-ink-muted">
-        You're linked to more than one service provider. Pick the one you want to open.
-    </p>
-    <ul class="flex flex-col gap-2.5">
+    <ul class="flex flex-col gap-2.5" aria-label="Your organizations">
         @for (membership of memberships(); track membership.organizationId) {
         <li>
             <button type="button" class="sc-org-card" (click)="selectMembership(membership)">
@@ -32,7 +55,7 @@
     }
 
     @case ('empty') {
-    <div class="sc-card p-6">
+    <div class="sc-card p-5">
         <sc-alert tone="warn" title="No linked organization">
             Your account isn't linked to a service provider yet. If you were sent an invitation, open that link to
             finish activating your account.
@@ -41,7 +64,7 @@
     }
 
     @case ('failed') {
-    <div class="sc-card p-6">
+    <div class="sc-card p-5">
         <sc-alert tone="error" title="We couldn't load your organizations" class="mb-5 block">
             {{ failureMessage() || 'Something went wrong while contacting the server.' }}
         </sc-alert>
@@ -53,4 +76,4 @@
     </div>
     }
     }
-</sc-auth-layout>
+</div>
