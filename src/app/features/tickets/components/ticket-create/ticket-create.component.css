@@ -1,180 +1,126 @@
-.create-ticket-workspace {
+:host {
+  display: block;
+}
+
+/* Form plus a live summary on wide screens; one column below. */
+.tc-grid {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .tc-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .tc-summary {
+    position: sticky;
+    top: calc(var(--sc-topbar-h) + 1rem);
+  }
+}
+
+/* --- Form sections ------------------------------------------------------------ */
+
+.tc-section {
+  min-width: 0;
+  margin: 0;
+  padding: 1.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.tc-legend {
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.workspace-header h2 {
-  margin: 0.5rem 0 0 0;
-  font-size: 1.5rem;
-  color: #0f172a;
-}
-
-.workspace-header p {
-  margin: 0.25rem 0 0 0;
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-.back-link {
-  font-size: 0.875rem;
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.back-link:hover {
-  text-decoration: underline;
-}
-
-.form-container-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  position: relative;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin-bottom: 1.5rem;
-}
-
-.split-form-row {
-  display: flex;
-  gap: 1.5rem;
-}
-
-.flex-item {
-  flex: 1;
-}
-
-.max-width-select {
-  max-width: 280px;
-}
-
-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
-}
-
-input,
-select,
-textarea {
-  padding: 0.65rem 0.85rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.925rem;
-  background-color: #ffffff;
-  color: #0f172a;
-  outline: none;
-  transition: all 0.15s ease-in-out;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-input.field-error,
-select.field-error,
-textarea.field-error {
-  border-color: #ef4444;
-}
-
-.error-msg-text {
-  font-size: 0.775rem;
-  color: #ef4444;
-  margin-top: 0.25rem;
-}
-
-.form-actions-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 1.5rem;
-  margin-top: 2rem;
-}
-
-button {
-  padding: 0.65rem 1.25rem;
-  font-size: 0.925rem;
-  font-weight: 600;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-}
-
-.btn-submit {
-  background: #2563eb;
-  color: #ffffff;
-  border: none;
-}
-
-.btn-submit:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-
-.btn-cancel {
-  background: #ffffff;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loading-overlay {
-  padding: 4rem;
-  display: flex;
-  justify-content: center;
+  float: left; /* keeps <legend> inside the fieldset's layout flow */
+  width: 100%;
   align-items: center;
   gap: 0.75rem;
-  color: #64748b;
-  font-size: 0.95rem;
+  padding: 0;
 }
 
-.pulse-loader {
-  width: 1rem;
-  height: 1rem;
-  background-color: #2563eb;
-  border-radius: 50%;
-  animation: pulse 1s ease-in-out infinite;
+.tc-legend + * {
+  clear: both;
+  padding-top: 1rem; /* margins are absorbed by the float, padding is not */
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(0.6);
-    opacity: 0.4;
+.tc-legend-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  color: var(--sc-text);
+}
+
+.tc-legend-sub {
+  display: block;
+  font-size: 12.5px;
+  color: var(--sc-text-subtle);
+}
+
+/* Native <select> keeps its arrow; just give the chosen placeholder the
+   muted colour a placeholder should have. */
+.sc-select:required:invalid,
+.sc-select:has(option[value=""]:checked) {
+  color: var(--sc-text-subtle);
+}
+
+.tc-priority {
+  display: flex;
+  width: 100%;
+}
+
+.tc-priority .sc-seg-item {
+  flex: 1 1 0;
+}
+
+@media (min-width: 640px) {
+  .tc-priority {
+    display: inline-flex;
+    width: auto;
   }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
+
+  .tc-priority .sc-seg-item {
+    flex: 0 0 auto;
+    min-width: 92px;
   }
 }
 
-.alert-error-banner {
-  padding: 0.75rem 1rem;
-  background-color: #fef2f2;
-  border: 1px solid #fee2e2;
-  border-radius: 6px;
-  color: #b91c1c;
-  font-size: 0.875rem;
+.tc-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
+}
+
+/* --- Summary ---------------------------------------------------------------------- */
+
+.tc-sum-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.011em;
+  overflow-wrap: anywhere;
+  color: var(--sc-text);
+}
+
+.tc-sum-empty {
+  font-weight: 500;
+  color: var(--sc-text-subtle);
+}
+
+.tc-sum-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sc-text-subtle);
+}
+
+.tc-sum-value {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--sc-text);
 }

@@ -61,7 +61,9 @@ export interface Breadcrumb {
       <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div class="min-w-0">
           <h1
-            class="truncate text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink"
+            class="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink"
+            [class.truncate]="!wrap()"
+            [class.break-words]="wrap()"
           >
             {{ title() }}
           </h1>
@@ -87,4 +89,10 @@ export class PageHeaderComponent {
   readonly title = input.required<string>();
   readonly description = input<string>('');
   readonly breadcrumbs = input<Breadcrumb[]>([]);
+  /**
+   * Let a long title wrap instead of truncating. Off by default; used where
+   * the title is user-written content the reader needs to see in full
+   * (the ticket details page).
+   */
+  readonly wrap = input<boolean>(false);
 }

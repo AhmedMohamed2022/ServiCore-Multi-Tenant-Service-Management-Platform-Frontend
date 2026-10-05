@@ -1,8 +1,43 @@
 @if (isLoading() && !ticket()) {
 
-<sc-page-header title="Loading ticket" />
-<div class="sc-card p-5">
-    <sc-loading-state label="Loading ticket" [count]="6" />
+<!-- Loading skeleton mirrors the real layout so nothing jumps when data lands. -->
+<div role="status" aria-label="Loading ticket" aria-busy="true">
+    <span class="sc-sr-only">Loading ticket</span>
+    <div aria-hidden="true">
+        <div class="sc-skeleton h-3 w-40 rounded-sc-sm"></div>
+        <div class="sc-skeleton mt-3 h-7 w-3/5 rounded-sc-sm"></div>
+        <div class="mt-3 flex gap-2">
+            <div class="sc-skeleton h-[22px] w-24 rounded-full"></div>
+            <div class="sc-skeleton h-[22px] w-20 rounded-full"></div>
+        </div>
+        <div class="sc-card mt-5 p-4">
+            <div class="flex items-center justify-between gap-2">
+                @for (i of skeletonSteps; track i) {
+                <div class="sc-skeleton h-6 w-6 rounded-full"></div>
+                }
+            </div>
+        </div>
+        <div class="td-grid mt-5">
+            <div class="td-main">
+                <div class="sc-card h-[180px] p-5">
+                    <div class="sc-skeleton h-3.5 w-1/4 rounded-sc-sm"></div>
+                    <div class="sc-skeleton mt-5 h-3 w-full rounded-sc-sm"></div>
+                    <div class="sc-skeleton mt-3 h-3 w-5/6 rounded-sc-sm"></div>
+                </div>
+                <div class="sc-card h-[320px] p-5">
+                    <div class="sc-skeleton h-3.5 w-1/4 rounded-sc-sm"></div>
+                </div>
+            </div>
+            <div class="td-rail">
+                <div class="sc-card h-[170px] p-5">
+                    <div class="sc-skeleton h-3.5 w-1/3 rounded-sc-sm"></div>
+                </div>
+                <div class="sc-card h-[260px] p-5">
+                    <div class="sc-skeleton h-3.5 w-1/3 rounded-sc-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 } @else {
@@ -11,8 +46,14 @@
 <!-- ======================================================================
      Header: identity, state, and the actions permitted to this viewer
      ====================================================================== -->
-<sc-page-header [title]="t.title" [breadcrumbs]="breadcrumbs()">
+<sc-page-header [title]="t.title" [breadcrumbs]="breadcrumbs()" [wrap]="true">
     <div slot="actions" class="flex flex-wrap items-center gap-2">
+        @if (isActionLoading()) {
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-ink-subtle" role="status">
+            <sc-icon name="progress_activity" size="xs" class="sc-spin" />
+            Updating
+        </span>
+        }
         @if (isManagementAllowed()) {
         @if (t.status === TicketStatus.New && t.teamId) {
         <button type="button" class="sc-btn sc-btn-primary" (click)="executeWorkflowTransition('open')"
@@ -51,21 +92,31 @@
         }
     </div>
 
-    <div class="mt-3 flex flex-wrap items-center gap-2">
+    <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <sc-ticket-status-badge [status]="t.status" />
         <sc-ticket-priority-badge [priority]="t.priority" />
-        <span class="font-mono text-xs text-ink-subtle">{{ shortId() }}</span>
-        <span class="text-xs text-ink-subtle">·</span>
-        <span class="text-xs text-ink-subtle">Opened {{ t.createdAt | date:'MMM d, y' }}</span>
+        <button type="button" class="td-id" (click)="copyTicketId()" [attr.aria-label]="'Copy ticket ID ' + t.id"
+            title="Copy full ticket ID">
+            <span class="font-mono">{{ shortId() }}</span>
+            <sc-icon name="content_copy" size="xs" />
+        </button>
+        @if (facts(); as f) {
+        <span class="td-dot" aria-hidden="true"></span>
+        <span class="text-xs text-ink-subtle" [attr.title]="t.createdAt | date:'MMM d, y · HH:mm'">Opened {{ f.opened
+            }}</span>
+        <span class="td-dot" aria-hidden="true"></span>
+        <span class="text-xs text-ink-subtle">{{ f.spanLabel }} <strong class="font-semibold text-ink-muted">{{ f.span
+                }}</strong></span>
+        }
     </div>
 
     <!-- Always says what happens next when there's no button above for this
          viewer's role at this status, so "nothing to click" never reads as
          "the page is broken." -->
     @if (workflowHint(); as hint) {
-    <p class="mt-2 flex items-center gap-1.5 text-[13px] text-ink-subtle">
-        <sc-icon name="info" size="xs" />
-        {{ hint }}
+    <p class="td-hint">
+        <sc-icon name="info" size="sm" />
+        <span>{{ hint }}</span>
     </p>
     }
 </sc-page-header>
@@ -74,68 +125,144 @@
 <sc-alert tone="error" title="That action didn't go through" class="mb-4 block">{{ errorMessage() }}</sc-alert>
 }
 
-<div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+<!-- ======================================================================
+     Lifecycle: read-only, so it can never bypass the transition rules
+     ====================================================================== -->
+<section class="sc-card td-lifecycle mb-5" aria-labelledby="lifecycleHeading">
+    <h2 id="lifecycleHeading" class="sc-sr-only">Lifecycle</h2>
 
-    <!-- ==================================================================
-         Primary column: the request, then the conversation
-         ================================================================== -->
-    <div class="flex min-w-0 flex-col gap-5">
-        <section class="sc-card" aria-labelledby="requestHeading">
+    <!-- Compact form for narrow screens: one bar, one sentence. -->
+    <div class="sm:hidden">
+        <div class="flex gap-1" aria-hidden="true">
+            @for (step of workflowSteps(); track step.status) {
+            <span class="td-seg" [class.td-seg-done]="step.state === 'done'"
+                [class.td-seg-current]="step.state === 'current'"></span>
+            }
+        </div>
+        <p class="mt-2 text-xs text-ink-subtle">
+            Step {{ currentStepNumber() }} of {{ workflowSteps().length }}
+            <span class="mx-1" aria-hidden="true">·</span>
+            <strong class="font-semibold text-ink">{{ currentStepLabel() }}</strong>
+        </p>
+    </div>
+
+    <ol class="td-steps hidden sm:flex">
+        @for (step of workflowSteps(); track step.status; let last = $last) {
+        <li class="td-step" [class.td-step-done]="step.state === 'done'"
+            [class.td-step-current]="step.state === 'current'" [class.td-step-last]="last"
+            [attr.aria-current]="step.state === 'current' ? 'step' : null">
+            <span class="td-step-marker">
+                <sc-icon [name]="step.state === 'done' ? 'check' : step.icon" size="xs" />
+            </span>
+            <span class="td-step-text">
+                <span class="td-step-label">
+                    {{ step.label }}
+                    <span class="sc-sr-only">
+                        ({{ step.state === 'done' ? 'completed' : step.state === 'current' ? 'current status' : 'not
+                        reached' }})
+                    </span>
+                </span>
+                @if (step.at) {
+                <time class="td-step-time" [attr.datetime]="step.at" [attr.title]="step.at | date:'MMM d, y · HH:mm'">
+                    {{ step.at | date:'MMM d' }}
+                </time>
+                }
+            </span>
+        </li>
+        }
+    </ol>
+</section>
+
+<div class="td-grid">
+
+    <div class="td-main">
+        <!-- Request -->
+        <section class="sc-card td-request" aria-labelledby="requestHeading">
             <div class="sc-card-header">
-                <div class="flex items-center gap-2">
-                    <sc-icon name="description" size="sm" class="text-ink-subtle" />
+                <div class="flex items-center gap-2.5">
+                    <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="description" size="sm" /></span>
                     <h2 id="requestHeading" class="sc-card-title">Request</h2>
                 </div>
                 <span class="text-xs text-ink-subtle">Updated {{ t.updatedAt | date:'MMM d, y · HH:mm' }}</span>
             </div>
             <div class="sc-card-body">
-                <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-muted">
-                    {{ t.description }}
-                </p>
+                <p id="requestBody" class="td-request-text" [class.td-clamped]="isLongRequest() && !requestExpanded()">
+                    @for (seg of descriptionSegments(); track $index) {@if (seg.href) {<a [href]="seg.href"
+                        target="_blank" rel="noopener noreferrer" class="td-link">{{ seg.text }}</a>} @else
+                    {<ng-container>{{ seg.text }}</ng-container>}}</p>
+                @if (isLongRequest()) {
+                <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm mt-2 -ml-2.5"
+                    (click)="toggleRequestExpanded()" [attr.aria-expanded]="requestExpanded()"
+                    aria-controls="requestBody">
+                    <sc-icon [name]="requestExpanded() ? 'expand_less' : 'expand_more'" size="sm" />
+                    {{ requestExpanded() ? 'Show less' : 'Show full request' }}
+                </button>
+                }
             </div>
         </section>
 
-        <app-ticket-comments [ticketId]="t.id" [teamId]="t.teamId" [customerName]="customer()?.name ?? null"
-            [locked]="isClosed()" />
+        <app-ticket-comments class="td-convo" [ticketId]="t.id" [teamId]="t.teamId"
+            [customerName]="customer()?.name ?? null" [locked]="isClosed()" />
     </div>
 
     <!-- ==================================================================
          Right rail: who and what this ticket belongs to
          ================================================================== -->
-    <aside class="flex min-w-0 flex-col gap-5">
+    <aside class="td-rail" aria-label="Ticket details">
 
         <!-- Assignment -->
-        <section class="sc-card" aria-labelledby="assignmentHeading">
+        <section class="sc-card td-assign" aria-labelledby="assignmentHeading">
             <div class="sc-card-header">
                 <h2 id="assignmentHeading" class="sc-card-title">Assignment</h2>
             </div>
             <div class="sc-card-body">
-                @if (assigneeName(); as assignee) {
-                <div class="flex items-center gap-2.5">
-                    <sc-avatar [name]="assignee" size="md" />
-                    <div class="min-w-0">
-                        <p class="truncate text-[13px] font-semibold text-ink">{{ assignee }}</p>
-                        <p class="text-xs text-ink-subtle">Assigned agent</p>
+                <dl class="flex flex-col gap-3.5">
+                    <div>
+                        <dt class="sc-meta-label">Agent</dt>
+                        <dd class="mt-1.5">
+                            @if (assigneeName(); as assignee) {
+                            <div class="flex items-center gap-2.5">
+                                <sc-avatar [name]="assignee" size="md" />
+                                <div class="min-w-0">
+                                    <p class="truncate text-[13px] font-semibold text-ink">{{ assignee }}</p>
+                                    <p class="text-xs text-ink-subtle">Assigned agent</p>
+                                </div>
+                            </div>
+                            } @else {
+                            <div class="flex items-center gap-2.5">
+                                <span class="sc-icon-chip sc-icon-chip-lg sc-icon-chip-neutral !rounded-full">
+                                    <sc-icon name="person_off" size="sm" />
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="text-[13px] font-semibold text-ink">
+                                        {{ t.teamId ? 'Unassigned agent' : 'Awaiting triage' }}
+                                    </p>
+                                    <p class="text-xs text-ink-subtle">
+                                        {{ t.teamId ? 'Waiting for an agent' : 'Waiting for team assignment' }}
+                                    </p>
+                                </div>
+                            </div>
+                            }
+                        </dd>
                     </div>
-                </div>
-                } @else {
-                <div class="flex items-center gap-2.5">
-                    <span
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-ink-subtle">
-                        <sc-icon name="person_off" size="sm" />
-                    </span>
-                    <div class="min-w-0">
-                        <p class="text-[13px] font-semibold text-ink">
-                            {{ t.teamId ? 'Unassigned agent' : 'Awaiting triage' }}
-                        </p>
-                        <p class="text-xs text-ink-subtle">
-                            {{ t.teamId ? 'Waiting for an agent' : 'Waiting for team assignment' }}
-                        </p>
+
+                    <div>
+                        <dt class="sc-meta-label">Team</dt>
+                        <dd class="mt-1.5 flex items-center gap-2 text-[13px] text-ink-muted">
+                            <sc-icon name="groups" size="sm" class="text-ink-subtle" />
+                            @if (teamName()) {
+                            <span class="font-medium text-ink">{{ teamName() }}</span>
+                            } @else if (isCustomerPortal() && !t.teamId) {
+                            Awaiting team assignment
+                            } @else {
+                            Awaiting triage
+                            }
+                        </dd>
                     </div>
-                </div>
-                }
+                </dl>
 
                 @if (isManagementAllowed() && !isClosed()) {
+                <div class="sc-divider mt-4"></div>
                 <div class="mt-4 flex flex-wrap gap-2">
                     @if (!t.teamId) {
                     <button type="button" class="sc-btn sc-btn-primary sc-btn-sm" [matMenuTriggerFor]="teamMenu"
@@ -145,8 +272,8 @@
                     </button>
                     } @else {
                     @if (canAssignTeam()) {
-                    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm"
-                        [matMenuTriggerFor]="teamMenu" [disabled]="isActionLoading() || assignableTeams().length === 0">
+                    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm" [matMenuTriggerFor]="teamMenu"
+                        [disabled]="isActionLoading() || assignableTeams().length === 0">
                         <sc-icon name="swap_horiz" size="sm" />
                         Change team
                     </button>
@@ -180,31 +307,8 @@
             </div>
         </section>
 
-        <!-- Lifecycle -->
-        <section class="sc-card" aria-labelledby="lifecycleHeading">
-            <div class="sc-card-header">
-                <h2 id="lifecycleHeading" class="sc-card-title">Lifecycle</h2>
-            </div>
-            <div class="sc-card-body">
-                <ol class="flex flex-col">
-                    @for (step of workflowSteps(); track step.status; let last = $last) {
-                    <li class="sc-step" [class.sc-step-done]="step.state === 'done'"
-                        [class.sc-step-current]="step.state === 'current'" [class.sc-step-last]="last">
-                        <span class="sc-step-marker">
-                            <sc-icon [name]="step.state === 'done' ? 'check' : step.icon" size="xs" />
-                        </span>
-                        <span class="sc-step-label">{{ step.label }}</span>
-                        @if (step.state === 'current') {
-                        <span class="sc-badge sc-badge-primary ml-auto">Now</span>
-                        }
-                    </li>
-                    }
-                </ol>
-            </div>
-        </section>
-
         <!-- Context -->
-        <section class="sc-card" aria-labelledby="contextHeading">
+        <section class="sc-card td-details" aria-labelledby="contextHeading">
             <div class="sc-card-header">
                 <h2 id="contextHeading" class="sc-card-title">Details</h2>
             </div>
@@ -212,10 +316,10 @@
                 <dl class="flex flex-col gap-3.5">
                     <div>
                         <dt class="sc-meta-label">Customer</dt>
-                        <dd class="mt-1">
+                        <dd class="mt-1.5">
                             @if (customer(); as c) {
                             <div class="flex items-center gap-2">
-                                <sc-avatar [name]="c.name" size="xs" />
+                                <sc-avatar [name]="c.name" size="sm" />
                                 <div class="min-w-0">
                                     <p class="truncate text-[13px] font-medium text-ink">{{ c.name }}</p>
                                     <p class="truncate text-xs text-ink-subtle">{{ c.email }}</p>
@@ -227,53 +331,48 @@
                         </dd>
                     </div>
 
-                    <div class="sc-divider"></div>
-
-                    <div>
-                        <dt class="sc-meta-label">Team</dt>
-                        <dd class="mt-1 text-[13px] text-ink-muted">
-                            @if (teamName()) {
-                            {{ teamName() }}
-                            } @else if (isCustomerPortal() && !t.teamId) {
-                            Awaiting team assignment
-                            } @else {
-                            Awaiting triage
-                            }
-                        </dd>
-                    </div>
-
                     <div>
                         <dt class="sc-meta-label">Category</dt>
-                        <dd class="mt-1 text-[13px] text-ink-muted">
+                        <dd class="mt-1.5 text-[13px] text-ink-muted">
                             {{ categoryName() ?? 'Not available' }}
                         </dd>
                     </div>
 
                     <div class="sc-divider"></div>
 
-                    <div>
-                        <dt class="sc-meta-label">Created</dt>
-                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.createdAt | date:'MMM d, y · HH:mm' }}</dd>
-                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-3.5">
+                        <div>
+                            <dt class="sc-meta-label">Created</dt>
+                            <dd class="mt-1.5 text-[13px] text-ink-muted">{{ t.createdAt | date:'MMM d, y' }}
+                                <span class="block text-xs text-ink-subtle">{{ t.createdAt | date:'HH:mm' }}</span>
+                            </dd>
+                        </div>
 
-                    <div>
-                        <dt class="sc-meta-label">Last updated</dt>
-                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.updatedAt | date:'MMM d, y · HH:mm' }}</dd>
-                    </div>
+                        <div>
+                            <dt class="sc-meta-label">Last updated</dt>
+                            <dd class="mt-1.5 text-[13px] text-ink-muted">{{ t.updatedAt | date:'MMM d, y' }}
+                                <span class="block text-xs text-ink-subtle">{{ t.updatedAt | date:'HH:mm' }}</span>
+                            </dd>
+                        </div>
 
-                    @if (t.resolvedAt) {
-                    <div>
-                        <dt class="sc-meta-label">Resolved</dt>
-                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.resolvedAt | date:'MMM d, y · HH:mm' }}</dd>
-                    </div>
-                    }
+                        @if (t.resolvedAt) {
+                        <div>
+                            <dt class="sc-meta-label">Resolved</dt>
+                            <dd class="mt-1.5 text-[13px] text-ink-muted">{{ t.resolvedAt | date:'MMM d, y' }}
+                                <span class="block text-xs text-ink-subtle">{{ t.resolvedAt | date:'HH:mm' }}</span>
+                            </dd>
+                        </div>
+                        }
 
-                    @if (t.closedAt) {
-                    <div>
-                        <dt class="sc-meta-label">Closed</dt>
-                        <dd class="mt-1 text-[13px] text-ink-muted">{{ t.closedAt | date:'MMM d, y · HH:mm' }}</dd>
+                        @if (t.closedAt) {
+                        <div>
+                            <dt class="sc-meta-label">Closed</dt>
+                            <dd class="mt-1.5 text-[13px] text-ink-muted">{{ t.closedAt | date:'MMM d, y' }}
+                                <span class="block text-xs text-ink-subtle">{{ t.closedAt | date:'HH:mm' }}</span>
+                            </dd>
+                        </div>
+                        }
                     </div>
-                    }
                 </dl>
             </div>
         </section>
@@ -281,9 +380,10 @@
     </aside>
 </div>
 
-<mat-menu #teamMenu="matMenu">
+<mat-menu #teamMenu="matMenu" class="sc-menu">
     @for (team of assignableTeams(); track team.id) {
-    <button type="button" mat-menu-item (click)="onAssignTeam(team.id)" [disabled]="team.id === t?.teamId">
+    <button type="button" mat-menu-item (click)="onAssignTeam(team.id)" [disabled]="team.id === t?.teamId"
+        [attr.aria-current]="team.id === t?.teamId ? 'true' : null">
         <span class="flex w-full items-center justify-between gap-6 text-[13px]">
             {{ team.name }}
             @if (team.id === t?.teamId) {
@@ -294,9 +394,10 @@
     }
 </mat-menu>
 
-<mat-menu #agentMenu="matMenu">
+<mat-menu #agentMenu="matMenu" class="sc-menu">
     @for (agent of assignableAgents(); track agent.userId) {
-    <button type="button" mat-menu-item (click)="onAssignAgent(agent.userId)" [disabled]="agent.isCurrent">
+    <button type="button" mat-menu-item (click)="onAssignAgent(agent.userId)" [disabled]="agent.isCurrent"
+        [attr.aria-current]="agent.isCurrent ? 'true' : null">
         <span class="flex w-full items-center justify-between gap-6 text-[13px]">
             {{ agent.name }}
             @if (agent.isCurrent) {
@@ -313,9 +414,15 @@
 } @else {
 <sc-page-header title="Ticket" />
 <sc-alert tone="error" title="Ticket unavailable">{{ errorMessage() }}</sc-alert>
-<a [routerLink]="isCustomerPortal() ? '/portal/tickets' : '/app/tickets'" class="sc-btn sc-btn-secondary mt-4">
-    <sc-icon name="arrow_back" size="sm" />
-    Back to tickets
-</a>
+<div class="mt-4 flex flex-wrap gap-2">
+    <button type="button" class="sc-btn sc-btn-primary" (click)="loadTicketContext()" [disabled]="isLoading()">
+        <sc-icon name="refresh" size="sm" />
+        Try again
+    </button>
+    <a [routerLink]="isCustomerPortal() ? '/portal/tickets' : '/app/tickets'" class="sc-btn sc-btn-secondary">
+        <sc-icon name="arrow_back" size="sm" />
+        Back to tickets
+    </a>
+</div>
 }
 }

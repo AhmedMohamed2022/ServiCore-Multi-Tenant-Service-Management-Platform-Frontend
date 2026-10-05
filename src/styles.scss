@@ -285,6 +285,13 @@ body {
     background-color: transparent;
     background-image: none;
   }
+
+  /* Preflight also zeroed these. Without it <dd> keeps the browser's 40px
+     left indent, which shoves every definition-list value off its label. */
+  dl,
+  dd {
+    margin: 0;
+  }
 }
 
 h1,
@@ -1018,7 +1025,99 @@ input[type="range"] {
     @apply font-semibold text-brand-600 hover:text-brand-700 hover:underline
            underline-offset-2;
   }
+  /* Segmented control for choices that should all be visible at once (status
+     filters, the ticket priority picker). Items are <button aria-pressed> for
+     filters, or <label> wrapping a radio input for form fields. The selected
+     item is raised onto a white surface, so state is carried by shape and
+     weight as well as colour. Distinct from .sc-segmented (view switchers). */
+  .sc-seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 100%;
+    padding: 3px;
+    border: 1px solid var(--sc-border);
+    border-radius: var(--sc-radius-md);
+    background-color: var(--sc-surface-sunken);
+  }
 
+  .sc-seg-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: var(--sc-radius);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--sc-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--sc-dur-fast) var(--sc-ease),
+      color var(--sc-dur-fast) var(--sc-ease),
+      box-shadow var(--sc-dur-fast) var(--sc-ease);
+  }
+
+  .sc-seg-item:hover {
+    background-color: var(--sc-state-hover);
+    color: var(--sc-text);
+  }
+
+  .sc-seg-item[aria-pressed="true"],
+  .sc-seg-item[aria-checked="true"],
+  .sc-seg-item:has(input:checked) {
+    background-color: var(--sc-surface);
+    color: var(--sc-brand-700);
+    box-shadow: var(--sc-shadow-md);
+  }
+
+  .sc-seg-item:has(input:focus-visible) {
+    outline: 2px solid var(--sc-brand-600);
+    outline-offset: 2px;
+  }
+
+  /* The real radio stays in the layout (keyboard and screen-reader operable)
+     but is stretched over the label and made invisible. */
+  .sc-seg-item input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .sc-seg-count {
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--sc-text-muted);
+  }
+
+  .sc-seg-item[aria-pressed="true"] .sc-seg-count {
+    color: var(--sc-brand-600);
+  }
+
+  /* A keyboard shortcut hint, e.g. next to a submit button. */
+  .sc-kbd {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--sc-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--sc-radius-sm);
+    background-color: var(--sc-surface-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--sc-text-muted);
+  }
   /* Screen-reader-only text, for icon-only controls and live regions. */
   .sc-sr-only {
     position: absolute;

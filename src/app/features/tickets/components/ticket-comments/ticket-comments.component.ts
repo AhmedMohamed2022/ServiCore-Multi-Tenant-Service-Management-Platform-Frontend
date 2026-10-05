@@ -21,13 +21,18 @@ import { AuthService } from '../../../../core/auth/services/auth.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { TenantContextService } from '../../../../core/services/tenant-context.service';
 import { TicketCommentDto } from '../../models/comment.model';
+import {
+  dayKey,
+  dayLabel,
+  linkify,
+  TextSegment,
+} from '../../utils/ticket-time';
 
 import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 
 /**
@@ -48,6 +53,23 @@ export interface ResolvedComment {
   readonly isStaff: boolean;
 }
 
+/** One row of the rendered thread: a day divider or a message. */
+export type ThreadItem =
+  | { readonly kind: 'day'; readonly key: string; readonly label: string }
+  | {
+      readonly kind: 'message';
+      readonly key: string;
+      readonly message: ResolvedComment;
+      readonly segments: TextSegment[];
+      /** False when it continues the previous message from the same author. */
+      readonly showHeader: boolean;
+    };
+
+/** Messages from one author this close together read as a single run. */
+const GROUP_WINDOW_MS = 5 * 60_000;
+/** Within this distance of the bottom counts as "reading the latest". */
+const BOTTOM_TOLERANCE_PX = 48;
+
 @Component({
   selector: 'app-ticket-comments',
   standalone: true,
@@ -58,7 +80,6 @@ export interface ResolvedComment {
     IconComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
   ],
   templateUrl: './ticket-comments.component.html',
   styleUrls: ['./ticket-comments.component.css'],
@@ -92,8 +113,14 @@ export class TicketCommentsComponent implements OnInit, OnDestroy {
 
   private streamSubscription?: Subscription;
 
-  private readonly scrollAnchor =
-    viewChild<ElementRef<HTMLDivElement>>('scrollAnchor');
+  private readonly thread = viewChild<ElementRef<HTMLElement>>('thread');
+
+  /** Scroll bookkeeping, so the thread only follows when the reader wants it. */
+  protected readonly atBottom = signal<boolean>(true);
+  protected readonly hasUnseen = signal<boolean>(false);
+  private initialScrollDone = false;
+  private forceScroll = false;
+  protected readonly skeletonMessages = [0, 1, 2];
 
   readonly comments = signal<TicketCommentDto[]>([]);
   readonly isLoading = signal<boolean>(false);
@@ -123,7 +150,11 @@ export class TicketCommentsComponent implements OnInit, OnDestroy {
   readonly commentForm = this.fb.nonNullable.group({
     content: [
       '',
-      [Validators.required, Validators.minLength(2), Validators.maxLength(2000)],
+      [
+        Validators.required,
+        Validators.minLength(2),
+        Validators.maxLength(2000),
+      ],
     ],
   });
 
@@ -226,6 +257,57 @@ export class TicketCommentsComponent implements OnInit, OnDestroy {
     });
   });
 
+  /**
+   * The thread as the view draws it: day dividers between days, and runs of
+   * messages from one author collapsed under a single header. Purely a
+   * reshaping of resolvedComments(); no message is added, dropped or edited.
+   */
+  readonly threadItems = computed<ThreadItem[]>(() => {
+    const items: ThreadItem[] = [];
+    let previous: ResolvedComment | null = null;
+    let previousDay = '';
+
+    for (const message of this.resolvedComments()) {
+      const day = dayKey(message.createdAt);
+      const newDay = day !== previousDay;
+
+      if (newDay) {
+        items.push({
+          kind: 'day',
+          key: `day-${day}`,
+          label: dayLabel(message.createdAt),
+        });
+      }
+
+      const continues =
+        !newDay &&
+        previous !== null &&
+        previous.avatarKey === message.avatarKey &&
+        previous.isMine === message.isMine &&
+        new Date(message.createdAt).getTime() -
+          new Date(previous.createdAt).getTime() <
+          GROUP_WINDOW_MS;
+
+      items.push({
+        kind: 'message',
+        key: message.id,
+        message,
+        segments: linkify(message.content),
+        showHeader: !continues,
+      });
+
+      previous = message;
+      previousDay = day;
+    }
+
+    return items;
+  });
+
+  /** Own messages use the same avatar seed as the top bar. */
+  protected readonly myEmail = computed(
+    () => this.authService.currentUser()?.email ?? 'You',
+  );
+
   readonly messageCount = computed(() => this.comments().length);
 
   constructor() {
@@ -233,16 +315,13 @@ export class TicketCommentsComponent implements OnInit, OnDestroy {
       this.remainingChars.set(2000 - (value?.length ?? 0)),
     );
 
-    // Keep the newest message in view as the thread grows, including when one
-    // arrives over SignalR while the user is reading.
+    // Follow the thread to the newest message, but only inside the thread's
+    // own scroll box (never the page), and only when the reader is already at
+    // the bottom, just posted, or is seeing the thread for the first time.
+    // Otherwise a "new messages" pill is offered instead of yanking the view.
     effect(() => {
-      this.resolvedComments();
-      queueMicrotask(() =>
-        this.scrollAnchor()?.nativeElement.scrollIntoView({
-          block: 'nearest',
-          behavior: 'smooth',
-        }),
-      );
+      const count = this.resolvedComments().length;
+      setTimeout(() => this.afterThreadChanged(count), 0);
     });
   }
 
@@ -303,6 +382,48 @@ export class TicketCommentsComponent implements OnInit, OnDestroy {
       });
   }
 
+  private afterThreadChanged(count: number): void {
+    const el = this.thread()?.nativeElement;
+    if (!el || count === 0) return;
+
+    if (!this.initialScrollDone || this.forceScroll || this.atBottom()) {
+      this.scrollToLatest(el, this.initialScrollDone);
+      this.hasUnseen.set(false);
+    } else {
+      this.hasUnseen.set(true);
+    }
+
+    this.initialScrollDone = true;
+    this.forceScroll = false;
+  }
+
+  private scrollToLatest(el: HTMLElement, animate: boolean): void {
+    const reduce = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: animate && !reduce ? 'smooth' : 'auto',
+    });
+  }
+
+  onThreadScroll(): void {
+    const el = this.thread()?.nativeElement;
+    if (!el) return;
+
+    const nearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_TOLERANCE_PX;
+    this.atBottom.set(nearBottom);
+    if (nearBottom) this.hasUnseen.set(false);
+  }
+
+  jumpToLatest(): void {
+    const el = this.thread()?.nativeElement;
+    if (!el) return;
+    this.scrollToLatest(el, true);
+    this.hasUnseen.set(false);
+  }
+
   onSubmitComment(): void {
     if (this.commentForm.invalid || this.isSubmitting() || this.locked()) {
       this.commentForm.markAllAsTouched();
@@ -320,6 +441,10 @@ export class TicketCommentsComponent implements OnInit, OnDestroy {
         this.commentForm.controls.content.enable();
         this.commentForm.reset();
         this.isSubmitting.set(false);
+
+        // Your own message always brings you to the bottom.
+        this.forceScroll = true;
+        setTimeout(() => this.afterThreadChanged(this.comments().length), 0);
 
         if (!this.comments().some((c) => c.id === savedComment.id)) {
           this.comments.update((current) =>

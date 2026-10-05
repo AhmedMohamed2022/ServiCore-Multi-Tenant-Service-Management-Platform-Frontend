@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -12,13 +13,26 @@ import { CustomerDto } from '../../../management/models/customer.model';
 import { TeamDto } from '../../../management/models/team.model';
 import {
   TicketPriority,
+  TicketPriorityIcons,
   TicketPriorityLabels,
 } from '../../models/ticket-enums.model';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
+import { TicketPriorityBadgeComponent } from '../../../../shared/ticket/ticket-badges.component';
 
 @Component({
   selector: 'app-ticket-create',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    PageHeaderComponent,
+    IconComponent,
+    AlertComponent,
+    TicketPriorityBadgeComponent,
+  ],
   templateUrl: './ticket-create.component.html',
   styleUrls: ['./ticket-create.component.css'],
 })
@@ -36,6 +50,8 @@ export class TicketCreateComponent implements OnInit {
   readonly isLoadingOptions = signal<boolean>(false);
   readonly isSubmitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
+  /** True when the team/customer/category lists failed to load. */
+  readonly optionsFailed = signal<boolean>(false);
 
   protected readonly priorityOptions = Object.keys(TicketPriorityLabels).map(
     (key) => ({
@@ -56,13 +72,80 @@ export class TicketCreateComponent implements OnInit {
     priority: [TicketPriority.Medium, [Validators.required]],
   });
 
+  /**
+   * Short guidance under each priority. Copy only: it describes how to choose,
+   * not what the system will do with the choice.
+   */
+  protected readonly priorityChoices = this.priorityOptions.map((option) => ({
+    ...option,
+    icon: TicketPriorityIcons[option.value],
+    hint:
+      {
+        1: 'Nothing is blocked. Can wait.',
+        2: 'Normal request. The default.',
+        3: 'Blocking real work. Needs attention soon.',
+        4: 'Outage or a customer completely stuck.',
+      }[option.value] ?? '',
+  }));
+
+  /** Live copy of the form, so the summary panel can follow every keystroke. */
+  private readonly formValue = toSignal(this.ticketForm.valueChanges, {
+    initialValue: this.ticketForm.getRawValue(),
+  });
+
+  protected readonly titleLength = computed(
+    () => (this.formValue().title ?? '').length,
+  );
+  protected readonly descriptionLength = computed(
+    () => (this.formValue().description ?? '').trim().length,
+  );
+
+  protected readonly selectedTeam = computed(
+    () => this.teams().find((t) => t.id === this.formValue().teamId) ?? null,
+  );
+  protected readonly selectedCustomer = computed(
+    () =>
+      this.customers().find((c) => c.id === this.formValue().customerId) ??
+      null,
+  );
+  protected readonly selectedCategory = computed(
+    () =>
+      this.categories().find((c) => c.id === this.formValue().categoryId) ??
+      null,
+  );
+  protected readonly selectedPriority = computed(() =>
+    Number(this.formValue().priority ?? TicketPriority.Medium),
+  );
+
+  protected readonly priorityHint = computed(
+    () =>
+      this.priorityChoices.find((c) => c.value === this.selectedPriority())
+        ?.hint ?? '',
+  );
+
+  /** Required fields still to complete, for the hint next to the button. */
+  protected readonly remainingFields = computed(() => {
+    this.formValue();
+    return Object.values(this.ticketForm.controls).filter((c) => c.invalid)
+      .length;
+  });
+
   ngOnInit(): void {
     this.loadDropdownDataOptions();
+  }
+
+  /** Ctrl/Cmd + Enter submits from anywhere in the form. */
+  onFormKeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      event.preventDefault();
+      if (!this.isSubmitting()) this.onSubmit();
+    }
   }
 
   loadDropdownDataOptions(): void {
     this.isLoadingOptions.set(true);
     this.errorMessage.set(null);
+    this.optionsFailed.set(false);
 
     forkJoin({
       cats: this.categoryService.getCategories(),
@@ -79,6 +162,7 @@ export class TicketCreateComponent implements OnInit {
         this.errorMessage.set(
           `Failed to load dependency options: ${err.message}`,
         );
+        this.optionsFailed.set(true);
         this.isLoadingOptions.set(false);
       },
     });

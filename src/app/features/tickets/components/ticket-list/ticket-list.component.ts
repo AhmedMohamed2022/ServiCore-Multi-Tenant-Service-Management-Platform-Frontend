@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -12,6 +20,7 @@ import { TeamService } from '../../../../core/services/team.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { CustomerService } from '../../../../core/services/customer.service';
 import { AgentDirectoryService } from '../../../../core/services/agent-directory.service';
+import { AuthService } from '../../../../core/auth/services/auth.service';
 import { TicketDto } from '../../models/ticket.model';
 import {
   TICKET_PRIORITY_ORDER,
@@ -22,6 +31,7 @@ import {
   TicketStatusLabels,
   isActiveStatus,
 } from '../../models/ticket-enums.model';
+import { relativeTime } from '../../utils/ticket-time';
 
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
@@ -29,15 +39,59 @@ import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
 import {
   AlertComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
 } from '../../../../shared/ui/states/states.component';
 import {
   TicketPriorityBadgeComponent,
   TicketStatusBadgeComponent,
 } from '../../../../shared/ticket/ticket-badges.component';
+import { CountUpDirective } from '../../../dashboard/widgets/directives/count-up.directive';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | TicketStatus;
-type SortKey = 'created' | 'priority' | 'status' | 'title';
+type AssignmentFilter = 'ALL' | 'UNASSIGNED' | 'MINE' | 'NO_AGENT';
+type SortKey = 'created' | 'updated' | 'priority' | 'status' | 'title';
+type QueueView = 'all' | 'active' | 'triage' | 'critical';
+type Density = 'comfortable' | 'compact';
+
+/** The direction each sort key starts in; header clicks flip it. */
+const SORT_DEFAULT_DESC: Record<SortKey, boolean> = {
+  created: true,
+  updated: true,
+  priority: true,
+  status: false,
+  title: false,
+};
+
+/** Status colour dots on the filter chips: the same data-viz tokens as charts. */
+const STATUS_DOT: Record<number, string> = {
+  [TicketStatus.New]: 'bg-status-new',
+  [TicketStatus.Open]: 'bg-status-open',
+  [TicketStatus.InProgress]: 'bg-status-progress',
+  [TicketStatus.WaitingForCustomer]: 'bg-status-waiting',
+  [TicketStatus.Resolved]: 'bg-status-resolved',
+  [TicketStatus.Closed]: 'bg-status-closed',
+};
+
+interface StatusChip {
+  readonly key: StatusFilter;
+  readonly label: string;
+  readonly count: number;
+  readonly dot: string;
+}
+
+/** Everything one table row or mobile card needs, resolved once per change. */
+export interface TicketRow {
+  readonly ticket: TicketDto;
+  readonly shortId: string;
+  readonly customer: string;
+  readonly category: string;
+  readonly team: string;
+  /** Empty when nobody is assigned. */
+  readonly assignee: string;
+  /** Why an unassigned ticket is unassigned: no team yet, or no agent yet. */
+  readonly pending: 'triage' | 'agent' | null;
+  readonly updated: string;
+  readonly opened: string;
+}
 
 @Component({
   selector: 'app-ticket-list',
@@ -53,9 +107,9 @@ type SortKey = 'created' | 'priority' | 'status' | 'title';
     AvatarComponent,
     AlertComponent,
     EmptyStateComponent,
-    LoadingStateComponent,
     TicketStatusBadgeComponent,
     TicketPriorityBadgeComponent,
+    CountUpDirective,
   ],
   templateUrl: './ticket-list.component.html',
   styleUrls: ['./ticket-list.component.css'],
@@ -66,12 +120,16 @@ export class TicketListComponent implements OnInit {
   private readonly categoryService = inject(CategoryService);
   private readonly customerService = inject(CustomerService);
   private readonly agentDirectory = inject(AgentDirectoryService);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly statusLabels = TicketStatusLabels;
   protected readonly priorityLabels = TicketPriorityLabels;
   protected readonly statusOrder = TICKET_STATUS_ORDER;
   protected readonly priorityOrder = TICKET_PRIORITY_ORDER;
   protected readonly TicketStatus = TicketStatus;
+  protected readonly pageSizes = [25, 50, 100];
+  protected readonly skeletonRows = [0, 1, 2, 3, 4, 5, 6, 7];
 
   // --- Data -------------------------------------------------------------
   readonly allTickets = signal<TicketDto[]>([]);
@@ -81,36 +139,39 @@ export class TicketListComponent implements OnInit {
   /**
    * TicketDto is ids only — it carries teamId, customerId, categoryId and
    * assignedAgentId but no names for any of them. These lookups supply the
-   * display text for those columns.
-   *
-   * Until now the templates read `ticket.customerName`, `ticket.categoryName`
-   * and `ticket.assignedAgentName`, none of which the server has ever sent, so
-   * Customer and Category permanently rendered an em dash and every assigned
-   * ticket looked unassigned. Search matched on those same phantom fields, so
-   * searching by customer or agent silently matched nothing.
-   *
-   * Each lookup fails independently and degrades to a blank cell rather than
-   * failing the page.
+   * display text for those columns. Each lookup fails independently and
+   * degrades to a blank cell rather than failing the page.
    */
   readonly teamNames = signal<Map<string, string>>(new Map());
   readonly customerNames = signal<Map<string, string>>(new Map());
   readonly categoryNames = signal<Map<string, string>>(new Map());
 
+  /** Ticks once a minute so "3m ago" does not go stale on a long-lived tab. */
+  private readonly now = signal<number>(Date.now());
+
   // --- Filters ----------------------------------------------------------
   readonly searchTerm = signal<string>('');
   readonly statusFilter = signal<StatusFilter>('ALL');
   readonly priorityFilter = signal<TicketPriority | 'ALL'>('ALL');
-  readonly assignmentFilter = signal<'ALL' | 'UNASSIGNED'>('ALL');
+  readonly assignmentFilter = signal<AssignmentFilter>('ALL');
   readonly sortKey = signal<SortKey>('created');
+  /** True when the user has flipped the key's default direction. */
+  readonly sortReversed = signal<boolean>(false);
+  readonly density = signal<Density>('comfortable');
 
   readonly pageSize = signal<number>(25);
   readonly pageIndex = signal<number>(0);
 
+  private readonly currentUserId = computed(
+    () => this.authService.currentUser()?.userId ?? null,
+  );
+
+  /** Gives the viewer's own avatar the same initials as the top bar. */
+  protected readonly myEmail = computed(
+    () => this.authService.currentUser()?.email ?? 'You',
+  );
+
   // --- Counts -----------------------------------------------------------
-  // Previously these filtered on literal strings ('0', '2', '3', '4') that did
-  // not line up with TicketStatus at all — "New" matched nothing and
-  // "In Progress" silently returned Open tickets. Every count and filter now
-  // goes through the enum.
   readonly totalCount = computed(() => this.allTickets().length);
 
   readonly activeCount = computed(
@@ -124,9 +185,50 @@ export class TicketListComponent implements OnInit {
   readonly criticalCount = computed(
     () =>
       this.allTickets().filter(
-        (t) => t.priority === TicketPriority.Critical && isActiveStatus(t.status),
+        (t) =>
+          t.priority === TicketPriority.Critical && isActiveStatus(t.status),
       ).length,
   );
+
+  readonly waitingCount = computed(
+    () =>
+      this.allTickets().filter(
+        (t) => t.status === TicketStatus.WaitingForCustomer,
+      ).length,
+  );
+
+  readonly finishedCount = computed(
+    () =>
+      this.allTickets().filter(
+        (t) =>
+          t.status === TicketStatus.Resolved ||
+          t.status === TicketStatus.Closed,
+      ).length,
+  );
+
+  /** Active tickets that have a team but are still waiting for an agent. */
+  readonly needsAgentCount = computed(
+    () =>
+      this.allTickets().filter(
+        (t) => isActiveStatus(t.status) && !!t.teamId && !t.assignedAgentId,
+      ).length,
+  );
+
+  readonly criticalUnassignedCount = computed(
+    () =>
+      this.allTickets().filter(
+        (t) =>
+          t.priority === TicketPriority.Critical &&
+          isActiveStatus(t.status) &&
+          !t.assignedAgentId,
+      ).length,
+  );
+
+  readonly mineCount = computed(() => {
+    const me = this.currentUserId();
+    if (!me) return 0;
+    return this.allTickets().filter((t) => t.assignedAgentId === me).length;
+  });
 
   readonly statusCounts = computed(() => {
     const counts = new Map<TicketStatus, number>();
@@ -136,12 +238,28 @@ export class TicketListComponent implements OnInit {
     return counts;
   });
 
+  /** One chip per status, in workflow order, each with its live count. */
+  readonly statusChips = computed<StatusChip[]>(() => {
+    const counts = this.statusCounts();
+    return [
+      { key: 'ALL', label: 'All', count: this.totalCount(), dot: '' },
+      { key: 'ACTIVE', label: 'Active', count: this.activeCount(), dot: '' },
+      ...this.statusOrder.map((status) => ({
+        key: status as StatusFilter,
+        label: TicketStatusLabels[status],
+        count: counts.get(status) ?? 0,
+        dot: STATUS_DOT[status],
+      })),
+    ];
+  });
+
   // --- Filtering and sorting -------------------------------------------
   readonly filteredTickets = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
     const priority = this.priorityFilter();
     const assignment = this.assignmentFilter();
+    const me = this.currentUserId();
 
     let rows = this.allTickets();
 
@@ -157,6 +275,12 @@ export class TicketListComponent implements OnInit {
 
     if (assignment === 'UNASSIGNED') {
       rows = rows.filter((t) => !t.teamId);
+    } else if (assignment === 'MINE') {
+      rows = rows.filter((t) => !!me && t.assignedAgentId === me);
+    } else if (assignment === 'NO_AGENT') {
+      rows = rows.filter(
+        (t) => isActiveStatus(t.status) && !!t.teamId && !t.assignedAgentId,
+      );
     }
 
     if (term) {
@@ -179,8 +303,42 @@ export class TicketListComponent implements OnInit {
     return this.filteredTickets().slice(start, start + this.pageSize());
   });
 
+  /** The visible page, with every lookup already resolved. */
+  readonly rows = computed<TicketRow[]>(() => {
+    const now = this.now();
+    return this.pagedTickets().map((ticket) => {
+      const assignee = this.assigneeNameFor(ticket);
+      return {
+        ticket,
+        shortId: ticket.id.substring(0, 8),
+        customer: this.customerNameFor(ticket),
+        category: this.categoryNameFor(ticket),
+        team: this.teamNameFor(ticket),
+        assignee,
+        pending:
+          assignee || !isActiveStatus(ticket.status)
+            ? null
+            : ticket.teamId
+              ? 'agent'
+              : 'triage',
+        updated: relativeTime(ticket.updatedAt, now),
+        opened: relativeTime(ticket.createdAt, now),
+      };
+    });
+  });
+
   readonly pageCount = computed(() =>
     Math.max(1, Math.ceil(this.filteredTickets().length / this.pageSize())),
+  );
+
+  readonly rangeStart = computed(() =>
+    this.filteredTickets().length === 0
+      ? 0
+      : this.pageIndex() * this.pageSize() + 1,
+  );
+
+  readonly rangeEnd = computed(
+    () => this.pageIndex() * this.pageSize() + this.pagedTickets().length,
   );
 
   readonly hasActiveFilters = computed(
@@ -189,6 +347,40 @@ export class TicketListComponent implements OnInit {
       this.priorityFilter() !== 'ALL' ||
       this.assignmentFilter() !== 'ALL' ||
       this.searchTerm().trim().length > 0,
+  );
+
+  /**
+   * Which of the four summary tiles the current filters correspond to
+   * exactly (search aside), so a tile only reads as pressed when pressing it
+   * would not change anything.
+   */
+  readonly activeView = computed<QueueView | null>(() => {
+    const status = this.statusFilter();
+    const priority = this.priorityFilter();
+    const assignment = this.assignmentFilter();
+
+    if (status === 'ALL' && priority === 'ALL' && assignment === 'ALL') {
+      return 'all';
+    }
+    if (status === 'ACTIVE' && priority === 'ALL' && assignment === 'ALL') {
+      return 'active';
+    }
+    if (status === 'ALL' && priority === 'ALL' && assignment === 'UNASSIGNED') {
+      return 'triage';
+    }
+    if (
+      status === 'ACTIVE' &&
+      priority === TicketPriority.Critical &&
+      assignment === 'ALL'
+    ) {
+      return 'critical';
+    }
+    return null;
+  });
+
+  /** First load only: later refreshes keep the rows on screen. */
+  readonly isInitialLoad = computed(
+    () => this.isLoading() && this.allTickets().length === 0,
   );
 
   constructor() {
@@ -200,6 +392,9 @@ export class TicketListComponent implements OnInit {
       this.assignmentFilter();
       this.pageIndex.set(0);
     });
+
+    const tick = setInterval(() => this.now.set(Date.now()), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(tick));
   }
 
   ngOnInit(): void {
@@ -215,6 +410,7 @@ export class TicketListComponent implements OnInit {
       next: (tickets) => {
         this.allTickets.set(tickets);
         this.isLoading.set(false);
+        this.now.set(Date.now());
       },
       error: (err: Error) => {
         this.errorMessage.set(err.message);
@@ -263,9 +459,11 @@ export class TicketListComponent implements OnInit {
 
   assigneeNameFor(ticket: TicketDto): string {
     if (!ticket.assignedAgentId) return '';
+    if (ticket.assignedAgentId === this.currentUserId()) return 'You';
     return this.agentDirectory.labelFor(ticket.assignedAgentId, 'Agent');
   }
 
+  // --- Filter actions ---------------------------------------------------
   setStatusFilter(status: StatusFilter): void {
     this.statusFilter.set(status);
   }
@@ -274,12 +472,29 @@ export class TicketListComponent implements OnInit {
     this.priorityFilter.set(priority);
   }
 
-  setAssignmentFilter(value: 'ALL' | 'UNASSIGNED'): void {
+  setAssignmentFilter(value: AssignmentFilter): void {
     this.assignmentFilter.set(value);
   }
 
-  setSort(key: SortKey): void {
-    this.sortKey.set(key);
+  /**
+   * Summary tiles are saved views: each sets the status, priority and
+   * assignment filters together (the search box is left alone). Pressing the
+   * tile that is already active returns to the full queue.
+   */
+  setView(view: QueueView): void {
+    const target = this.activeView() === view ? 'all' : view;
+
+    this.statusFilter.set(
+      target === 'active' || target === 'critical' ? 'ACTIVE' : 'ALL',
+    );
+    this.priorityFilter.set(
+      target === 'critical' ? TicketPriority.Critical : 'ALL',
+    );
+    this.assignmentFilter.set(target === 'triage' ? 'UNASSIGNED' : 'ALL');
+  }
+
+  isStatusChipActive(key: StatusFilter): boolean {
+    return this.statusFilter() === key;
   }
 
   clearFilters(): void {
@@ -289,31 +504,135 @@ export class TicketListComponent implements OnInit {
     this.assignmentFilter.set('ALL');
   }
 
+  // --- Sorting ----------------------------------------------------------
+  /** From the sort menu: pick a key in its natural direction. */
+  setSort(key: SortKey): void {
+    this.sortKey.set(key);
+    this.sortReversed.set(false);
+    this.pageIndex.set(0);
+  }
+
+  /** From a column header: same key flips direction, a new key starts fresh. */
+  toggleSort(key: SortKey): void {
+    if (this.sortKey() === key) {
+      this.sortReversed.update((reversed) => !reversed);
+    } else {
+      this.sortKey.set(key);
+      this.sortReversed.set(false);
+    }
+    this.pageIndex.set(0);
+  }
+
+  toggleSortDirection(): void {
+    this.sortReversed.update((reversed) => !reversed);
+    this.pageIndex.set(0);
+  }
+
+  /** aria-sort value for a header, or null when the column is not sorted. */
+  ariaSort(key: SortKey): 'ascending' | 'descending' | null {
+    if (this.sortKey() !== key) return null;
+    const descending = SORT_DEFAULT_DESC[key] !== this.sortReversed();
+    return descending ? 'descending' : 'ascending';
+  }
+
+  /** Arrow for the sorted column; a quiet two-way glyph for the others. */
+  protected sortIcon(key: SortKey): string {
+    const direction = this.ariaSort(key);
+    if (!direction) return 'unfold_more';
+    return direction === 'descending' ? 'arrow_downward' : 'arrow_upward';
+  }
+
+  protected sortLabel(): string {
+    const labels: Record<SortKey, string> = {
+      created: 'date opened',
+      updated: 'last update',
+      priority: 'priority',
+      status: 'workflow order',
+      title: 'title',
+    };
+    return labels[this.sortKey()];
+  }
+
+  // --- Paging and layout ------------------------------------------------
   goToPage(index: number): void {
     this.pageIndex.set(Math.min(Math.max(0, index), this.pageCount() - 1));
   }
 
+  setPageSize(size: number): void {
+    this.pageSize.set(Number(size) || 25);
+    this.pageIndex.set(0);
+  }
+
+  toggleDensity(): void {
+    this.density.update((d) =>
+      d === 'comfortable' ? 'compact' : 'comfortable',
+    );
+  }
+
+  /**
+   * Up/Down/Home/End move focus between rows while a row link has focus, so
+   * a long queue can be walked from the keyboard. Enter on the focused link
+   * opens the ticket as usual.
+   */
+  onRowKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target?.hasAttribute('data-row-link')) return;
+
+    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+    if (!keys.includes(event.key)) return;
+
+    const links = Array.from(
+      (event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(
+        '[data-row-link]',
+      ),
+    );
+    const index = links.indexOf(target);
+    if (index === -1) return;
+
+    const next =
+      event.key === 'ArrowDown'
+        ? index + 1
+        : event.key === 'ArrowUp'
+          ? index - 1
+          : event.key === 'Home'
+            ? 0
+            : links.length - 1;
+
+    const destination = links[Math.min(Math.max(0, next), links.length - 1)];
+    if (destination) {
+      event.preventDefault();
+      destination.focus();
+    }
+  }
+
   private sortRows(rows: TicketDto[]): TicketDto[] {
     const sorted = [...rows];
+    const byNewest = (a: TicketDto, b: TicketDto) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
     switch (this.sortKey()) {
       case 'priority':
         // Critical first — that is the order an operator wants to triage in.
-        return sorted.sort(
-          (a, b) =>
-            b.priority - a.priority ||
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        sorted.sort((a, b) => b.priority - a.priority || byNewest(a, b));
+        break;
       case 'status':
-        return sorted.sort((a, b) => a.status - b.status);
+        sorted.sort((a, b) => a.status - b.status || byNewest(a, b));
+        break;
       case 'title':
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'updated':
+        sorted.sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        );
+        break;
       case 'created':
       default:
-        return sorted.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        sorted.sort(byNewest);
+        break;
     }
+
+    return this.sortReversed() ? sorted.reverse() : sorted;
   }
 }

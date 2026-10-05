@@ -4,56 +4,180 @@
 
 /* The thread is capped rather than unbounded so the right rail and the
    composer stay reachable on a long ticket without scrolling the whole page. */
+.cm-thread-wrap {
+  position: relative;
+}
+
 .sc-thread {
-  max-height: 32rem;
+  max-height: min(34rem, 62vh);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+.sc-thread:focus-visible {
+  outline: 2px solid var(--sc-brand-600);
+  outline-offset: -2px;
+}
+
+/* "New messages" pill, floating over the bottom edge of the thread. */
+.cm-jump {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  box-shadow: var(--sc-shadow-pop);
+}
+
+/* --- Day divider ------------------------------------------------------------- */
+
+.cm-day {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0.75rem 0 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sc-text-subtle);
+}
+
+.cm-day:first-child {
+  margin-top: 0;
+}
+
+.cm-day::before,
+.cm-day::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background-color: var(--sc-border);
+}
+
+/* --- Rows -------------------------------------------------------------------- */
+
+.cm-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.cm-row:first-child,
+.cm-day + .cm-row {
+  margin-top: 0;
+}
+
+/* A continuation of the previous author's run sits tight against it. */
+.cm-row-run {
+  margin-top: 0;
+}
+
+.cm-avatar {
+  display: block;
+  width: 32px;
+  flex-shrink: 0;
+}
+
 .sc-msg-body {
   min-width: 0;
-  flex: 1 1 auto;
+  max-width: min(100%, 38rem);
+  flex: 0 1 auto;
 }
 
 /* Own messages mirror to the right. The alignment is a convenience, not the
-   only signal — the author line still reads "You". */
+   only signal: the author line still reads "You". */
 .sc-msg-mine {
   flex-direction: row-reverse;
 }
 
-.sc-msg-mine .sc-msg-body > div:first-child {
+.sc-msg-mine .sc-msg-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+.cm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.sc-msg-mine .cm-meta {
   flex-direction: row-reverse;
 }
 
 .sc-bubble {
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.875rem;
   color: var(--sc-text-muted);
   background-color: var(--sc-surface-muted);
   border: 1px solid var(--sc-border);
   border-radius: var(--sc-radius-lg);
-  border-top-left-radius: 2px;
+  border-top-left-radius: 4px;
+}
+
+/* Staff replies carry a faint brand tint, so the two sides of a support
+   conversation are told apart by more than the badge text. */
+.sc-bubble-staff {
+  color: var(--sc-text);
+  background-color: var(--sc-brand-50);
+  border-color: var(--sc-brand-100);
 }
 
 .sc-bubble-mine {
-  color: var(--sc-text-inverse);
+  color: var(--sc-on-brand);
   background-color: var(--sc-brand-600);
-  border-color: var(--sc-brand-600);
+  background-image: var(--sc-grad-action);
+  border-color: var(--sc-brand-700);
   border-top-left-radius: var(--sc-radius-lg);
-  border-top-right-radius: 2px;
+  border-top-right-radius: 4px;
+  box-shadow: var(--sc-shadow);
 }
 
-.sc-spin {
-  animation: sc-rotate 1s linear infinite;
+/* Tight runs: flatten the touching corners so they read as one block. */
+.cm-row-run .sc-bubble {
+  border-top-left-radius: 4px;
 }
 
-@keyframes sc-rotate {
-  to {
-    transform: rotate(360deg);
-  }
+.cm-row-run.sc-msg-mine .sc-bubble {
+  border-top-left-radius: var(--sc-radius-lg);
+  border-top-right-radius: 4px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sc-spin {
-    animation: none;
+.cm-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.cm-link {
+  color: var(--sc-brand-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* On the solid brand bubble the brand link colour has no contrast. */
+.sc-bubble-mine .cm-link {
+  color: var(--sc-on-brand);
+  text-decoration-color: rgb(255 255 255 / 0.6);
+}
+
+/* --- Composer ------------------------------------------------------------------- */
+
+.cm-composer {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--sc-border);
+  background-color: var(--sc-surface-muted);
+  border-bottom-left-radius: var(--sc-radius-lg);
+  border-bottom-right-radius: var(--sc-radius-lg);
+}
+
+@media (max-width: 639px) {
+  .sc-msg-body {
+    max-width: 100%;
   }
 }

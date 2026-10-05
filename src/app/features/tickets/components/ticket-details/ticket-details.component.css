@@ -10,72 +10,241 @@
   color: var(--sc-text-subtle);
 }
 
-/* --- Lifecycle rail ------------------------------------------------------
+/* --- Layout -----------------------------------------------------------------
+   Below xl the two columns dissolve into one stack and `order` interleaves
+   them, so the assignment controls sit right after the request instead of
+   below the whole conversation: request, assignment, conversation, details.
+   From xl up it is the familiar main column plus a 320px rail. */
+
+.td-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.td-main,
+.td-rail {
+  display: contents;
+}
+
+.td-request {
+  order: 1;
+}
+.td-assign {
+  order: 2;
+}
+.td-convo {
+  order: 3;
+}
+.td-details {
+  order: 4;
+}
+
+@media (min-width: 1280px) {
+  .td-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+
+  .td-main,
+  .td-rail {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+}
+
+/* --- Header bits --------------------------------------------------------------- */
+
+.td-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--sc-radius-sm);
+  font-size: 12px;
+  color: var(--sc-text-subtle);
+  cursor: pointer;
+  transition:
+    background-color var(--sc-dur-fast) var(--sc-ease),
+    color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.td-id:hover {
+  background-color: var(--sc-surface-sunken);
+  color: var(--sc-text);
+}
+
+.td-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background-color: var(--sc-border-strong);
+}
+
+/* "What happens next" callout. Tinted and iconed, not an error. */
+.td-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 42rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--sc-brand-100);
+  border-radius: var(--sc-radius-md);
+  background-color: var(--sc-brand-50);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--sc-brand-800);
+}
+
+.td-hint .material-symbols-rounded {
+  margin-top: 1px;
+  color: var(--sc-brand-600);
+}
+
+/* --- Lifecycle stepper ----------------------------------------------------------
    Read-only on purpose. It reports where the ticket is in the real workflow
    (New -> Open -> InProgress -> WaitingForCustomer -> Resolved -> Closed)
    without offering a way to jump between states, which would bypass the
    transition rules the backend enforces. */
 
-.sc-step {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding-bottom: 1rem;
-  font-size: 13px;
-  color: var(--sc-text-subtle);
+.td-lifecycle {
+  padding: 0.875rem 1rem;
+  overflow-x: auto;
 }
 
-.sc-step-last {
-  padding-bottom: 0;
+.td-steps {
+  min-width: 34rem;
 }
 
-/* The connecting line between markers. */
-.sc-step:not(.sc-step-last)::before {
-  content: '';
-  position: absolute;
-  left: 11px;
-  top: 22px;
-  bottom: 2px;
-  width: 2px;
+.td-seg {
+  height: 6px;
+  flex: 1;
+  border-radius: 999px;
   background-color: var(--sc-border);
 }
 
-.sc-step-done:not(.sc-step-last)::before {
+.td-seg-done {
   background-color: var(--sc-success-600);
 }
 
-.sc-step-marker {
+.td-seg-current {
+  background-image: var(--sc-grad-brand);
+}
+
+.td-step {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--sc-text-subtle);
+}
+
+/* Connector to the next step, centred on the marker row. */
+.td-step:not(.td-step-last)::before {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: calc(50% + 17px);
+  right: calc(-50% + 17px);
+  height: 2px;
+  border-radius: 2px;
+  background-color: var(--sc-border);
+}
+
+.td-step-done:not(.td-step-last)::before {
+  background-color: var(--sc-success-600);
+}
+
+.td-step-marker {
   z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 24px;
-  flex-shrink: 0;
   border-radius: 999px;
-  border: 1px solid var(--sc-border);
+  border: 1px solid var(--sc-border-strong);
   background-color: var(--sc-surface);
   color: var(--sc-text-subtle);
 }
 
-.sc-step-done .sc-step-marker {
+.td-step-done .td-step-marker {
   border-color: var(--sc-success-600);
   background-color: var(--sc-success-50);
   color: var(--sc-success-700);
 }
 
-.sc-step-current .sc-step-marker {
-  border-color: var(--sc-brand-600);
-  background-color: var(--sc-brand-600);
-  color: #ffffff;
+.td-step-current .td-step-marker {
+  border-color: transparent;
+  background-image: var(--sc-grad-brand);
+  color: var(--sc-on-brand);
+  box-shadow:
+    0 0 0 4px var(--sc-focus-ring),
+    var(--sc-shadow-brand);
 }
 
-.sc-step-done .sc-step-label {
+.td-step-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 0 4px;
+}
+
+.td-step-label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.td-step-done .td-step-label {
   color: var(--sc-text-muted);
 }
 
-.sc-step-current .sc-step-label {
-  font-weight: 600;
+.td-step-current .td-step-label {
+  font-weight: 700;
   color: var(--sc-text);
+}
+
+.td-step-time {
+  font-size: 11px;
+  color: var(--sc-text-subtle);
+}
+
+/* --- Request text ---------------------------------------------------------------- */
+
+.td-request-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--sc-text-muted);
+}
+
+.td-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.td-link {
+  color: var(--sc-brand-700);
+  text-decoration: underline;
+  text-decoration-color: var(--sc-brand-200);
+  text-underline-offset: 2px;
+  transition: text-decoration-color var(--sc-dur-fast) var(--sc-ease);
+}
+
+.td-link:hover {
+  text-decoration-color: var(--sc-brand-700);
 }

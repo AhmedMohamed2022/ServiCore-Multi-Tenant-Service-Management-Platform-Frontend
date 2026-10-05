@@ -1,4 +1,11 @@
-import { Component, computed, inject, Input, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  Input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -24,14 +31,13 @@ import {
   TicketStatusLabels,
 } from '../../models/ticket-enums.model';
 
+import { formatSpan, linkify, relativeTime } from '../../utils/ticket-time';
+
 import { TicketCommentsComponent } from '../ticket-comments/ticket-comments.component';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { AvatarComponent } from '../../../../shared/ui/avatar/avatar.component';
-import {
-  AlertComponent,
-  LoadingStateComponent,
-} from '../../../../shared/ui/states/states.component';
+import { AlertComponent } from '../../../../shared/ui/states/states.component';
 import { ConfirmService } from '../../../../shared/ui/confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../../../../shared/ui/toast/toast.service';
 import {
@@ -47,6 +53,12 @@ interface WorkflowStep {
   readonly label: string;
   readonly icon: string;
   readonly state: 'done' | 'current' | 'upcoming';
+  /**
+   * When the ticket reached this status, for the three moments the API
+   * actually records (created, resolved, closed). The intermediate statuses
+   * have no timestamp in the contract, so they stay null rather than guessed.
+   */
+  readonly at: string | null;
 }
 
 @Component({
@@ -63,7 +75,6 @@ interface WorkflowStep {
     IconComponent,
     AvatarComponent,
     AlertComponent,
-    LoadingStateComponent,
     TicketStatusBadgeComponent,
     TicketPriorityBadgeComponent,
   ],
@@ -202,7 +213,7 @@ export class TicketDetailsComponent implements OnInit {
       return null;
     }
 
-    return 'Workflow actions are available to this ticket\'s assigned agent and to organization managers.';
+    return "Workflow actions are available to this ticket's assigned agent and to organization managers.";
   });
 
   readonly isClosed = computed(
@@ -307,8 +318,94 @@ export class TicketDetailsComponent implements OnInit {
       icon: TicketStatusIcons[status],
       state:
         status < current ? 'done' : status === current ? 'current' : 'upcoming',
+      at: this.stepTimestamp(status),
     }));
   });
+
+  /** 1-based position of the current status, for the compact mobile bar. */
+  readonly currentStepNumber = computed(
+    () => this.workflowSteps().findIndex((s) => s.state === 'current') + 1,
+  );
+
+  readonly currentStepLabel = computed(
+    () => this.workflowSteps().find((s) => s.state === 'current')?.label ?? '',
+  );
+
+  /** Local UI state: whether a long request is shown in full. */
+  readonly requestExpanded = signal<boolean>(false);
+
+  /** The description split into text and http(s) link segments. */
+  readonly descriptionSegments = computed(() =>
+    linkify(this.ticket()?.description ?? ''),
+  );
+
+  readonly isLongRequest = computed(() => {
+    const text = this.ticket()?.description ?? '';
+    return text.length > 480 || text.split('\n').length > 7;
+  });
+
+  /**
+   * Headline facts, all derived from the ticket's own timestamps. The span is
+   * "open for" while the ticket is live and "resolved in" once resolvedAt
+   * exists; it is never an estimate.
+   */
+  readonly facts = computed(() => {
+    const t = this.ticket();
+    if (!t) return null;
+
+    const finishedAt = t.resolvedAt ?? t.closedAt;
+    return {
+      opened: relativeTime(t.createdAt),
+      updated: relativeTime(t.updatedAt),
+      spanLabel: t.resolvedAt
+        ? 'Resolved in'
+        : t.closedAt
+          ? 'Closed after'
+          : 'Open for',
+      span: formatSpan(t.createdAt, finishedAt ?? Date.now()),
+    };
+  });
+
+  private stepTimestamp(status: TicketStatus): string | null {
+    const t = this.ticket();
+    if (!t) return null;
+    switch (status) {
+      case TicketStatus.New:
+        return t.createdAt;
+      case TicketStatus.Resolved:
+        return t.resolvedAt;
+      case TicketStatus.Closed:
+        return t.closedAt;
+      default:
+        return null;
+    }
+  }
+
+  protected readonly relativeTime = relativeTime;
+
+  protected readonly skeletonFacts = [0, 1, 2];
+  protected readonly skeletonSteps = [0, 1, 2, 3, 4, 5];
+
+  toggleRequestExpanded(): void {
+    this.requestExpanded.update((expanded) => !expanded);
+  }
+
+  /** Copies the full ticket id, which the header only shows abbreviated. */
+  copyTicketId(): void {
+    const id = this.ticket()?.id;
+    if (!id) return;
+
+    const clipboard = navigator.clipboard;
+    if (!clipboard?.writeText) {
+      this.toast.error('Copying is not available in this browser.');
+      return;
+    }
+
+    clipboard.writeText(id).then(
+      () => this.toast.info('Ticket ID copied.'),
+      () => this.toast.error('Could not copy the ticket ID.'),
+    );
+  }
 
   readonly breadcrumbs = computed(() => [
     {

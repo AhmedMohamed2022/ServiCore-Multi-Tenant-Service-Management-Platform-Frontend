@@ -1,15 +1,17 @@
 <section class="sc-card" aria-labelledby="conversationHeading">
     <div class="sc-card-header">
-        <div class="flex items-center gap-2">
-            <sc-icon name="forum" size="sm" class="text-ink-subtle" />
+        <div class="flex items-center gap-2.5">
+            <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="forum" size="sm" /></span>
             <h2 id="conversationHeading" class="sc-card-title">Conversation</h2>
             @if (messageCount() > 0) {
             <span class="sc-badge sc-badge-neutral">{{ messageCount() }}</span>
             }
         </div>
         <button type="button" class="sc-btn sc-btn-ghost sc-btn-sm" (click)="loadCommentsTimeline()"
-            [disabled]="isLoading()">
-            <sc-icon name="refresh" size="sm" />
+            [disabled]="isLoading()" aria-label="Refresh conversation">
+            <span class="inline-flex" [class.sc-spin]="isLoading()">
+                <sc-icon name="refresh" size="sm" />
+            </span>
             <span class="hidden sm:inline">Refresh</span>
         </button>
     </div>
@@ -23,41 +25,78 @@
     <!-- ==================================================================
          Thread
          ================================================================== -->
-    <div class="sc-thread" role="log" aria-live="polite" aria-relevant="additions">
-        @if (isLoading()) {
-        <div class="p-5">
-            <sc-loading-state label="Loading conversation" [count]="3" />
-        </div>
-        } @else if (resolvedComments().length === 0) {
-        <sc-empty-state icon="chat_bubble" title="No messages yet"
-            [description]="locked() ? 'This ticket was closed without any conversation.' : 'Post the first update and the customer will be notified.'" />
-        } @else {
-        <ol class="flex flex-col gap-4 p-5">
-            @for (message of resolvedComments(); track message.id) {
-            <li class="flex gap-3" [class.sc-msg-mine]="message.isMine">
-                <sc-avatar [name]="message.avatarKey" size="sm" class="mt-5" />
-
-                <div class="sc-msg-body">
-                    <div class="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span class="text-[13px] font-semibold text-ink">{{ message.authorName }}</span>
-                        @if (message.roleLabel) {
-                        <span class="sc-badge" [class]="message.isStaff ? 'sc-badge-info' : 'sc-badge-neutral'">
-                            {{ message.roleLabel }}
-                        </span>
-                        }
-                        <time class="text-xs text-ink-subtle" [attr.datetime]="message.createdAt">
-                            {{ message.createdAt | date:'MMM d, y · HH:mm' }}
-                        </time>
-                    </div>
-
-                    <div class="sc-bubble" [class.sc-bubble-mine]="message.isMine">
-                        <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed">{{ message.content }}</p>
+    <div class="cm-thread-wrap">
+        <div #thread class="sc-thread" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
+            aria-label="Messages" (scroll)="onThreadScroll()">
+            @if (isLoading() && messageCount() === 0) {
+            <div class="flex flex-col gap-5 p-5" role="status" aria-label="Loading conversation">
+                <span class="sc-sr-only">Loading conversation</span>
+                @for (i of skeletonMessages; track i) {
+                <div class="flex gap-3" aria-hidden="true" [class.flex-row-reverse]="i === 1">
+                    <div class="sc-skeleton h-8 w-8 shrink-0 rounded-full"></div>
+                    <div class="min-w-0 flex-1" [class.flex]="i === 1" [class.justify-end]="i === 1">
+                        <div class="sc-skeleton h-[52px] rounded-sc-lg" [class]="i === 1 ? 'w-2/5' : 'w-3/5'"></div>
                     </div>
                 </div>
-            </li>
+                }
+            </div>
+            } @else if (resolvedComments().length === 0) {
+            <sc-empty-state icon="chat_bubble" title="No messages yet"
+                [description]="locked() ? 'This ticket was closed without any conversation.' : 'Post the first update and the customer will be notified.'" />
+            } @else {
+            <ol class="flex flex-col gap-1 p-5">
+                @for (item of threadItems(); track item.key) {
+                @if (item.kind === 'day') {
+                <li class="cm-day"><span>{{ item.label }}</span></li>
+                } @else {
+                <li class="cm-row" [class.sc-msg-mine]="item.message.isMine" [class.cm-row-run]="!item.showHeader">
+                    <span class="cm-avatar">
+                        @if (item.showHeader) {
+                        <sc-avatar [name]="item.message.isMine ? myEmail() : item.message.avatarKey" size="sm" />
+                        }
+                    </span>
+
+                    <div class="sc-msg-body">
+                        @if (item.showHeader) {
+                        <div class="cm-meta">
+                            <span class="text-[13px] font-semibold text-ink">{{ item.message.authorName }}</span>
+                            @if (item.message.roleLabel) {
+                            <span class="sc-badge"
+                                [class]="item.message.isStaff ? 'sc-badge-info' : 'sc-badge-neutral'">
+                                {{ item.message.roleLabel }}
+                            </span>
+                            }
+                            <time class="text-xs text-ink-subtle" [attr.datetime]="item.message.createdAt"
+                                [attr.title]="item.message.createdAt | date:'MMM d, y · HH:mm'">
+                                {{ item.message.createdAt | date:'HH:mm' }}
+                            </time>
+                        </div>
+                        } @else {
+                        <time class="sc-sr-only" [attr.datetime]="item.message.createdAt">
+                            {{ item.message.createdAt | date:'HH:mm' }}
+                        </time>
+                        }
+
+                        <div class="sc-bubble" [class.sc-bubble-mine]="item.message.isMine"
+                            [class.sc-bubble-staff]="item.message.isStaff && !item.message.isMine"
+                            [attr.title]="item.showHeader ? null : (item.message.createdAt | date:'MMM d, y · HH:mm')">
+                            <p class="cm-text">@for (seg of item.segments; track $index) {@if (seg.href) {<a
+                                    [href]="seg.href" target="_blank" rel="noopener noreferrer" class="cm-link">{{
+                                    seg.text }}</a>} @else {<ng-container>{{ seg.text }}</ng-container>}}</p>
+                        </div>
+                    </div>
+                </li>
+                }
+                }
+            </ol>
             }
-        </ol>
-        <div #scrollAnchor aria-hidden="true"></div>
+        </div>
+
+        @if (hasUnseen()) {
+        <button type="button" class="cm-jump sc-btn sc-btn-primary sc-btn-sm" (click)="jumpToLatest()">
+            <sc-icon name="arrow_downward" size="xs" />
+            New messages
+        </button>
         }
     </div>
 
@@ -70,11 +109,10 @@
         <span>This ticket is closed. The conversation is read-only.</span>
     </div>
     } @else {
-    <form class="border-t border-line p-5" [formGroup]="commentForm" (ngSubmit)="onSubmitComment()">
+    <form class="cm-composer" [formGroup]="commentForm" (ngSubmit)="onSubmitComment()">
         <label for="commentContent" class="sc-label">Add a message</label>
         <textarea id="commentContent" class="sc-textarea" formControlName="content" rows="3"
-            placeholder="Share an update, ask a question, or record what you did. Ctrl + Enter to post."
-            (keydown)="onComposerKeydown($event)"
+            placeholder="Share an update, ask a question, or record what you did." (keydown)="onComposerKeydown($event)"
             [class.sc-input-invalid]="commentForm.controls.content.touched && commentForm.controls.content.invalid"
             [attr.aria-invalid]="commentForm.controls.content.touched && commentForm.controls.content.invalid"
             aria-describedby="commentHint"></textarea>
@@ -83,15 +121,24 @@
         <p class="sc-field-error"><sc-icon name="error" size="xs" /> A message can't be empty.</p>
         } @else if (commentForm.controls.content.touched && commentForm.controls.content.errors?.['minlength']) {
         <p class="sc-field-error"><sc-icon name="error" size="xs" /> Write at least two characters.</p>
-        } @else {
-        <p id="commentHint" class="sc-hint">
-            Everyone on this ticket is notified. {{ remainingChars() }} characters left.
-        </p>
+        } @else if (commentForm.controls.content.errors?.['maxlength']) {
+        <p class="sc-field-error"><sc-icon name="error" size="xs" /> That's {{ -remainingChars() }} characters over the
+            limit.</p>
         }
 
-        <div class="mt-3 flex justify-end">
-            <button type="submit" class="sc-btn sc-btn-primary"
-                [disabled]="commentForm.invalid || isSubmitting()">
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <p id="commentHint" class="m-0 text-xs text-ink-subtle">
+                Everyone on this ticket is notified.
+                @if (remainingChars() <= 300) { <span [class.text-danger-700]="remainingChars() < 0"
+                    [class.font-semibold]="remainingChars() < 0">
+                    {{ remainingChars() }} characters left.
+                    </span>
+                    }
+                    <span class="ml-1 hidden sm:inline">
+                        <kbd class="sc-kbd">Ctrl</kbd> <kbd class="sc-kbd">Enter</kbd> to post
+                    </span>
+            </p>
+            <button type="submit" class="sc-btn sc-btn-primary" [disabled]="commentForm.invalid || isSubmitting()">
                 @if (isSubmitting()) {
                 <sc-icon name="progress_activity" size="sm" class="sc-spin" />
                 Posting
