@@ -1,79 +1,330 @@
-# ServiCore: Multi-Tenant Service Management Platform
+# ServiCore Frontend
 
-A ticketing and service-desk platform where every organization gets its own isolated workspace. Staff manage teams, tickets and reporting; customers use a separate portal. Built end to end with **Angular 19** and **ASP.NET Core 8**.
+The Angular frontend for **ServiCore**, a multi-tenant customer support and ticket management platform.
 
-**Live demo:** https://servicore-lovat.vercel.app/
-**Backend repo:** https://github.com/AhmedMohamed2022/ServiCore-Multi-Tenant-Service-Management-Platform-Backend
+ServiCore provides separate experiences for organization staff and customers while enforcing organization-aware authorization and tenant isolation through the backend API.
 
-<!-- Add 2-3 screenshots or one short GIF here: dashboard, ticket details, customer portal. -->
-<!-- ![Dashboard](docs/dashboard.png) -->
+## Live Demo
 
-## Try it
+**https://servicore-lovat.vercel.app/**
 
-Registering creates your own organization with you as **Owner**, so there are no shared logins. Open the demo, choose **Get started**, and you have a private workspace in under a minute.
+## Repositories
 
-> The first request after a period of inactivity may be slow while the API wakes up.
+- **Frontend:** https://github.com/AhmedMohamed2022/ServiCore-Multi-Tenant-Service-Management-Platform-Frontend
+- **Backend:** https://github.com/AhmedMohamed2022/ServiCore-Multi-Tenant-Service-Management-Platform-Backend
 
-## Features
+## Screenshots
 
-- **Multi-tenancy:** every request is scoped to an organization; users can belong to several and switch between them.
-- **Roles:** Owner, Manager and Agent for staff, plus an isolated Customer portal. Enforced by route guards on the client and authorization policies on the server.
-- **Ticket workflow:** `New → Open → In progress → Waiting for customer → Resolved → Closed`, with each action offered only to the people allowed to take it. Four priority levels (Low to Critical).
-- **Teams and assignment:** route tickets to teams, assign to agents, support unassigned tickets.
-- **Realtime:** SignalR delivers notifications and ticket comments instantly.
-- **Reporting:** ticket, team, agent, customer and category statistics plus a time-series view, over any date range.
-- **Invitations:** email invitations for staff and customers, with preview and accept flows for new and existing users.
-- **Management console:** teams, customer directory, categories and invitations.
+![ServiCore Dashboard](docs/screenshots/dashboard.png)
 
-## Tech stack
+*Organization dashboard with ticket statistics, activity, and reporting.*
 
-| Layer    | Technology                                                                                                               |
-| -------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Frontend | Angular 19 (standalone components, signals, lazy routes), Tailwind CSS, Angular Material/CDK, ngx-charts, SignalR client |
-| Backend  | ASP.NET Core 8, Clean Architecture (Domain / Application / Infrastructure / API), EF Core 8, SQL Server                  |
-| Auth     | ASP.NET Identity, JWT bearer, organization-role authorization handlers                                                   |
-| Realtime | SignalR hub                                                                                                              |
-| Email    | MailKit (SMTP)                                                                                                           |
-| Tests    | xUnit unit tests; integration tests for tenant isolation, role rules, ticket visibility and workflow                     |
-| Hosting  | Vercel (frontend)                                                                                                        |
+![Ticket Management](docs/screenshots/tickets.png)
 
-## Architecture
+*Ticket queue with organization-scoped ticket management.*
 
+![Ticket Details](docs/screenshots/ticket-details.png)
+
+*Ticket lifecycle, assignment, details, and customer conversation.*
+
+![Customer Portal](docs/screenshots/customer-portal.png)
+
+*Dedicated customer portal for creating and tracking support requests.*
+
+![Team Management](docs/screenshots/team-management.png)
+
+*Team and membership management.*
+
+![Organization Switching](docs/screenshots/tenant-switching.png)
+
+*The same account can switch between organizations with organization-specific roles.*
+
+---
+
+## Frontend Responsibilities
+
+The Angular application provides:
+
+- Staff workspace for Owners, Managers, and Agents.
+- Customer support portal.
+- Organization switching.
+- Role-aware navigation and actions.
+- Ticket creation, listing, details, assignment, and lifecycle management.
+- Ticket conversations and comments.
+- Team and membership management.
+- Customer management.
+- Category management.
+- Staff and customer invitation workflows.
+- Notifications and realtime updates.
+- Organization-aware reporting dashboards.
+- Responsive layouts for desktop and smaller screens.
+
+The frontend is intentionally treated as a client of the backend authorization model. UI guards improve the user experience, but security-sensitive authorization remains enforced by the API.
+
+---
+
+## Application Structure
+
+The frontend is organized by application responsibility rather than one large collection of components:
+
+```text
+src/app
+├── core
+│   ├── auth
+│   ├── guards
+│   ├── interceptors
+│   ├── models
+│   ├── services
+│   └── tokens
+│
+├── features
+│   ├── auth
+│   ├── customer-portal
+│   ├── dashboard
+│   ├── management
+│   ├── shell
+│   └── tickets
+│
+└── shared
+    ├── charts
+    ├── pipes
+    ├── ticket
+    └── ui
 ```
-Angular SPA ──HTTPS + JWT + tenant header──▶ ASP.NET Core API ──▶ SQL Server
-     ▲                                          │
-     └────────────── SignalR hub ◀──────────────┘
+
+### Core
+
+Contains application-wide infrastructure such as:
+
+- Authentication
+- JWT handling
+- HTTP interceptors
+- Tenant context
+- Authorization guards
+- Shared API services
+- Application models
+
+### Features
+
+Feature areas are isolated into focused modules/components:
+
+- Authentication
+- Dashboard and reporting
+- Ticket management
+- Customer portal
+- Organization management
+- Application shell
+
+### Shared UI
+
+Reusable UI primitives are kept under the shared layer, including:
+
+- Avatars
+- Buttons and controls
+- Dialogs
+- Icons
+- Page headers
+- Statistic cards
+- Loading/empty/error states
+- Ticket badges
+- Toast notifications
+
+---
+
+## Multi-Tenant Frontend Design
+
+The application maintains an active organization context for authenticated users who belong to multiple organizations.
+
+The selected organization is propagated to backend API requests through the tenant context mechanism.
+
+This allows the same authenticated account to operate under different organizations while receiving the correct organization-specific data and permissions.
+
+For example:
+
+```text
+Daniel Harper
+
+Brightwave IT Solutions
+→ Owner
+
+Meridian Facilities Group
+→ Manager
 ```
 
-- **Tenant resolution:** a client interceptor attaches the active organization; server middleware resolves it and role policies check membership on every request.
-- **Frontend structure:** `core/` (auth, guards, interceptors, services), `features/` (auth, dashboard, tickets, management, customer-portal, shell), `shared/ui/` (design-system components).
-- **Design system:** one set of CSS custom properties drives both Tailwind utilities and Angular Material, so colors, radii and shadows are defined once.
+The organization identifier is treated as an internal tenant identifier. Customers are not required to manually enter organization GUIDs to use the portal.
 
-## Run locally
+---
 
-Requires Node 20+ and the backend running (see its README).
+## Authentication & Authorization
+
+The frontend uses:
+
+- JWT bearer authentication
+- Route guards
+- Permission-aware navigation
+- Organization-aware context
+- HTTP interceptors
+- Protected feature routes
+
+Examples of protected frontend areas include:
+
+```text
+/app/dashboard
+/app/tickets
+/app/management/teams
+/app/management/customers
+/app/management/categories
+/app/management/invitations
+/app/reports/*
+/portal/*
+```
+
+Frontend authorization is primarily concerned with navigation and user experience.
+
+The backend remains the authoritative security boundary and independently validates authentication, organization membership, roles, ownership, and resource access.
+
+---
+
+## Realtime Communication
+
+The application uses **Microsoft SignalR** for realtime events.
+
+Realtime functionality supports scenarios such as:
+
+- New notifications
+- Ticket comments
+- Ticket assignments
+- Ticket status changes
+- Ticket resolution
+- Ticket closure
+
+SignalR connections are associated with the authenticated user and active organization so realtime events remain tenant-aware.
+
+---
+
+## Reporting
+
+The frontend provides reporting views for:
+
+- Ticket statistics
+- Team performance
+- Agent performance
+- Customer activity
+- Category activity
+- Ticket time-series data
+
+Charts are implemented using `@swimlane/ngx-charts`.
+
+---
+
+## Technology Stack
+
+| Area | Technology |
+|---|---|
+| Framework | Angular 19 |
+| Language | TypeScript |
+| UI | Tailwind CSS 3 |
+| Component Library | Angular Material / CDK |
+| State / Reactivity | Angular Signals + RxJS |
+| Realtime | Microsoft SignalR |
+| Charts | ngx-charts |
+| Authentication | JWT |
+| API | ASP.NET Core 8 Web API |
+| Deployment | Vercel |
+
+---
+
+## Configuration
+
+The production API URL is supplied through an environment variable:
+
+```text
+SERVICORE_API_BASE_URL
+```
+
+The build process generates the production Angular environment configuration from this value.
+
+Example:
+
+```text
+SERVICORE_API_BASE_URL=https://your-backend.runasp.net/api
+```
+
+The API URL is configuration rather than a hard-coded production value.
+
+---
+
+## Local Development
+
+Install dependencies:
 
 ```bash
 npm install
-npm start          # http://localhost:4200
 ```
 
-For a production build, the API URL must be provided and use HTTPS:
+Start the Angular development server:
 
 ```bash
-SERVICORE_API_BASE_URL=https://your-api.example.com/api npm run build
+ng serve
 ```
 
-Local development uses `src/environments/environment.development.ts`.
+Then open:
 
-## Deployment
+```text
+http://localhost:4200
+```
 
-The frontend deploys to Vercel (`vercel.json` rewrites all routes to `index.html`). Set `SERVICORE_API_BASE_URL` in the project's environment variables. The API must list the frontend origin under `Cors:AllowedOrigins`.
+The development environment is configured to communicate with the local ServiCore API.
 
-## Project status
+---
 
-Feature-complete for the core flows. Planned: seeded demo data, broader frontend test coverage, CI.
+## Production Build
 
-## Author
+The production build generates the API environment configuration before compiling Angular:
 
-Ahmed Mohamed: [GitHub](https://github.com/AhmedMohamed2022)
+```bash
+npm run build
+```
+
+The generated application is deployed to Vercel.
+
+---
+
+## Testing
+
+The frontend contains unit tests for important application services, guards, interceptors, and components.
+
+Run the test suite with:
+
+```bash
+npm test
+```
+
+---
+
+## Backend
+
+The Angular application depends on the ServiCore ASP.NET Core backend for:
+
+- Authentication
+- Authorization
+- Tenant resolution
+- Business rules
+- Ticket management
+- Customer management
+- Team management
+- Reporting
+- Notifications
+- Persistence
+
+See the backend repository for the API architecture, domain model, database, migrations, and security implementation.
+
+---
+
+## Project Status
+
+**ServiCore v1.0 — Deployed**
+
+The frontend currently provides the complete v1 user experience for the multi-tenant support platform.
+
+Future improvements are tracked in the backend project's roadmap and will be introduced based on product requirements rather than adding unnecessary complexity to the v1 release.
