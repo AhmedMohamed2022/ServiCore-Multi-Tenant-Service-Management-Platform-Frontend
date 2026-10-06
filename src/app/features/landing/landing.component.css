@@ -75,7 +75,7 @@
     linear-gradient(90deg, var(--sc-border) 1px, transparent 1px) 0 0 / 56px
       56px,
     var(--sc-surface-muted);
-  mask-image: linear-gradient(#000 70%, transparent);
+  mask-image: linear-gradient(black 70%, transparent);
 }
 .lp-hero::after {
   content: "";

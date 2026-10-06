@@ -163,7 +163,11 @@
 /* On the solid brand bubble the brand link colour has no contrast. */
 .sc-bubble-mine .cm-link {
   color: var(--sc-on-brand);
-  text-decoration-color: rgb(255 255 255 / 0.6);
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--sc-on-brand) 60%,
+    transparent
+  );
 }
 
 /* --- Composer ------------------------------------------------------------------- */
