@@ -1,118 +1,76 @@
 <sc-page-header title="Tickets" description="Every service request in this organization.">
-    <button slot="actions" type="button" class="sc-btn sc-btn-secondary" (click)="loadTicketWorkspace()"
-        [disabled]="isLoading()" aria-label="Refresh tickets">
-        <span class="inline-flex" [class.sc-spin]="isLoading()">
-            <sc-icon name="refresh" size="sm" />
-        </span>
-        <span class="hidden sm:inline">Refresh</span>
-    </button>
+    @if (permissions.canManage()) {
     <a slot="actions" routerLink="/app/tickets/create" class="sc-btn sc-btn-primary">
         <sc-icon name="add" size="sm" />
         New ticket
     </a>
+    }
 </sc-page-header>
 
 <!-- ======================================================================
-     Queue views. Each tile is a saved view: it sets the filters together.
+     Queue summary. Each tile is also a filter shortcut.
      ====================================================================== -->
-<div class="sc-enter sc-enter-2 grid grid-cols-2 gap-3 lg:grid-cols-4" role="group" aria-label="Queue views"
-    [attr.aria-busy]="isInitialLoad()">
-
-    <button type="button" class="sc-card sc-card-interactive tl-tile" [attr.aria-pressed]="activeView() === 'all'"
-        (click)="setView('all')">
-        <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="inbox" size="sm" /></span>
-        <span class="tl-tile-text">
-            @if (isInitialLoad()) {
-            <span class="sc-skeleton tl-tile-skel" aria-hidden="true"></span>
-            } @else {
-            <span class="tl-tile-value" [appCountUp]="totalCount()">0</span>
-            }
-            <span class="tl-tile-label">All tickets</span>
-            <span class="tl-tile-sub hidden sm:block">{{ finishedCount() }} resolved or closed</span>
-        </span>
+<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="statusFilter() === 'ALL'"
+        (click)="setStatusFilter('ALL')" [attr.aria-pressed]="statusFilter() === 'ALL'">
+        <span class="sc-summary-value">{{ totalCount() }}</span>
+        <span class="sc-summary-label">All tickets</span>
     </button>
 
-    <button type="button" class="sc-card sc-card-interactive tl-tile" [attr.aria-pressed]="activeView() === 'active'"
-        (click)="setView('active')">
-        <span class="sc-icon-chip sc-icon-chip-sm"><sc-icon name="bolt" size="sm" /></span>
-        <span class="tl-tile-text">
-            @if (isInitialLoad()) {
-            <span class="sc-skeleton tl-tile-skel" aria-hidden="true"></span>
-            } @else {
-            <span class="tl-tile-value" [appCountUp]="activeCount()">0</span>
-            }
-            <span class="tl-tile-label">Active workload</span>
-            <span class="tl-tile-sub hidden sm:block">{{ waitingCount() }} waiting on customer</span>
-        </span>
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="statusFilter() === 'ACTIVE'"
+        (click)="setStatusFilter('ACTIVE')" [attr.aria-pressed]="statusFilter() === 'ACTIVE'">
+        <span class="sc-summary-value">{{ activeCount() }}</span>
+        <span class="sc-summary-label">Active workload</span>
     </button>
 
-    <button type="button" class="sc-card sc-card-interactive tl-tile" [attr.aria-pressed]="activeView() === 'triage'"
-        (click)="setView('triage')">
-        <span class="sc-icon-chip sc-icon-chip-sm" [class.sc-icon-chip-warn]="unassignedCount() > 0">
-            <sc-icon name="move_to_inbox" size="sm" />
-        </span>
-        <span class="tl-tile-text">
-            @if (isInitialLoad()) {
-            <span class="sc-skeleton tl-tile-skel" aria-hidden="true"></span>
-            } @else {
-            <span class="tl-tile-value" [appCountUp]="unassignedCount()">0</span>
-            }
-            <span class="tl-tile-label">Needs triage</span>
-            <span class="tl-tile-sub hidden sm:block">{{ needsAgentCount() }} more need an agent</span>
-        </span>
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="assignmentFilter() === 'UNASSIGNED'"
+        (click)="setAssignmentFilter(assignmentFilter() === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')"
+        [attr.aria-pressed]="assignmentFilter() === 'UNASSIGNED'">
+        <span class="sc-summary-value">{{ unassignedCount() }}</span>
+        <span class="sc-summary-label">Needs triage</span>
     </button>
 
-    <button type="button" class="sc-card sc-card-interactive tl-tile" [attr.aria-pressed]="activeView() === 'critical'"
-        (click)="setView('critical')">
-        <span class="sc-icon-chip sc-icon-chip-sm" [class.sc-icon-chip-danger]="criticalCount() > 0">
-            <sc-icon name="priority_high" size="sm" />
+    <button type="button" class="sc-summary-tile" [class.sc-summary-active]="priorityFilter() === 4"
+        (click)="setPriorityFilter(priorityFilter() === 4 ? 'ALL' : 4)"
+        [attr.aria-pressed]="priorityFilter() === 4">
+        <span class="sc-summary-value" [class.text-danger-700]="criticalCount() > 0">
+            {{ criticalCount() }}
         </span>
-        <span class="tl-tile-text">
-            @if (isInitialLoad()) {
-            <span class="sc-skeleton tl-tile-skel" aria-hidden="true"></span>
-            } @else {
-            <span class="tl-tile-value" [class.text-danger-700]="criticalCount() > 0"
-                [appCountUp]="criticalCount()">0</span>
-            }
-            <span class="tl-tile-label">Critical &amp; open</span>
-            <span class="tl-tile-sub hidden sm:block">{{ criticalUnassignedCount() }} without an agent</span>
-        </span>
+        <span class="sc-summary-label">Critical &amp; open</span>
     </button>
 </div>
 
 @if (errorMessage()) {
-<sc-alert tone="error" title="Couldn't load tickets" class="mt-4 block">
-    {{ errorMessage() }}
-    <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm mt-2.5" (click)="loadTicketWorkspace()"
-        [disabled]="isLoading()">
-        <sc-icon name="refresh" size="xs" />
-        Try again
-    </button>
-</sc-alert>
+<sc-alert tone="error" title="Couldn't load tickets" class="mt-4 block">{{ errorMessage() }}</sc-alert>
 }
 
 <!-- ======================================================================
-     Workspace: filters, then results
+     Toolbar
      ====================================================================== -->
-<div class="sc-card sc-enter sc-enter-3 relative mt-4 overflow-hidden">
-
-    @if (isLoading() && !isInitialLoad()) {
-    <div class="tl-progress" role="status" aria-label="Refreshing tickets"></div>
-    }
-
-    <div class="flex flex-wrap items-center gap-2 p-3">
+<div class="sc-card mt-4">
+    <div class="flex flex-wrap items-center gap-2 border-b border-line p-3">
         <div class="relative min-w-[200px] flex-1">
             <sc-icon name="search" size="sm"
                 class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
             <label for="ticketSearch" class="sc-sr-only">Search tickets</label>
             <input id="ticketSearch" type="search" class="sc-input pl-9"
-                placeholder="Search by title, customer, category or agent" [ngModel]="searchTerm()"
-                (ngModelChange)="searchTerm.set($event)" />
+                placeholder="Search by title, customer, category or agent"
+                [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
         </div>
 
+        <!-- Status -->
+        <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="statusMenu">
+            <sc-icon name="filter_list" size="sm" />
+            <span>
+                @if (statusFilter() === 'ALL') { Status }
+                @else if (statusFilter() === 'ACTIVE') { Active }
+                @else { {{ statusLabels[$any(statusFilter())] }} }
+            </span>
+            <sc-icon name="expand_more" size="xs" />
+        </button>
+
         <!-- Priority -->
-        <button type="button" class="sc-btn" [class.sc-btn-secondary]="priorityFilter() === 'ALL'"
-            [class.sc-btn-soft]="priorityFilter() !== 'ALL'" [matMenuTriggerFor]="priorityMenu">
+        <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="priorityMenu">
             <sc-icon name="flag" size="sm" />
             <span>
                 @if (priorityFilter() === 'ALL') { Priority }
@@ -121,33 +79,11 @@
             <sc-icon name="expand_more" size="xs" />
         </button>
 
-        <!-- Assignee -->
-        <button type="button" class="sc-btn" [class.sc-btn-secondary]="assignmentFilter() === 'ALL'"
-            [class.sc-btn-soft]="assignmentFilter() !== 'ALL'" [matMenuTriggerFor]="assigneeMenu">
-            <sc-icon name="person" size="sm" />
-            <span>
-                @switch (assignmentFilter()) {
-                @case ('MINE') { Assigned to me }
-                @case ('UNASSIGNED') { Needs triage }
-                @case ('NO_AGENT') { Needs an agent }
-                @default { Assignee }
-                }
-            </span>
-            <sc-icon name="expand_more" size="xs" />
-        </button>
-
         <!-- Sort -->
         <button type="button" class="sc-btn sc-btn-secondary" [matMenuTriggerFor]="sortMenu"
-            matTooltip="Sorted by {{ sortLabel() }}" aria-label="Change sort order">
+            matTooltip="Change sort order">
             <sc-icon name="swap_vert" size="sm" />
             <span class="hidden sm:inline">Sort</span>
-        </button>
-
-        <button type="button" class="sc-btn sc-btn-secondary sc-btn-icon hidden md:inline-flex"
-            (click)="toggleDensity()" [attr.aria-pressed]="density() === 'compact'"
-            [matTooltip]="density() === 'compact' ? 'Switch to comfortable rows' : 'Switch to compact rows'"
-            aria-label="Compact rows">
-            <sc-icon [name]="density() === 'compact' ? 'density_small' : 'density_medium'" size="sm" />
         </button>
 
         @if (hasActiveFilters()) {
@@ -158,79 +94,16 @@
         }
     </div>
 
-    <!-- Status chips: one tap to narrow the queue, with live counts -->
-    <div class="tl-chips border-b border-line px-3 pb-3">
-        <div class="sc-seg" role="group" aria-label="Filter by status">
-            @for (chip of statusChips(); track chip.key) {
-            <button type="button" class="sc-seg-item" [attr.aria-pressed]="isStatusChipActive(chip.key)"
-                (click)="setStatusFilter(chip.key)">
-                @if (chip.dot) {
-                <span class="tl-dot" [class]="chip.dot" aria-hidden="true"></span>
-                }
-                {{ chip.label }}
-                <span class="sc-seg-count">{{ chip.count }}</span>
-            </button>
-            }
-        </div>
-    </div>
-
-    <p class="sc-sr-only" role="status" aria-live="polite">
-        {{ filteredTickets().length }} {{ filteredTickets().length === 1 ? 'ticket' : 'tickets' }} shown
-    </p>
-
     <!-- ==================================================================
          Results
          ================================================================== -->
-    @if (isInitialLoad()) {
-    <div role="status" aria-label="Loading tickets">
-        <span class="sc-sr-only">Loading tickets</span>
-        <div class="hidden md:block" aria-hidden="true">
-            <table class="sc-table tl-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Ticket</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Priority</th>
-                        <th scope="col">Assignee</th>
-                        <th scope="col">Updated</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (i of skeletonRows; track i) {
-                    <tr>
-                        <td>
-                            <span class="sc-skeleton block h-3.5 rounded-sc-sm"
-                                [style.width.%]="70 - (i % 3) * 12"></span>
-                            <span class="sc-skeleton mt-2 block h-2.5 w-24 rounded-sc-sm"></span>
-                        </td>
-                        <td><span class="sc-skeleton block h-[22px] w-24 rounded-full"></span></td>
-                        <td><span class="sc-skeleton block h-[22px] w-20 rounded-full"></span></td>
-                        <td><span class="sc-skeleton block h-6 w-32 rounded-full"></span></td>
-                        <td><span class="sc-skeleton block h-3.5 w-14 rounded-sc-sm"></span></td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <ul class="divide-y divide-line md:hidden" aria-hidden="true">
-            @for (i of skeletonRows; track i) {
-            <li class="p-4">
-                <span class="sc-skeleton block h-3.5 w-4/5 rounded-sc-sm"></span>
-                <span class="mt-3 flex gap-1.5">
-                    <span class="sc-skeleton block h-[22px] w-20 rounded-full"></span>
-                    <span class="sc-skeleton block h-[22px] w-16 rounded-full"></span>
-                </span>
-                <span class="sc-skeleton mt-3 block h-2.5 w-3/5 rounded-sc-sm"></span>
-            </li>
-            }
-        </ul>
+    @if (isLoading()) {
+    <div class="p-3">
+        <sc-loading-state label="Loading tickets" [count]="6" />
     </div>
     } @else if (filteredTickets().length === 0) {
-    @if (errorMessage() && allTickets().length === 0) {
-    <sc-empty-state icon="cloud_off" tone="error" title="Couldn't load tickets"
-        description="Check your connection, then try again." actionLabel="Try again" (action)="loadTicketWorkspace()" />
-    } @else if (hasActiveFilters()) {
-    <sc-empty-state icon="search_off" tone="neutral" title="No tickets match these filters"
+    @if (hasActiveFilters()) {
+    <sc-empty-state icon="search_off" title="No tickets match these filters"
         description="Try a different search term or clear the filters." actionLabel="Clear filters"
         (action)="clearFilters()" />
     } @else {
@@ -240,89 +113,63 @@
     } @else {
 
     <!-- Desktop table -->
-    <div class="hidden overflow-x-auto md:block" [class.tl-compact]="density() === 'compact'">
-        <table class="sc-table tl-table">
+    <div class="hidden overflow-x-auto md:block">
+        <table class="sc-table">
             <caption class="sc-sr-only">
-                Tickets, sorted by {{ sortLabel() }}
+                Tickets, sorted by {{ sortKey() }}
             </caption>
             <thead>
                 <tr>
-                    <th scope="col" [attr.aria-sort]="ariaSort('title')">
-                        <button type="button" class="tl-sort" (click)="toggleSort('title')">
-                            Ticket <sc-icon [name]="sortIcon('title')" size="xs" />
-                        </button>
-                    </th>
-                    <th scope="col" [attr.aria-sort]="ariaSort('status')">
-                        <button type="button" class="tl-sort" (click)="toggleSort('status')">
-                            Status <sc-icon [name]="sortIcon('status')" size="xs" />
-                        </button>
-                    </th>
-                    <th scope="col" [attr.aria-sort]="ariaSort('priority')">
-                        <button type="button" class="tl-sort" (click)="toggleSort('priority')">
-                            Priority <sc-icon [name]="sortIcon('priority')" size="xs" />
-                        </button>
-                    </th>
+                    <th scope="col">Ticket</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Customer</th>
                     <th scope="col">Assignee</th>
-                    <th scope="col" [attr.aria-sort]="ariaSort('updated')">
-                        <button type="button" class="tl-sort" (click)="toggleSort('updated')">
-                            Updated <sc-icon [name]="sortIcon('updated')" size="xs" />
-                        </button>
-                    </th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Created</th>
+                    <th scope="col"><span class="sc-sr-only">Actions</span></th>
                 </tr>
             </thead>
-            <tbody (keydown)="onRowKeydown($event)">
-                @for (row of rows(); track row.ticket.id) {
-                <tr class="sc-row-interactive tl-row" [class.tl-row-critical]="row.ticket.priority === 4"
-                    [class.tl-row-high]="row.ticket.priority === 3">
-                    <td class="tl-cell-title">
-                        <a [routerLink]="['/app/tickets', row.ticket.id]" data-row-link class="tl-row-link"
-                            [attr.title]="row.ticket.title">
-                            {{ row.ticket.title }}
+            <tbody>
+                @for (ticket of pagedTickets(); track ticket.id) {
+                <tr class="sc-row-interactive" [class.sc-row-critical]="ticket.priority === 4">
+                    <td class="max-w-[320px]">
+                        <a [routerLink]="['/app/tickets', ticket.id]"
+                            class="block truncate font-semibold text-ink hover:text-brand-700 hover:underline underline-offset-2">
+                            {{ ticket.title }}
                         </a>
-                        <span class="tl-sub tl-sub-line">
-                            <span class="font-mono">#{{ row.shortId }}</span>
-                            @if (row.customer) {
-                            <span class="tl-sep" aria-hidden="true"></span>{{ row.customer }}
-                            }
-                            @if (row.category) {
-                            <span class="tl-sep" aria-hidden="true"></span>{{ row.category }}
+                        <span class="mt-0.5 block font-mono text-2xs text-ink-subtle">
+                            #{{ ticket.id.substring(0, 8) }}
+                            @if (teamNameFor(ticket)) {
+                            <span class="ml-1.5 font-sans">· {{ teamNameFor(ticket) }}</span>
                             }
                         </span>
                     </td>
-                    <td><sc-ticket-status-badge [status]="row.ticket.status" /></td>
-                    <td><sc-ticket-priority-badge [priority]="row.ticket.priority" /></td>
-                    <td class="max-w-[190px]">
-                        @if (row.assignee) {
-                        <span class="flex min-w-0 items-center gap-2">
-                            <sc-avatar [name]="row.assignee === 'You' ? myEmail() : row.assignee" size="xs" />
-                            <span class="min-w-0">
-                                <span class="block truncate text-ink">{{ row.assignee }}</span>
-                                @if (row.team) {
-                                <span class="tl-sub block truncate">{{ row.team }}</span>
-                                }
-                            </span>
+                    <td><sc-ticket-status-badge [status]="ticket.status" /></td>
+                    <td><sc-ticket-priority-badge [priority]="ticket.priority" /></td>
+                    <td class="max-w-[160px] truncate">{{ customerNameFor(ticket) || '—' }}</td>
+                    <td>
+                        @if (assigneeNameFor(ticket); as assignee) {
+                        <span class="flex items-center gap-2">
+                            <sc-avatar [name]="assignee" size="xs" />
+                            <span class="max-w-[120px] truncate">{{ assignee }}</span>
                         </span>
-                        } @else if (row.pending === 'triage') {
-                        <span class="tl-pending tl-pending-warn">
-                            <sc-icon name="move_to_inbox" size="xs" />
-                            Needs triage
-                        </span>
-                        } @else if (row.pending === 'agent') {
-                        <span class="tl-pending">
-                            <sc-icon name="person_search" size="xs" />
-                            Needs an agent
-                        </span>
-                        @if (row.team) {
-                        <span class="tl-sub block truncate">{{ row.team }}</span>
-                        }
                         } @else {
-                        <span class="text-ink-subtle">—</span>
+                        <span class="sc-badge sc-badge-neutral">
+                            <sc-icon name="person_off" size="xs" />
+                            Unassigned
+                        </span>
                         }
                     </td>
-                    <td class="whitespace-nowrap">
-                        <span class="block text-ink-muted"
-                            [attr.title]="row.ticket.updatedAt | date:'MMM d, y · HH:mm'">{{ row.updated }}</span>
-                        <span class="tl-sub block">Opened {{ row.ticket.createdAt | date:'MMM d' }}</span>
+                    <td class="max-w-[140px] truncate">{{ categoryNameFor(ticket) || '—' }}</td>
+                    <td class="whitespace-nowrap text-ink-subtle">
+                        {{ ticket.createdAt | date:'MMM d, y' }}
+                    </td>
+                    <td class="w-10">
+                        <a [routerLink]="['/app/tickets', ticket.id]" class="sc-btn sc-btn-ghost sc-btn-icon"
+                            [attr.aria-label]="'Open ticket ' + ticket.title">
+                            <sc-icon name="chevron_right" size="sm" />
+                        </a>
                     </td>
                 </tr>
                 }
@@ -332,154 +179,106 @@
 
     <!-- Mobile cards: the same rows, not a horizontally scrolling table -->
     <ul class="divide-y divide-line md:hidden">
-        @for (row of rows(); track row.ticket.id) {
+        @for (ticket of pagedTickets(); track ticket.id) {
         <li>
-            <a [routerLink]="['/app/tickets', row.ticket.id]" class="tl-card"
-                [class.tl-row-critical]="row.ticket.priority === 4" [class.tl-row-high]="row.ticket.priority === 3">
-                <p class="text-[13px] font-semibold leading-snug text-ink">{{ row.ticket.title }}</p>
+            <a [routerLink]="['/app/tickets', ticket.id]" class="block p-4 transition-colors hover:bg-surface-muted"
+                [class.sc-row-critical]="ticket.priority === 4">
+                <p class="text-[13px] font-semibold text-ink">{{ ticket.title }}</p>
                 <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                    <sc-ticket-status-badge [status]="row.ticket.status" />
-                    <sc-ticket-priority-badge [priority]="row.ticket.priority" />
+                    <sc-ticket-status-badge [status]="ticket.status" />
+                    <sc-ticket-priority-badge [priority]="ticket.priority" />
                 </div>
-                <dl class="mt-2.5 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-y-1 text-xs">
-                    <dt class="text-ink-subtle">Customer</dt>
-                    <dd class="truncate text-ink-muted">{{ row.customer || '—' }}</dd>
-                    <dt class="text-ink-subtle">Assignee</dt>
-                    <dd class="truncate text-ink-muted">
-                        {{ row.assignee || (row.pending === 'triage' ? 'Needs triage' : row.pending === 'agent' ? 'Needs
-                        an agent' : '—') }}
-                    </dd>
-                    <dt class="text-ink-subtle">Updated</dt>
-                    <dd class="text-ink-muted">{{ row.updated }} · opened {{ row.ticket.createdAt | date:'MMM d' }}</dd>
+                <dl class="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <div class="flex gap-1.5">
+                        <dt class="text-ink-subtle">Customer</dt>
+                        <dd class="truncate text-ink-muted">{{ customerNameFor(ticket) || '—' }}</dd>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <dt class="text-ink-subtle">Assignee</dt>
+                        <dd class="truncate text-ink-muted">{{ assigneeNameFor(ticket) || 'Unassigned' }}</dd>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <dt class="text-ink-subtle">Created</dt>
+                        <dd class="text-ink-muted">{{ ticket.createdAt | date:'MMM d' }}</dd>
+                    </div>
                 </dl>
             </a>
         </li>
         }
     </ul>
 
-    <!-- Footer: range, page size, paging -->
+    <!-- Pagination -->
+    @if (pageCount() > 1) {
     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
         <p class="text-xs text-ink-subtle">
-            Showing {{ rangeStart() }}–{{ rangeEnd() }} of {{ filteredTickets().length }}
+            Showing {{ pageIndex() * pageSize() + 1 }}–{{ (pageIndex() * pageSize()) + pagedTickets().length }}
+            of {{ filteredTickets().length }}
         </p>
-        <div class="flex items-center gap-3">
-            @if (filteredTickets().length > pageSizes[0]) {
-            <span class="flex items-center gap-1.5 text-xs text-ink-subtle">
-                <label for="ticketPageSize">Rows</label>
-                <select id="ticketPageSize" class="sc-select tl-pagesize" [ngModel]="pageSize()"
-                    (ngModelChange)="setPageSize($event)">
-                    @for (size of pageSizes; track size) {
-                    <option [ngValue]="size">{{ size }}</option>
-                    }
-                </select>
+        <div class="flex items-center gap-1">
+            <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm sc-btn-icon"
+                (click)="goToPage(pageIndex() - 1)" [disabled]="pageIndex() === 0" aria-label="Previous page">
+                <sc-icon name="chevron_left" size="sm" />
+            </button>
+            <span class="px-2 text-xs tabular-nums text-ink-muted">
+                {{ pageIndex() + 1 }} / {{ pageCount() }}
             </span>
-            }
-            @if (pageCount() > 1) {
-            <div class="flex items-center gap-1">
-                <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm sc-btn-icon"
-                    (click)="goToPage(pageIndex() - 1)" [disabled]="pageIndex() === 0" aria-label="Previous page">
-                    <sc-icon name="chevron_left" size="sm" />
-                </button>
-                <span class="px-2 text-xs tabular-nums text-ink-muted">
-                    {{ pageIndex() + 1 }} / {{ pageCount() }}
-                </span>
-                <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm sc-btn-icon"
-                    (click)="goToPage(pageIndex() + 1)" [disabled]="pageIndex() >= pageCount() - 1"
-                    aria-label="Next page">
-                    <sc-icon name="chevron_right" size="sm" />
-                </button>
-            </div>
-            }
+            <button type="button" class="sc-btn sc-btn-secondary sc-btn-sm sc-btn-icon"
+                (click)="goToPage(pageIndex() + 1)" [disabled]="pageIndex() >= pageCount() - 1"
+                aria-label="Next page">
+                <sc-icon name="chevron_right" size="sm" />
+            </button>
         </div>
     </div>
+    }
     }
 </div>
 
 <!-- ======================================================================
-     Menus
+     Filter menus
      ====================================================================== -->
-<mat-menu #priorityMenu="matMenu" class="sc-menu">
-    <button type="button" mat-menu-item (click)="setPriorityFilter('ALL')"
-        [attr.aria-current]="priorityFilter() === 'ALL' ? 'true' : null">
+<mat-menu #statusMenu="matMenu">
+    <button type="button" mat-menu-item (click)="setStatusFilter('ALL')">
         <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            All priorities
-            @if (priorityFilter() === 'ALL') { <sc-icon name="check" size="xs" /> }
+            All statuses <span class="tabular-nums text-ink-subtle">{{ totalCount() }}</span>
         </span>
     </button>
-    @for (priority of priorityOrder; track priority) {
-    <button type="button" mat-menu-item (click)="setPriorityFilter(priority)"
-        [attr.aria-current]="priorityFilter() === priority ? 'true' : null">
+    <button type="button" mat-menu-item (click)="setStatusFilter('ACTIVE')">
         <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            {{ priorityLabels[priority] }}
-            @if (priorityFilter() === priority) { <sc-icon name="check" size="xs" /> }
+            Active only <span class="tabular-nums text-ink-subtle">{{ activeCount() }}</span>
+        </span>
+    </button>
+    @for (status of statusOrder; track status) {
+    <button type="button" mat-menu-item (click)="setStatusFilter(status)">
+        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
+            {{ statusLabels[status] }}
+            <span class="tabular-nums text-ink-subtle">{{ statusCounts().get(status) || 0 }}</span>
         </span>
     </button>
     }
 </mat-menu>
 
-<mat-menu #assigneeMenu="matMenu" class="sc-menu">
-    <button type="button" mat-menu-item (click)="setAssignmentFilter('ALL')"
-        [attr.aria-current]="assignmentFilter() === 'ALL' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Anyone
-            @if (assignmentFilter() === 'ALL') { <sc-icon name="check" size="xs" /> }
-        </span>
+<mat-menu #priorityMenu="matMenu">
+    <button type="button" mat-menu-item (click)="setPriorityFilter('ALL')">
+        <span class="text-[13px]">All priorities</span>
     </button>
-    <button type="button" mat-menu-item (click)="setAssignmentFilter('MINE')"
-        [attr.aria-current]="assignmentFilter() === 'MINE' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Assigned to me <span class="tabular-nums text-ink-subtle">{{ mineCount() }}</span>
-        </span>
+    @for (priority of priorityOrder; track priority) {
+    <button type="button" mat-menu-item (click)="setPriorityFilter(priority)">
+        <span class="text-[13px]">{{ priorityLabels[priority] }}</span>
     </button>
-    <button type="button" mat-menu-item (click)="setAssignmentFilter('UNASSIGNED')"
-        [attr.aria-current]="assignmentFilter() === 'UNASSIGNED' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Needs triage <span class="tabular-nums text-ink-subtle">{{ unassignedCount() }}</span>
-        </span>
-    </button>
-    <button type="button" mat-menu-item (click)="setAssignmentFilter('NO_AGENT')"
-        [attr.aria-current]="assignmentFilter() === 'NO_AGENT' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Needs an agent <span class="tabular-nums text-ink-subtle">{{ needsAgentCount() }}</span>
-        </span>
-    </button>
+    }
 </mat-menu>
 
-<mat-menu #sortMenu="matMenu" class="sc-menu">
-    <button type="button" mat-menu-item (click)="setSort('created')"
-        [attr.aria-current]="sortKey() === 'created' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Date opened @if (sortKey() === 'created') { <sc-icon name="check" size="xs" /> }
-        </span>
+<mat-menu #sortMenu="matMenu">
+    <button type="button" mat-menu-item (click)="setSort('created')">
+        <span class="text-[13px]">Newest first</span>
     </button>
-    <button type="button" mat-menu-item (click)="setSort('updated')"
-        [attr.aria-current]="sortKey() === 'updated' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Recently updated @if (sortKey() === 'updated') { <sc-icon name="check" size="xs" /> }
-        </span>
+    <button type="button" mat-menu-item (click)="setSort('priority')">
+        <span class="text-[13px]">Highest priority</span>
     </button>
-    <button type="button" mat-menu-item (click)="setSort('priority')"
-        [attr.aria-current]="sortKey() === 'priority' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Highest priority @if (sortKey() === 'priority') { <sc-icon name="check" size="xs" /> }
-        </span>
+    <button type="button" mat-menu-item (click)="setSort('status')">
+        <span class="text-[13px]">Workflow order</span>
     </button>
-    <button type="button" mat-menu-item (click)="setSort('status')"
-        [attr.aria-current]="sortKey() === 'status' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Workflow order @if (sortKey() === 'status') { <sc-icon name="check" size="xs" /> }
-        </span>
-    </button>
-    <button type="button" mat-menu-item (click)="setSort('title')"
-        [attr.aria-current]="sortKey() === 'title' ? 'true' : null">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Title A–Z @if (sortKey() === 'title') { <sc-icon name="check" size="xs" /> }
-        </span>
-    </button>
-    <div class="my-1 h-px bg-line" role="separator"></div>
-    <button type="button" mat-menu-item (click)="toggleSortDirection()">
-        <span class="flex w-full items-center justify-between gap-6 text-[13px]">
-            Reverse order @if (sortReversed()) { <sc-icon name="check" size="xs" /> }
-        </span>
+    <button type="button" mat-menu-item (click)="setSort('title')">
+        <span class="text-[13px]">Title A–Z</span>
     </button>
 </mat-menu>
